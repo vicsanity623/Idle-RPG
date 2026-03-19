@@ -133,8 +133,11 @@ class Inventory {
             }
             if (player.canUpgradeSkill(skillId)) {
                 skillNode.classList.add('upgradable');
-            } else if (player.getSkillDetails(skillId)?.level === player.getSkillDetails(skillId)?.maxLevel) {
-                skillNode.classList.add('max-level');
+            } else {
+                const skillDetails = player.getSkillDetails(skillId);
+                if (skillDetails?.level === skillDetails?.maxLevel) {
+                    skillNode.classList.add('max-level');
+                }
             }
             // Example: Change border color for upgraded skills
             // skillNode.style.borderColor = 'gold';
