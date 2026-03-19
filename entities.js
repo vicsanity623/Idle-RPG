@@ -24,7 +24,6 @@ class Player {
         this.speed = 250; 
 this.color = '#bb86fc';
 
-        this.hp = this.getMaxHp();
         this.skills = [
             { id: 'pot', cdMax: 10, current: 0 },
             { id: 'atk', cdMax: 1, current: 0 },
@@ -33,6 +32,7 @@ this.color = '#bb86fc';
         ];
         this.skillHpBonus = 0; // Initialize skill HP bonus
         this.applySkillEffects(); // Apply skill effects on initialization
+        this.hp = this.getMaxHp(); // Calculate HP *after* skill effects are applied
     }
 
     getMaxHp() { 
