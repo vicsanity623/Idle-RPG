@@ -4,13 +4,11 @@
  */
 
 // --- HIVE MIND AI ---
-// Adapts enemy behavior dynamically based on pack size
 const HiveMind = {
     flankWeight: 0,
     packSize: 0,
     update: function() {
         this.packSize = entities.filter(e => e instanceof Enemy).length;
-        // If too many enemies, spread them out to flank
         this.flankWeight = Math.min(1.0, this.packSize / 20); 
     }
 };
@@ -35,7 +33,6 @@ class Player {
         ];
     }
 
-    // --- DERIVED STATS CALCULATION ---
     getMaxHp() { 
         const g = PlayerData.gear;
         return Math.floor(100 + (PlayerData.level * 20) + 
@@ -79,14 +76,11 @@ class Player {
         return Math.max(0.3, 1.0 - (g.Boots.atkSpeed || 0));
     }
 
-    // --- LOGIC ---
     update(dt) {
-        // Handle Regen
         if (this.hp < this.getMaxHp()) {
             this.hp = Math.min(this.getMaxHp(), this.hp + this.getRegen() * dt);
         }
 
-        // Standard Movement
         if (Input.joystick.active) {
             this.vx = Math.cos(Input.joystick.angle) * this.speed;
             this.vy = Math.sin(Input.joystick.angle) * this.speed;
@@ -102,7 +96,8 @@ class Player {
         this.handleSkills(dt);
         this.updateFog();
 
-        if (Math.hypot(this.x - portal.x, this.y - portal.y) < this.radius + portal.radius) {
+        // Safety check for portal existence before collision check
+        if (portal && Math.hypot(this.x - portal.x, this.y - portal.y) < this.radius + portal.radius) {
             levelUpDungeon();
         }
         UI.updateStats();
@@ -121,24 +116,18 @@ class Player {
     handleSkills(dt) {
         this.skills.forEach(s => { if(s.current > 0) s.current -= dt; });
 
-        // Basic Attack with CRIT Logic
         if (this.skills[1].current <= 0) {
             let target = this.getNearestEnemy(200);
             if (target) {
                 let damage = this.getAttackPower();
                 let isCrit = Math.random() * 100 < this.getCritChance();
-                
-                if (isCrit) {
-                    damage *= this.getCritMultiplier();
-                }
-
+                if (isCrit) damage *= this.getCritMultiplier();
                 target.takeDamage(damage, isCrit);
                 spawnProjectile(this.x, this.y, target.x, target.y);
                 this.skills[1].current = this.skills[1].cdMax * this.getAttackSpeedFactor(); 
             }
         }
 
-        // Aura
         if (this.skills[2].current <= 0) {
             entities.forEach(e => {
                 if (e instanceof Enemy && Math.hypot(this.x - e.x, this.y - e.y) < 120) {
@@ -149,13 +138,11 @@ class Player {
             this.skills[2].current = this.skills[2].cdMax;
         }
 
-        // Potion
         if (this.hp < this.getMaxHp() * 0.4 && this.skills[0].current <= 0) {
             this.hp = Math.min(this.getMaxHp(), this.hp + this.getMaxHp() * 0.4);
             spawnFloatingText(this.x, this.y, "HEALED", '#0f0');
             this.skills[0].current = this.skills[0].cdMax;
         }
-
         UI.updateHotbar(this.skills);
     }
 
@@ -173,7 +160,6 @@ class Player {
     takeDamage(amt) {
         const reduction = Math.min(amt * 0.8, this.getDefense());
         const finalDamage = Math.max(1, amt - reduction);
-        
         this.hp -= finalDamage;
         spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
         if (this.hp <= 0) die();
@@ -193,19 +179,16 @@ class Enemy {
         this.y = y;
         this.radius = 15;
         this.speed = randomFloat(80, 130) * Math.pow(1.02, GameState.level); 
-        
         const hpMultiplier = Math.pow(1.1, GameState.level);
         this.hp = 30 * hpMultiplier;
         this.maxHp = this.hp;
         this.damage = 5 * hpMultiplier;
-        
         this.id = Math.random(); 
         this.attackCooldown = 0;
     }
 
     update(dt) {
         if (!player) return;
-        
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         const dist = Math.hypot(dx, dy);
@@ -220,13 +203,10 @@ class Enemy {
             const angleToPlayer = Math.atan2(dy, dx);
             const flankOffset = (this.id > 0.5 ? 1 : -1) * (Math.PI / 2) * HiveMind.flankWeight;
             const targetAngle = angleToPlayer + flankOffset;
-            
             let vx = Math.cos(targetAngle) * this.speed;
             let vy = Math.sin(targetAngle) * this.speed;
-
             const nextX = this.x + vx * dt;
             const nextY = this.y + vy * dt;
-
             if (!isWall(nextX, this.y)) this.x = nextX;
             if (!isWall(this.x, nextY)) this.y = nextY;
         }
@@ -243,7 +223,6 @@ class Enemy {
     die() {
         entities.splice(entities.indexOf(this), 1);
         gainXp(10 * GameState.level);
-        
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
         if (Math.random() < 0.2) spawnLoot(this.x, this.y, 'shard');
         if (Math.random() < 0.05) spawnLoot(this.x, this.y, 'gear');
@@ -254,7 +233,6 @@ class Enemy {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
-        
         ctx.fillStyle = '#000';
         ctx.fillRect(this.x - 15, this.y - 25, 30, 4);
         ctx.fillStyle = '#ff0000';
@@ -265,25 +243,24 @@ class Enemy {
 // --- LOOT CLASS ---
 class Loot {
     constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.type = type;
-        this.radius = 8;
-        this.life = 15; 
-        this.floatY = 0;
+        this.x = x; this.y = y; this.type = type;
+        this.radius = 8; this.life = 15; this.floatY = 0;
         this.time = Math.random() * 10;
     }
 
     update(dt) {
         this.life -= dt;
-        if (this.life <= 0) entities.splice(entities.indexOf(this), 1);
-
+        if (this.life <= 0) {
+            const idx = entities.indexOf(this);
+            if(idx > -1) entities.splice(idx, 1);
+            return;
+        }
         this.time += dt * 5;
         this.floatY = Math.sin(this.time) * 5;
-
         if (player && Math.hypot(player.x - this.x, player.y - this.y) < player.radius + this.radius + 10) {
             this.pickup();
-            entities.splice(entities.indexOf(this), 1);
+            const idx = entities.indexOf(this);
+            if(idx > -1) entities.splice(idx, 1);
         }
     }
 
@@ -296,9 +273,8 @@ class Loot {
             PlayerData.shards += 1;
             spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
         } else if (this.type === 'gear') {
-            const slot = GEAR_TYPES[randomInt(0, GEAR_TYPES.length - 1)];
             PlayerData.shards += 5; 
-            spawnFloatingText(this.x, this.y, `+5 Shards (Melted ${slot})`, '#bb86fc');
+            spawnFloatingText(this.x, this.y, `+5 Shards (Gear)`, '#bb86fc');
         }
         UI.updateCurrencies();
         saveGame();
@@ -324,17 +300,16 @@ class Loot {
 // --- VISUAL CLASSES ---
 class FloatingText {
     constructor(x, y, text, color) {
-        this.x = x;
-        this.y = y;
-        this.text = text;
-        this.color = color;
-        this.life = 1.0;
-        this.vy = -30;
+        this.x = x; this.y = y; this.text = text; this.color = color;
+        this.life = 1.0; this.vy = -30;
     }
     update(dt) {
         this.life -= dt;
         this.y += this.vy * dt;
-        if(this.life <= 0) floatingTexts.splice(floatingTexts.indexOf(this), 1);
+        if(this.life <= 0) {
+            const idx = floatingTexts.indexOf(this);
+            if(idx > -1) floatingTexts.splice(idx, 1);
+        }
     }
     draw(ctx) {
         ctx.fillStyle = this.color;
@@ -347,21 +322,20 @@ class FloatingText {
 
 class Particle {
     constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
+        this.x = x; this.y = y; this.color = color;
         const angle = Math.random() * Math.PI * 2;
         const speed = Math.random() * 100;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
-        this.life = 0.5;
-        this.size = randomFloat(2, 5);
+        this.life = 0.5; this.size = randomFloat(2, 5);
     }
     update(dt) {
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
+        this.x += this.vx * dt; this.y += this.vy * dt;
         this.life -= dt;
-        if(this.life <= 0) particles.splice(particles.indexOf(this), 1);
+        if(this.life <= 0) {
+            const idx = particles.indexOf(this);
+            if(idx > -1) particles.splice(idx, 1);
+        }
     }
     draw(ctx) {
         ctx.fillStyle = this.color;
