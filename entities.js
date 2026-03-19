@@ -96,7 +96,6 @@ class Player {
         this.handleSkills(dt);
         this.updateFog();
 
-        // Safety check for portal existence before collision check
         if (portal && Math.hypot(this.x - portal.x, this.y - portal.y) < this.radius + portal.radius) {
             levelUpDungeon();
         }
@@ -116,8 +115,11 @@ class Player {
     handleSkills(dt) {
         this.skills.forEach(s => { if(s.current > 0) s.current -= dt; });
 
+        // REF NO: Magic Number Refactor by Pyob
+        const PLAYER_ATTACK_RANGE = 200; 
+
         if (this.skills[1].current <= 0) {
-            let target = this.getNearestEnemy(200);
+            let target = this.getNearestEnemy(PLAYER_ATTACK_RANGE);
             if (target) {
                 let damage = this.getAttackPower();
                 let isCrit = Math.random() * 100 < this.getCritChance();
@@ -221,7 +223,8 @@ class Enemy {
     }
 
     die() {
-        entities.splice(entities.indexOf(this), 1);
+        const idx = entities.indexOf(this);
+        if(idx > -1) entities.splice(idx, 1);
         gainXp(10 * GameState.level);
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
         if (Math.random() < 0.2) spawnLoot(this.x, this.y, 'shard');
@@ -247,23 +250,16 @@ class Loot {
         this.radius = 8; this.life = 15; this.floatY = 0;
         this.time = Math.random() * 10;
     }
-
     update(dt) {
         this.life -= dt;
-        if (this.life <= 0) {
-            const idx = entities.indexOf(this);
-            if(idx > -1) entities.splice(idx, 1);
-            return;
-        }
+        if (this.life <= 0) { entities.splice(entities.indexOf(this), 1); return; }
         this.time += dt * 5;
         this.floatY = Math.sin(this.time) * 5;
         if (player && Math.hypot(player.x - this.x, player.y - this.y) < player.radius + this.radius + 10) {
             this.pickup();
-            const idx = entities.indexOf(this);
-            if(idx > -1) entities.splice(idx, 1);
+            entities.splice(entities.indexOf(this), 1);
         }
     }
-
     pickup() {
         if (this.type === 'gold') {
             const amt = randomInt(5, 15) * GameState.level;
@@ -279,7 +275,6 @@ class Loot {
         UI.updateCurrencies();
         saveGame();
     }
-
     draw(ctx) {
         ctx.fillStyle = this.type === 'gold' ? '#ffd700' : this.type === 'shard' ? '#00e5ff' : '#bb86fc';
         ctx.beginPath();
@@ -292,8 +287,7 @@ class Loot {
             ctx.arc(this.x, this.y + this.floatY, this.radius, 0, Math.PI * 2);
         }
         ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.stroke();
+        ctx.strokeStyle = '#fff'; ctx.stroke();
     }
 }
 
@@ -304,12 +298,8 @@ class FloatingText {
         this.life = 1.0; this.vy = -30;
     }
     update(dt) {
-        this.life -= dt;
-        this.y += this.vy * dt;
-        if(this.life <= 0) {
-            const idx = floatingTexts.indexOf(this);
-            if(idx > -1) floatingTexts.splice(idx, 1);
-        }
+        this.life -= dt; this.y += this.vy * dt;
+        if(this.life <= 0) floatingTexts.splice(floatingTexts.indexOf(this), 1);
     }
     draw(ctx) {
         ctx.fillStyle = this.color;
@@ -332,10 +322,7 @@ class Particle {
     update(dt) {
         this.x += this.vx * dt; this.y += this.vy * dt;
         this.life -= dt;
-        if(this.life <= 0) {
-            const idx = particles.indexOf(this);
-            if(idx > -1) particles.splice(idx, 1);
-        }
+        if(this.life <= 0) particles.splice(particles.indexOf(this), 1);
     }
     draw(ctx) {
         ctx.fillStyle = this.color;
