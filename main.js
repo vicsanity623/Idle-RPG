@@ -547,11 +547,11 @@ const UI = {
 };
 
 // Add to UI object (overwriting existing methods)
-UI.renderSkills = (player) => renderSkills(player);
+UI.renderSkills = (playerInstance) => renderSkills(playerInstance, PlayerData, SKILLS);
 
 UI.upgradeSkill = (skillId) => {
     // Ensure the global 'player' instance is passed, not the 'Player' class constructor.
-    upgradeSkill(skillId, player, PlayerData, saveGame, UI.notify);
+    upgradeSkill(skillId, player, PlayerData, SKILLS, saveGame, UI.notify);
 };
 
 // --- SAVE / LOAD ---
