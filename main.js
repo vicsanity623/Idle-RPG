@@ -5,7 +5,7 @@
 
 // --- CONFIG & GLOBALS ---
 const TILE_SIZE = 64;
-const MAP_SIZE = 40; 
+const MAP_SIZE = 40; // 40x40 tiles
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
 const canvas = document.getElementById('game-canvas');
@@ -24,12 +24,13 @@ const randomFloat = (min, max) => Math.random() * (max - min) + min;
 
 // --- GAME STATE ---
 const GameState = {
-    state: 'BOOT',
+    state: 'BOOT', // BOOT, MENU, PLAYING, DEAD
     level: 1,
     camera: { x: 0, y: 0 },
     lastTime: 0,
     deltaTime: 0,
-    frame: 0
+    frame: 0,
+    pendingLevelUp: false // FIX: Track if we need to change levels safely
 };
 
 // Persistent Data
@@ -49,11 +50,11 @@ let PlayerData = {
         'Ring':     { level: 1, atk: 8, critChance: 1.5 },
         'Earrings': { level: 1, critMult: 0.1, regen: 0.2 },
         'Necklace': { level: 1, regen: 1.0, hp: 10 },
-        'Boots':    { level: 1, def: 5, atkSpeed: 0.02 }
+        'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } // atkSpeed is a CD reduction factor
     }
 };
 
-// Entities Arrays
+// Entities
 let mapGrid = [];
 let exploredGrid = [];
 let entities = [];
@@ -62,9 +63,9 @@ let floatingTexts = [];
 let portal = null;
 let player = null;
 
-// --- MAP GENERATION ---
+// --- MAP GENERATION (Cellular Automata / Drunkard's Walk) ---
 function generateMap() {
-    mapGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(1)); 
+    mapGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(1)); // 1 = wall, 0 = floor
     exploredGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(false));
     
     let x = Math.floor(MAP_SIZE / 2);
@@ -72,12 +73,14 @@ function generateMap() {
     let floorCount = 0;
     const maxFloors = (MAP_SIZE * MAP_SIZE) * 0.4;
     
+    // Start area
     for(let i=-2; i<=2; i++) {
         for(let j=-2; j<=2; j++) {
             mapGrid[y+i][x+j] = 0;
         }
     }
 
+    // Drunkard's walk
     while (floorCount < maxFloors) {
         const dir = randomInt(0, 3);
         if (dir === 0 && y > 2) y--;
@@ -87,15 +90,18 @@ function generateMap() {
 
         if (mapGrid[y][x] === 1) {
             mapGrid[y][x] = 0;
+            // Carve thicker paths
             if(Math.random() > 0.5) mapGrid[y+1][x] = 0;
             if(Math.random() > 0.5) mapGrid[y][x+1] = 0;
             floorCount++;
         }
     }
 
+    // Place portal at the last walker position
     portal = { x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, radius: 30 };
 }
 
+// Map Collision Helper
 function isWall(x, y) {
     const col = Math.floor(x / TILE_SIZE);
     const row = Math.floor(y / TILE_SIZE);
@@ -114,6 +120,7 @@ function spawnLoot(x, y, type) {
 }
 
 function spawnProjectile(x1, y1, x2, y2) {
+    // Simple visual line via particles
     for(let i=0; i<5; i++) {
         particles.push(new Particle(x2, y2, '#fff'));
     }
@@ -138,6 +145,7 @@ function gainXp(amt) {
 
 function die() {
     GameState.state = 'DEAD';
+    // Lose half loot
     PlayerData.gold = Math.floor(PlayerData.gold / 2);
     PlayerData.shards = Math.floor(PlayerData.shards / 2);
     UI.notify("YOU DIED. Lost 50% Wealth.");
@@ -151,9 +159,9 @@ function die() {
 }
 
 function levelUpDungeon() {
-    GameState.level++;
-    UI.notify(`Entering Depth ${GameState.level}`);
-    initLevel();
+    // FIX: Don't call initLevel immediately. Set a flag.
+    // This prevents clearing the entities array while the loop is still using it.
+    GameState.pendingLevelUp = true;
 }
 
 function spawnEnemies() {
@@ -230,6 +238,7 @@ const endJoystick = () => {
 jZone.addEventListener('touchend', endJoystick);
 jZone.addEventListener('touchcancel', endJoystick);
 
+
 // --- UI MANAGER ---
 const UI = {
     updateStats: () => {
@@ -264,9 +273,11 @@ const UI = {
                 }
             }
         }
+        // Draw Player
         mmCtx.fillStyle = '#bb86fc';
         mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
-        if(exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
+        // Draw Portal if explored
+        if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
             mmCtx.fillStyle = '#00e5ff';
             mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
         }
@@ -281,6 +292,7 @@ const UI = {
         }
     },
     renderInventory: () => {
+        // 1. Stats Sheet
         const sheet = document.getElementById('stats-sheet');
         if (sheet && player) {
             sheet.innerHTML = `
@@ -293,12 +305,14 @@ const UI = {
             `;
         }
 
+        // 2. Specialized Gear Rendering
         const grid = document.getElementById('gear-grid');
         grid.innerHTML = '';
         GEAR_TYPES.forEach(type => {
             const gear = PlayerData.gear[type];
             const cost = gear.level * 10;
             
+            // Generate a string describing the bonuses
             let bonusText = "";
             if (gear.atk) bonusText += `Atk: +${Math.floor(gear.atk)} `;
             if (gear.hp) bonusText += `HP: +${Math.floor(gear.hp)} `;
@@ -330,13 +344,14 @@ const UI = {
             PlayerData.shards -= cost;
             gear.level++;
 
+            // Apply logic-based specialized scaling
             if (gear.atk !== undefined) gear.atk += randomInt(3, 7);
             if (gear.hp !== undefined) gear.hp += randomInt(15, 30);
             if (gear.def !== undefined) gear.def += randomInt(2, 5);
             if (gear.regen !== undefined) gear.regen += 0.2;
             if (gear.critChance !== undefined) gear.critChance += 0.4;
             if (gear.critMult !== undefined) gear.critMult += 0.03;
-            if (gear.atkSpeed !== undefined) gear.atkSpeed = Math.min(0.6, gear.atkSpeed + 0.01);
+            if (gear.atkSpeed !== undefined) gear.atkSpeed = Math.min(0.6, gear.atkSpeed + 0.01); // Cap speed boost
 
             UI.renderInventory();
             UI.updateStats();
@@ -348,6 +363,7 @@ const UI = {
         const el = document.getElementById('notification');
         el.innerText = msg;
         el.style.opacity = 1;
+        // Clean restart of the fade animation
         if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
         UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
     },
@@ -379,6 +395,7 @@ function loadGame() {
     if (save) {
         try {
             const data = JSON.parse(save);
+            // Deep merge gear to handle potential version updates
             PlayerData = { ...PlayerData, ...data };
             if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
         } catch(e) { console.error("Save Corrupted", e); }
@@ -405,13 +422,14 @@ function drawMap(camX, camY) {
             }
 
             if (mapGrid[r][c] === 1) {
-                ctx.fillStyle = '#1e1e1e';
+                ctx.fillStyle = '#1e1e1e'; // Wall
                 ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                 ctx.strokeStyle = '#2a2a2a';
                 ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
             } else {
-                ctx.fillStyle = '#161616';
+                ctx.fillStyle = '#161616'; // Floor
                 ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                // Subtle floor detail
                 ctx.fillStyle = '#1a1a1a';
                 ctx.fillRect(screenX + TILE_SIZE/4, screenY + TILE_SIZE/4, TILE_SIZE/2, TILE_SIZE/2);
             }
@@ -425,8 +443,11 @@ function draw() {
 
     if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') return;
 
+    // Camera follow player
     let camX = player.x - canvas.width / 2;
     let camY = player.y - canvas.height / 2;
+    
+    // Clamp camera to map bounds
     camX = Math.max(0, Math.min(camX, MAP_SIZE * TILE_SIZE - canvas.width));
     camY = Math.max(0, Math.min(camY, MAP_SIZE * TILE_SIZE - canvas.height));
 
@@ -434,19 +455,23 @@ function draw() {
     drawMap(camX, camY);
     ctx.translate(-camX, -camY);
 
-    const pRow = Math.floor(portal.y/TILE_SIZE);
-    const pCol = Math.floor(portal.x/TILE_SIZE);
-    if (exploredGrid[pRow] && exploredGrid[pRow][pCol]) {
-        const glow = Math.abs(Math.sin(Date.now()/500)) * 20;
-        ctx.shadowBlur = glow;
-        ctx.shadowColor = '#00e5ff';
-        ctx.fillStyle = '#00e5ff';
-        ctx.beginPath();
-        ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    // Render Portal
+    if (portal) {
+        const pRow = Math.floor(portal.y/TILE_SIZE);
+        const pCol = Math.floor(portal.x/TILE_SIZE);
+        if (exploredGrid[pRow] && exploredGrid[pRow][pCol]) {
+            const glow = Math.abs(Math.sin(Date.now()/500)) * 20;
+            ctx.shadowBlur = glow;
+            ctx.shadowColor = '#00e5ff';
+            ctx.fillStyle = '#00e5ff';
+            ctx.beginPath();
+            ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
     }
 
+    // Entities (Loot, Enemies, Player) sorted by Y for depth
     entities.sort((a, b) => a.y - b.y).forEach(e => {
         if (e.draw) e.draw(ctx);
     });
@@ -472,22 +497,38 @@ function loop(timestamp) {
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
+        // FIX: SAFE LEVEL TRANSITION
+        // Check for the level-up flag here, before we iterate through the entities.
+        if (GameState.pendingLevelUp) {
+            GameState.level++;
+            UI.notify(`Entering Depth ${GameState.level}`);
+            initLevel();
+            GameState.pendingLevelUp = false;
+        }
+
         HiveMind.update();
+        
+        // Use a reverse loop for safe removal during iteration
         for (let i = entities.length - 1; i >= 0; i--) {
             entities[i].update(dt);
         }
+
         for (let i = particles.length - 1; i >= 0; i--) {
             particles[i].update(dt);
         }
+
         for (let i = floatingTexts.length - 1; i >= 0; i--) {
             floatingTexts[i].update(dt);
         }
+
+        // Auto-spawn logic
         if (GameState.frame % 120 === 0) {
             const enemyCount = entities.filter(e => e instanceof Enemy).length;
             if (enemyCount < 10 + GameState.level) {
                 spawnEnemies();
             }
         }
+
         if (GameState.frame % 30 === 0) UI.updateMinimap();
     }
 
@@ -499,6 +540,7 @@ function loop(timestamp) {
 // --- BOOT SEQUENCE ---
 window.onload = () => {
     loadGame();
+    
     const fill = document.getElementById('loading-fill');
     let progress = 0;
     const bootInterval = setInterval(() => {
@@ -519,9 +561,11 @@ window.onload = () => {
 document.getElementById('play-btn').addEventListener('click', () => {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('ui-layer').classList.remove('hidden');
+    
     initLevel();
     UI.updateCurrencies();
     UI.checkDailyLogin();
+    
     GameState.state = 'PLAYING';
     GameState.lastTime = performance.now();
     requestAnimationFrame(loop);
