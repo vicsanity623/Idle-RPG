@@ -152,7 +152,8 @@ return (g.Robe.regen || 0) + (g.Necklace.regen || 0) +
         this.skillCritMultiplierBonus = 0;
         this.skillAttackSpeedFactorBonus = 0;
 
-        const bonuses = this._calculateSkillBonuses(PlayerData.learnedSkills);
+        // Use PlayerData.activePassiveSkills for currently applied bonuses, managed by skillSelector.js
+        const bonuses = this._calculateSkillBonuses(PlayerData.activePassiveSkills || []);
         this.skillHpBonus = bonuses.hpBonus;
         this.skillAtkBonus = bonuses.atkBonus;
         this.skillDefBonus = bonuses.defBonus;
@@ -179,12 +180,12 @@ return (g.Robe.regen || 0) + (g.Necklace.regen || 0) +
         const originalSkillCritMultiplierBonus = this.skillCritMultiplierBonus;
         const originalSkillAttackSpeedFactorBonus = this.skillAttackSpeedFactorBonus;
 
-        // Calculate bonuses with the simulated skill
-        const tempLearnedSkills = [...(PlayerData.learnedSkills || [])]; // Ensure it's an array
-        if (skillIdToSimulate && !tempLearnedSkills.includes(skillIdToSimulate)) {
-            tempLearnedSkills.push(skillIdToSimulate);
+        // Calculate bonuses with the simulated skill, based on currently active passive skills
+        const tempActivePassiveSkills = [...(PlayerData.activePassiveSkills || [])]; // Use activePassiveSkills
+        if (skillIdToSimulate && !tempActivePassiveSkills.includes(skillIdToSimulate)) {
+            tempActivePassiveSkills.push(skillIdToSimulate);
         }
-        const simulatedBonuses = this._calculateSkillBonuses(tempLearnedSkills);
+        const simulatedBonuses = this._calculateSkillBonuses(tempActivePassiveSkills);
 
         // Temporarily apply simulated bonuses to the player object
         this.skillHpBonus = simulatedBonuses.hpBonus;
