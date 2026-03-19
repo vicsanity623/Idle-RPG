@@ -3,6 +3,19 @@
  * Contains Player, Enemy, Loot, and Particle logic.
  */
 
+// Assume SkillsData is defined globally or imported, mapping skill IDs to their effects.
+// Example structure for SkillsData:
+const SkillsData = {
+    'hp_mastery': { type: 'hp', value: 100 },
+    'atk_boost': { type: 'attack', value: 15 },
+    'def_training': { type: 'defense', value: 5 },
+    'regen_aura': { type: 'regen', value: 0.5 },
+    'crit_focus': { type: 'critChance', value: 3 },
+    'crit_power': { type: 'critMultiplier', value: 0.1 },
+    'swift_strikes': { type: 'attackSpeedFactor', value: 0.05 }, // Reduces factor by 0.05
+    // Add more skill definitions here as needed
+};
+
 // --- HIVE MIND AI ---
 const HiveMind = {
     flankWeight: 0,
@@ -31,6 +44,12 @@ class Player {
             { id: 'dash', cdMax: 3, current: 0 }
         ];
         this.skillHpBonus = 0; // Initialize skill HP bonus
+        this.skillAtkBonus = 0; // NEW: Initialize skill Attack bonus
+        this.skillDefBonus = 0; // NEW: Initialize skill Defense bonus
+        this.skillRegenBonus = 0; // NEW: Initialize skill Regen bonus
+        this.skillCritChanceBonus = 0; // NEW: Initialize skill Crit Chance bonus
+        this.skillCritMultiplierBonus = 0; // NEW: Initialize skill Crit Multiplier bonus
+        this.skillAttackSpeedFactorBonus = 0; // NEW: Initialize skill Attack Speed Factor bonus
         this.applySkillEffects(); // Apply skill effects on initialization
         this.hp = this.getMaxHp(); // Calculate HP *after* skill effects are applied
     }
@@ -45,50 +64,166 @@ class Player {
 
     getAttackPower() { 
         const g = PlayerData.gear;
-        return Math.floor(10 + (PlayerData.level * 2) + 
-            (g.Weapon.atk || 0) + (g.Fists.atk || 0) + 
-            (g.Ring.atk || 0)); 
+return Math.floor(10 + (PlayerData.level * 2) +
+            (g.Weapon.atk || 0) + (g.Fists.atk || 0) +
+            (g.Ring.atk || 0) + this.skillAtkBonus); // NEW: Added skillAtkBonus
     }
 
     getDefense() { 
         const g = PlayerData.gear;
-        return Math.floor((g.Armor.def || 0) + (g.Head.def || 0) + 
-            (g.Legs.def || 0) + (g.Boots.def || 0)); 
+return Math.floor((g.Armor.def || 0) + (g.Head.def || 0) +
+            (g.Legs.def || 0) + (g.Boots.def || 0) + this.skillDefBonus); // NEW: Added skillDefBonus
     }
 
     getRegen() { 
         const g = PlayerData.gear;
-        return (g.Robe.regen || 0) + (g.Necklace.regen || 0) + 
-            (g.Earrings.regen || 0); 
+return (g.Robe.regen || 0) + (g.Necklace.regen || 0) +
+            (g.Earrings.regen || 0) + this.skillRegenBonus; // NEW: Added skillRegenBonus
     }
 
     getCritChance() { 
         const g = PlayerData.gear;
-        let base = 5 + (g.Fists.critChance || 0) + (g.Ring.critChance || 0);
+        let base = 5 + (g.Fists.critChance || 0) + (g.Ring.critChance || 0) + this.skillCritChanceBonus; // NEW: Added skillCritChanceBonus
         return Math.min(75, base); 
     }
 
     getCritMultiplier() { 
         const g = PlayerData.gear;
-        return 1.5 + (g.Weapon.critMult || 0) + (g.Earrings.critMult || 0); 
+        return 1.5 + (g.Weapon.critMult || 0) + (g.Earrings.critMult || 0) + this.skillCritMultiplierBonus; // NEW: Added skillCritMultiplierBonus 
     }
 
     getAttackSpeedFactor() {
         const g = PlayerData.gear;
-        return Math.max(0.3, 1.0 - (g.Boots.atkSpeed || 0));
+        return Math.max(0.3, 1.0 - (g.Boots.atkSpeed || 0) - this.skillAttackSpeedFactorBonus); // NEW: Added skillAttackSpeedFactorBonus
     }
 
+    /**
+     * NEW: Helper method to calculate all skill bonuses based on a given list of skill IDs.
+     * This centralizes the logic for applying skill effects.
+     * @param {string[]} skillList - An array of skill IDs to calculate bonuses for.
+     * @returns {object} An object containing all calculated bonuses.
+     */
+    _calculateSkillBonuses(skillList) {
+        let hpBonus = 0;
+        let atkBonus = 0;
+        let defBonus = 0;
+        let regenBonus = 0;
+        let critChanceBonus = 0;
+        let critMultiplierBonus = 0;
+        let attackSpeedFactorBonus = 0;
+
+        if (!skillList) return { hpBonus, atkBonus, defBonus, regenBonus, critChanceBonus, critMultiplierBonus, attackSpeedFactorBonus };
+
+        skillList.forEach(skillId => {
+            const skillEffect = SkillsData[skillId];
+            if (skillEffect) {
+                if (skillEffect.type === 'hp') {
+                    hpBonus += skillEffect.value;
+                } else if (skillEffect.type === 'attack') {
+                    atkBonus += skillEffect.value;
+                } else if (skillEffect.type === 'defense') {
+                    defBonus += skillEffect.value;
+                } else if (skillEffect.type === 'regen') {
+                    regenBonus += skillEffect.value;
+                } else if (skillEffect.type === 'critChance') {
+                    critChanceBonus += skillEffect.value;
+                } else if (skillEffect.type === 'critMultiplier') {
+                    critMultiplierBonus += skillEffect.value;
+                } else if (skillEffect.type === 'attackSpeedFactor') {
+                    attackSpeedFactorBonus += skillEffect.value;
+                }
+            }
+        });
+        return { hpBonus, atkBonus, defBonus, regenBonus, critChanceBonus, critMultiplierBonus, attackSpeedFactorBonus };
+    }
+
+    /**
+     * Refactored: Applies all passive skill effects based on PlayerData.learnedSkills.
+     */
     applySkillEffects() {
-        // Reset bonuses before applying
+        // Reset all skill bonuses before applying new ones
         this.skillHpBonus = 0;
-        // Example: Iterate through learned skills and apply their passive effects
-        // This assumes PlayerData.learnedSkills is an array of skill IDs
-        // and there's a global SkillsData object mapping IDs to effects.
-        // For this example, we'll hardcode a simple HP bonus if a specific skill is learned.
-        if (PlayerData.learnedSkills && PlayerData.learnedSkills.includes('hp_mastery')) {
-            this.skillHpBonus += 100; // Example: +100 HP from 'hp_mastery' skill
+        this.skillAtkBonus = 0;
+        this.skillDefBonus = 0;
+        this.skillRegenBonus = 0;
+        this.skillCritChanceBonus = 0;
+        this.skillCritMultiplierBonus = 0;
+        this.skillAttackSpeedFactorBonus = 0;
+
+        const bonuses = this._calculateSkillBonuses(PlayerData.learnedSkills);
+        this.skillHpBonus = bonuses.hpBonus;
+        this.skillAtkBonus = bonuses.atkBonus;
+        this.skillDefBonus = bonuses.defBonus;
+        this.skillRegenBonus = bonuses.regenBonus;
+        this.skillCritChanceBonus = bonuses.critChanceBonus;
+        this.skillCritMultiplierBonus = bonuses.critMultiplierBonus;
+        this.skillAttackSpeedFactorBonus = bonuses.attackSpeedFactorBonus;
+    }
+
+    /**
+     * NEW: Calculates and returns the player's current stats and projected stats
+     * if a specific skill were to be learned. Used for interactive skill tree previews.
+     * @param {string} skillIdToSimulate - The ID of the skill to simulate learning.
+     * @returns {object} An object containing 'current' and 'projected' stats.
+     */
+    getProjectedStats(skillIdToSimulate) {
+        // Store current skill bonuses to revert after simulation
+        const originalSkillHpBonus = this.skillHpBonus;
+        const originalSkillAtkBonus = this.skillAtkBonus;
+        const originalSkillDefBonus = this.skillDefBonus;
+        const originalSkillRegenBonus = this.skillRegenBonus;
+        const originalSkillCritChanceBonus = this.skillCritChanceBonus;
+        const originalSkillCritMultiplierBonus = this.skillCritMultiplierBonus;
+        const originalSkillAttackSpeedFactorBonus = this.skillAttackSpeedFactorBonus;
+
+        // Calculate bonuses with the simulated skill
+        const tempLearnedSkills = [...(PlayerData.learnedSkills || [])]; // Ensure it's an array
+        if (skillIdToSimulate && !tempLearnedSkills.includes(skillIdToSimulate)) {
+            tempLearnedSkills.push(skillIdToSimulate);
         }
-        // Other skill effects would go here (e.g., attack power, defense, etc.)
+        const simulatedBonuses = this._calculateSkillBonuses(tempLearnedSkills);
+
+        // Temporarily apply simulated bonuses to the player object
+        this.skillHpBonus = simulatedBonuses.hpBonus;
+        this.skillAtkBonus = simulatedBonuses.atkBonus;
+        this.skillDefBonus = simulatedBonuses.defBonus;
+        this.skillRegenBonus = simulatedBonuses.regenBonus;
+        this.skillCritChanceBonus = simulatedBonuses.critChanceBonus;
+        this.skillCritMultiplierBonus = simulatedBonuses.critMultiplierBonus;
+        this.skillAttackSpeedFactorBonus = simulatedBonuses.attackSpeedFactorBonus;
+
+        // Calculate projected stats using the temporarily applied bonuses
+        const projectedStats = {
+            hp: this.getMaxHp(),
+            attack: this.getAttackPower(),
+            defense: this.getDefense(),
+            regen: this.getRegen(),
+            critChance: this.getCritChance(),
+            critMultiplier: this.getCritMultiplier(),
+            attackSpeedFactor: this.getAttackSpeedFactor()
+        };
+
+        // Revert player object's skill bonuses to their original state
+        this.skillHpBonus = originalSkillHpBonus;
+        this.skillAtkBonus = originalSkillAtkBonus;
+        this.skillDefBonus = originalSkillDefBonus;
+        this.skillRegenBonus = originalSkillRegenBonus;
+        this.skillCritChanceBonus = originalSkillCritChanceBonus;
+        this.skillCritMultiplierBonus = originalSkillCritMultiplierBonus;
+        this.skillAttackSpeedFactorBonus = originalSkillAttackSpeedFactorBonus;
+
+        // Calculate current stats (after reverting, ensuring they reflect the actual learned skills)
+        const currentStats = {
+            hp: this.getMaxHp(),
+            attack: this.getAttackPower(),
+            defense: this.getDefense(),
+            regen: this.getRegen(),
+            critChance: this.getCritChance(),
+            critMultiplier: this.getCritMultiplier(),
+            attackSpeedFactor: this.getAttackSpeedFactor()
+        };
+
+        return { current: currentStats, projected: projectedStats };
     }
 
     update(dt) {
