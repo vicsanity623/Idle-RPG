@@ -5,9 +5,9 @@ const CACHE_NAME = 'dungeons-of-fate-v1';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
+    './entities.js',
     './main.js',
     './manifest.json',
-    // Add your icon files here once you create them
     './icon-192.png',
     './icon-512.png'
 ];
