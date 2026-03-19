@@ -14,6 +14,17 @@ class Inventory {
         this.skillPreviewCost = document.getElementById('skill-preview-cost');
         this.skillPreviewStats = document.getElementById('skill-preview-stats');
         this.skillUpgradeButton = document.getElementById('skill-upgrade-button'); // Button within the preview panel
+
+        // NEW: UI elements for skill simulation
+        this.skillSimulation = document.getElementById('skill-simulation');
+        this.simulationArea = document.getElementById('simulation-area');
+        this.dummyStats = document.getElementById('dummy-stats');
+        this.playerStats = document.getElementById('player-stats');
+        this.combatLog = document.getElementById('combat-log');
+        this.simulationControls = document.getElementById('simulation-controls');
+        this.startSimulationButton = document.getElementById('start-simulation');
+        this.pauseSimulationButton = document.getElementById('pause-simulation');
+        this.resetSimulationButton = document.getElementById('reset-simulation');
     }
 
     toggleInventory() {
