@@ -354,7 +354,7 @@
                             <p>Level: <span class="skill-level">0</span>/<span class="skill-max-level">5</span></p>
                             <button class="skill-upgrade-btn" onclick="UI.upgradeSkill(1)">Upgrade (1 SP)</button>
                         </div>
-                        <div class="skill-node" data-skill-id="2">
+                        <div class="skill-node" data-skill-id="2" onmouseover="UI.displaySkillPreview(2)" onmouseout="UI.hideSkillPreview()">
                             <h5>Swift Strikes</h5>
                             <p>Increases attack speed by 3% per level.</p>
                             <p>Level: <span class="skill-level">0</span>/<span class="skill-max-level">3</span></p>
@@ -363,7 +363,7 @@
                     </div>
                     <div class="skill-category">
                         <h4>Defensive Skills</h4>
-                        <div class="skill-node" data-skill-id="3">
+                        <div class="skill-node" data-skill-id="3" onmouseover="UI.displaySkillPreview(3)" onmouseout="UI.hideSkillPreview()">
                             <h5>Iron Skin</h5>
                             <p>Reduces incoming damage by 2% per level.</p>
                             <p>Level: <span class="skill-level">0</span>/<span class="skill-max-level">5</span></p>
