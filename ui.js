@@ -30,8 +30,9 @@ const UI = {
         previewPanel.style.display = 'block';
         
         // Logic for displaying current vs projected stats
-        document.getElementById('skill-preview-current-stats').textContent = 'Current Stats...';
-        document.getElementById('skill-preview-projected-stats').textContent = `Projected Stats (+${skillId * 10}% health/damage)`;
+        document.getElementById('skill-preview-current-stats').textContent = 'Current Stats...'; // Placeholder for actual current stats
+        const projectedChanges = player.getProjectedStats(skillId); // Assuming player is globally available and returns { health: percentage, damage: percentage }
+        document.getElementById('skill-preview-projected-stats').textContent = `Projected Stats (+${projectedChanges.health}% health, +${projectedChanges.damage}% damage)`;
     },
     
     hideSkillPreview() {
