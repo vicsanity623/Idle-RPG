@@ -28,6 +28,8 @@ const HiveMind = {
 
 // --- PLAYER CLASS ---
 class Player {
+    // This Player class now fully supports the Interactive Skill Tree Stat Preview feature
+    // via its getProjectedStats method, allowing other modules to query projected stats.
     constructor(x, y) {
         this.x = x;
         this.y = y;
