@@ -21,8 +21,8 @@ class Player {
         this.radius = 20;
         this.vx = 0;
         this.vy = 0;
-        this.speed = 250; 
-this.color = '#bb86fc';
+        this.speed = 250;
+        this.color = '#bb86fc';
 
         this.skills = [
             { id: 'pot', cdMax: 10, current: 0 },
