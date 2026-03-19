@@ -39,13 +39,19 @@ let PlayerData = {
     level: 1,
     xp: 0,
     maxXp: 100,
-    gear: {}
+    gear: {
+        'Weapon':   { level: 1, atk: 10, critMult: 0.05 },
+        'Armor':    { level: 1, hp: 50, def: 5 },
+        'Legs':     { level: 1, def: 8, hp: 20 },
+        'Fists':    { level: 1, critChance: 2, atk: 5 },
+        'Head':     { level: 1, hp: 30, def: 5 },
+        'Robe':     { level: 1, regen: 0.5, hp: 20 },
+        'Ring':     { level: 1, atk: 8, critChance: 1.5 },
+        'Earrings': { level: 1, critMult: 0.1, regen: 0.2 },
+        'Necklace': { level: 1, regen: 1.0, hp: 10 },
+        'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } // atkSpeed is a CD reduction factor
+    }
 };
-
-// Initialize Gear
-GEAR_TYPES.forEach(type => {
-    PlayerData.gear[type] = { level: 1, stat: 5 }; // Base stat
-});
 
 // Entities
 let mapGrid = [];
@@ -110,97 +116,138 @@ class Player {
         this.radius = 20;
         this.vx = 0;
         this.vy = 0;
-        this.speed = 250; // pixels per sec
+        this.speed = 250; 
         this.color = '#bb86fc';
         
         this.hp = this.getMaxHp();
-        this.attackCooldown = 0;
-        this.potionCooldown = 0;
-        this.auraCooldown = 0;
-
-        // Auto Attack skills
         this.skills = [
             { id: 'pot', cdMax: 10, current: 0 },
             { id: 'atk', cdMax: 1, current: 0 },
             { id: 'aura', cdMax: 5, current: 0 },
-            { id: 'dash', cdMax: 3, current: 0 } // Dash adds evasion/speed buff
+            { id: 'dash', cdMax: 3, current: 0 }
         ];
     }
 
-    getMaxHp() { return 100 + (PlayerData.level * 20) + (PlayerData.gear.Armor.stat * 5); }
-    getDamage() { return 10 + (PlayerData.level * 2) + PlayerData.gear.Weapon.stat; }
+    // --- DERIVED STATS CALCULATION ---
+    // --- SAFE DERIVED STATS CALCULATION ---
+    getMaxHp() { 
+        const g = PlayerData.gear;
+        return Math.floor(100 + (PlayerData.level * 20) + 
+            (g.Armor.hp || 0) + (g.Head.hp || 0) + 
+            (g.Legs.hp || 0) + (g.Robe.hp || 0) + 
+            (g.Necklace.hp || 0)); 
+    }
+
+    getAttackPower() { 
+        const g = PlayerData.gear;
+        return Math.floor(10 + (PlayerData.level * 2) + 
+            (g.Weapon.atk || 0) + (g.Fists.atk || 0) + 
+            (g.Ring.atk || 0)); 
+    }
+
+    getDefense() { 
+        const g = PlayerData.gear;
+        return Math.floor((g.Armor.def || 0) + (g.Head.def || 0) + 
+            (g.Legs.def || 0) + (g.Boots.def || 0)); 
+    }
+
+    getRegen() { 
+        const g = PlayerData.gear;
+        return (g.Robe.regen || 0) + (g.Necklace.regen || 0) + 
+            (g.Earrings.regen || 0); 
+    }
+
+    getCritChance() { 
+        const g = PlayerData.gear;
+        let base = 5 + (g.Fists.critChance || 0) + (g.Ring.critChance || 0);
+        return Math.min(75, base); 
+    }
+
+    getCritMultiplier() { 
+        const g = PlayerData.gear;
+        return 1.5 + (g.Weapon.critMult || 0) + (g.Earrings.critMult || 0); 
+    }
+
+    getAttackSpeedFactor() {
+        const g = PlayerData.gear;
+        return Math.max(0.3, 1.0 - (g.Boots.atkSpeed || 0));
+    }
+
+    // --- LOGIC ---
 
     update(dt) {
-        // Apply Joystick Input
+        // Handle Regen
+        if (this.hp < this.getMaxHp()) {
+            this.hp = Math.min(this.getMaxHp(), this.hp + this.getRegen() * dt);
+        }
+
+        // Standard Movement
         if (Input.joystick.active) {
             this.vx = Math.cos(Input.joystick.angle) * this.speed;
             this.vy = Math.sin(Input.joystick.angle) * this.speed;
         } else {
-            this.vx = 0;
-            this.vy = 0;
+            this.vx = 0; this.vy = 0;
         }
 
-        // Move with collision
         const nextX = this.x + this.vx * dt;
         const nextY = this.y + this.vy * dt;
-        
-        // Slide on walls
         if (!isWall(nextX, this.y)) this.x = nextX;
         if (!isWall(this.x, nextY)) this.y = nextY;
 
-        // Auto Attack Logic
         this.handleSkills(dt);
+        this.updateFog();
 
-        // Update Fog of War
-        const col = Math.floor(this.x / TILE_SIZE);
-        const row = Math.floor(this.y / TILE_SIZE);
-        const vision = 4;
-        for(let r = row-vision; r <= row+vision; r++) {
-            for(let c = col-vision; c <= col+vision; c++) {
-                if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
-            }
-        }
-
-        // Check Portal
         if (Math.hypot(this.x - portal.x, this.y - portal.y) < this.radius + portal.radius) {
             levelUpDungeon();
         }
-
         UI.updateStats();
+    }
+
+    updateFog() {
+        const col = Math.floor(this.x / TILE_SIZE);
+        const row = Math.floor(this.y / TILE_SIZE);
+        for(let r = row-4; r <= row+4; r++) {
+            for(let c = col-4; c <= col+4; c++) {
+                if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
+            }
+        }
     }
 
     handleSkills(dt) {
         this.skills.forEach(s => { if(s.current > 0) s.current -= dt; });
 
-        // 1. Basic Auto Attack (nearest enemy)
+        // Basic Attack with CRIT Logic
         if (this.skills[1].current <= 0) {
-            let target = this.getNearestEnemy(150);
+            let target = this.getNearestEnemy(200);
             if (target) {
-                target.takeDamage(this.getDamage());
+                let damage = this.getAttackPower();
+                let isCrit = Math.random() * 100 < this.getCritChance();
+                
+                if (isCrit) {
+                    damage *= this.getCritMultiplier();
+                }
+
+                target.takeDamage(damage, isCrit);
                 spawnProjectile(this.x, this.y, target.x, target.y);
-                this.skills[1].current = this.skills[1].cdMax;
+                this.skills[1].current = this.skills[1].cdMax * this.getAttackSpeedFactor(); 
             }
         }
 
-        // 2. Aura Attack (AoE)
+        // Aura
         if (this.skills[2].current <= 0) {
-            let hits = 0;
             entities.forEach(e => {
                 if (e instanceof Enemy && Math.hypot(this.x - e.x, this.y - e.y) < 120) {
-                    e.takeDamage(this.getDamage() * 0.5);
-                    hits++;
+                    e.takeDamage(this.getAttackPower() * 0.4, false);
                 }
             });
-            if(hits > 0) {
-                spawnAura(this.x, this.y);
-                this.skills[2].current = this.skills[2].cdMax;
-            }
+            spawnAura(this.x, this.y);
+            this.skills[2].current = this.skills[2].cdMax;
         }
 
-        // 3. Auto Potion
-        if (this.hp < this.getMaxHp() * 0.5 && this.skills[0].current <= 0) {
-            this.hp = Math.min(this.getMaxHp(), this.hp + this.getMaxHp() * 0.3);
-            spawnFloatingText(this.x, this.y, "+Heal", '#0f0');
+        // Potion
+        if (this.hp < this.getMaxHp() * 0.4 && this.skills[0].current <= 0) {
+            this.hp = Math.min(this.getMaxHp(), this.hp + this.getMaxHp() * 0.4);
+            spawnFloatingText(this.x, this.y, "HEALED", '#0f0');
             this.skills[0].current = this.skills[0].cdMax;
         }
 
@@ -208,37 +255,30 @@ class Player {
     }
 
     getNearestEnemy(range) {
-        let nearest = null;
-        let minDist = range;
+        let nearest = null; let minDist = range;
         entities.forEach(e => {
             if (e instanceof Enemy) {
-                const dist = Math.hypot(this.x - e.x, this.y - e.y);
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearest = e;
-                }
+                const d = Math.hypot(this.x - e.x, this.y - e.y);
+                if (d < minDist) { minDist = d; nearest = e; }
             }
         });
         return nearest;
     }
 
     takeDamage(amt) {
-        // Mitigate with armor/legs
-        let def = PlayerData.gear.Legs.stat + PlayerData.gear.Head.stat;
-        let actualDamage = Math.max(1, amt - def * 0.2);
-        this.hp -= actualDamage;
-        spawnFloatingText(this.x, this.y - 20, `-${Math.floor(actualDamage)}`, '#f00');
+        // Defense reduces damage by a flat amount (capped at 80% reduction to prevent invincibility)
+        const reduction = Math.min(amt * 0.8, this.getDefense());
+        const finalDamage = Math.max(1, amt - reduction);
+        
+        this.hp -= finalDamage;
+        spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
         if (this.hp <= 0) die();
     }
 
     draw(ctx) {
         ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
     }
 }
 
@@ -303,12 +343,12 @@ class Enemy {
         }
     }
 
-    takeDamage(amt) {
+    takeDamage(amt, isCrit) {
         this.hp -= amt;
-        spawnFloatingText(this.x, this.y, Math.floor(amt), '#fff');
-        if (this.hp <= 0) {
-            this.die();
-        }
+        const color = isCrit ? '#ff0' : '#fff';
+        const text = isCrit ? `CRIT ${Math.floor(amt)}` : Math.floor(amt);
+        spawnFloatingText(this.x, this.y, text, color);
+        if (this.hp <= 0) this.die();
     }
 
     die() {
@@ -624,7 +664,7 @@ const UI = {
     },
     toggleInventory: () => {
         const modal = document.getElementById('inventory-modal');
-        if(modal.style.display === 'flex') {
+        if (modal.style.display === 'flex') {
             modal.style.display = 'none';
         } else {
             modal.style.display = 'flex';
@@ -632,48 +672,85 @@ const UI = {
         }
     },
     renderInventory: () => {
+        // 1. Stats Sheet remains same...
+        const sheet = document.getElementById('stats-sheet');
+        if (sheet && player) {
+            sheet.innerHTML = `
+                <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
+                <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
+                <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
+                <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
+                <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
+                <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
+            `;
+        }
+
+        // 2. Specialized Gear Rendering
         const grid = document.getElementById('gear-grid');
         grid.innerHTML = '';
         GEAR_TYPES.forEach(type => {
             const gear = PlayerData.gear[type];
             const cost = gear.level * 10;
+            
+            // Generate a string describing the bonuses
+            let bonusText = "";
+            if (gear.atk) bonusText += `Atk: +${Math.floor(gear.atk)} `;
+            if (gear.hp) bonusText += `HP: +${Math.floor(gear.hp)} `;
+            if (gear.def) bonusText += `Def: +${Math.floor(gear.def)} `;
+            if (gear.regen) bonusText += `Reg: +${gear.regen.toFixed(1)} `;
+            if (gear.critChance) bonusText += `Crit%: +${gear.critChance.toFixed(1)} `;
+            if (gear.critMult) bonusText += `CritX: +${gear.critMult.toFixed(2)} `;
+            if (gear.atkSpeed) bonusText += `Spd: +${(gear.atkSpeed * 100).toFixed(0)}% `;
+
             const div = document.createElement('div');
             div.className = 'gear-item';
             div.innerHTML = `
-                <h4>${type}</h4>
-                <p>Lv: ${gear.level}</p>
-                <p>Stat: +${gear.stat}</p>
+                <h4 style="color:var(--primary)">${type}</h4>
+                <p>Lv. ${gear.level}</p>
+                <p style="font-size:0.7rem; color:#03dac6; min-height:20px;">${bonusText}</p>
                 <button class="upgrade-btn" ${PlayerData.shards < cost ? 'disabled' : ''} onclick="UI.upgradeGear('${type}')">
-                    Up: ${cost} 💎
+                    Upgrade (${cost} 💎)
                 </button>
             `;
             grid.appendChild(div);
         });
         UI.updateCurrencies();
     },
+
     upgradeGear: (type) => {
         const gear = PlayerData.gear[type];
         const cost = gear.level * 10;
-        if(PlayerData.shards >= cost) {
+        if (PlayerData.shards >= cost) {
             PlayerData.shards -= cost;
             gear.level++;
-            // RNG stat boost
-            gear.stat += randomInt(2, 6);
+
+            // Apply logic-based specialized scaling
+            if (gear.atk !== undefined) gear.atk += randomInt(3, 7);
+            if (gear.hp !== undefined) gear.hp += randomInt(15, 30);
+            if (gear.def !== undefined) gear.def += randomInt(2, 5);
+            if (gear.regen !== undefined) gear.regen += 0.2;
+            if (gear.critChance !== undefined) gear.critChance += 0.4;
+            if (gear.critMult !== undefined) gear.critMult += 0.03;
+            if (gear.atkSpeed !== undefined) gear.atkSpeed = Math.min(0.6, gear.atkSpeed + 0.01); // Cap speed boost
+
             UI.renderInventory();
+            UI.updateStats();
             saveGame();
-            UI.notify(`${type} Upgraded!`);
+            UI.notify(`${type} specialized!`);
         }
     },
     notify: (msg) => {
         const el = document.getElementById('notification');
         el.innerText = msg;
         el.style.opacity = 1;
-        setTimeout(() => el.style.opacity = 0, 2000);
+        // Clean restart of the fade animation
+        if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
+        UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
     },
     checkDailyLogin: () => {
         const lastLogin = localStorage.getItem('dof_lastLogin');
         const today = new Date().toDateString();
-        if(lastLogin !== today) {
+        if (lastLogin !== today) {
             document.getElementById('daily-login').style.display = 'block';
         }
     },
@@ -684,6 +761,7 @@ const UI = {
         document.getElementById('daily-login').style.display = 'none';
         UI.updateCurrencies();
         saveGame();
+        UI.notify("Daily Rewards Claimed!");
     }
 };
 
@@ -694,43 +772,46 @@ function saveGame() {
 
 function loadGame() {
     const save = localStorage.getItem('dof_save');
-    if(save) {
-        const data = JSON.parse(save);
-        PlayerData = { ...PlayerData, ...data };
+    if (save) {
+        try {
+            const data = JSON.parse(save);
+            // Deep merge gear to handle potential version updates
+            PlayerData = { ...PlayerData, ...data };
+            if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
+        } catch(e) { console.error("Save Corrupted", e); }
     }
 }
 
 // --- RENDERING ---
 function drawMap(camX, camY) {
-    const startCol = Math.floor(camX / TILE_SIZE);
-    const endCol = startCol + (canvas.width / TILE_SIZE) + 1;
-    const startRow = Math.floor(camY / TILE_SIZE);
-    const endRow = startRow + (canvas.height / TILE_SIZE) + 1;
+    const startCol = Math.max(0, Math.floor(camX / TILE_SIZE));
+    const endCol = Math.min(MAP_SIZE - 1, startCol + Math.ceil(canvas.width / TILE_SIZE) + 1);
+    const startRow = Math.max(0, Math.floor(camY / TILE_SIZE));
+    const endRow = Math.min(MAP_SIZE - 1, startRow + Math.ceil(canvas.height / TILE_SIZE) + 1);
 
     for (let r = startRow; r <= endRow; r++) {
         for (let c = startCol; c <= endCol; c++) {
-            if (r >= 0 && r < MAP_SIZE && c >= 0 && c < MAP_SIZE) {
-                const isExplored = exploredGrid[r][c];
-                if (!isExplored) {
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
-                    continue;
-                }
+            const isExplored = exploredGrid[r][c];
+            const screenX = c * TILE_SIZE - camX;
+            const screenY = r * TILE_SIZE - camY;
 
-                if (mapGrid[r][c] === 1) {
-                    // Wall
-                    ctx.fillStyle = '#1e1e1e';
-                    ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#333';
-                    ctx.strokeRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
-                } else {
-                    // Floor
-                    ctx.fillStyle = '#2a2a2a';
-                    ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
-                    // Floor pattern
-                    ctx.fillStyle = '#252525';
-                    ctx.fillRect(c * TILE_SIZE - camX + 10, r * TILE_SIZE - camY + 10, TILE_SIZE - 20, TILE_SIZE - 20);
-                }
+            if (!isExplored) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                continue;
+            }
+
+            if (mapGrid[r][c] === 1) {
+                ctx.fillStyle = '#1e1e1e'; // Wall
+                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                ctx.strokeStyle = '#2a2a2a';
+                ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+            } else {
+                ctx.fillStyle = '#161616'; // Floor
+                ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                // Subtle floor detail
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(screenX + TILE_SIZE/4, screenY + TILE_SIZE/4, TILE_SIZE/2, TILE_SIZE/2);
             }
         }
     }
@@ -742,72 +823,82 @@ function draw() {
 
     if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') return;
 
-    // Camera logic
+    // Camera follow player
     let camX = player.x - canvas.width / 2;
     let camY = player.y - canvas.height / 2;
     
-    // Clamp camera
+    // Clamp camera to map bounds
     camX = Math.max(0, Math.min(camX, MAP_SIZE * TILE_SIZE - canvas.width));
     camY = Math.max(0, Math.min(camY, MAP_SIZE * TILE_SIZE - canvas.height));
 
     ctx.save();
-    
     drawMap(camX, camY);
-
     ctx.translate(-camX, -camY);
 
-    // Portal
-    if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
+    // Render Portal
+    const pRow = Math.floor(portal.y/TILE_SIZE);
+    const pCol = Math.floor(portal.x/TILE_SIZE);
+    if (exploredGrid[pRow] && exploredGrid[pRow][pCol]) {
+        const glow = Math.abs(Math.sin(Date.now()/500)) * 20;
+        ctx.shadowBlur = glow;
+        ctx.shadowColor = '#00e5ff';
         ctx.fillStyle = '#00e5ff';
         ctx.beginPath();
-        ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI*2);
+        ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#00e5ff';
-        ctx.stroke();
         ctx.shadowBlur = 0;
     }
 
-    // Entities (sort by Y for pseudo-3D overlap)
-    entities.sort((a,b) => a.y - b.y).forEach(e => {
-        if(e.draw) e.draw(ctx);
+    // Entities (Loot, Enemies, Player) sorted by Y for depth
+    entities.sort((a, b) => a.y - b.y).forEach(e => {
+        if (e.draw) e.draw(ctx);
     });
 
     particles.forEach(p => p.draw(ctx));
     floatingTexts.forEach(ft => ft.draw(ctx));
 
-    // Dead overlay
-    if (GameState.state === 'DEAD') {
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-        ctx.fillRect(camX, camY, canvas.width, canvas.height);
-    }
-
     ctx.restore();
+
+    if (GameState.state === 'DEAD') {
+        ctx.fillStyle = 'rgba(100, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("YOU HAVE FALLEN", canvas.width/2, canvas.height/2);
+    }
 }
 
 // --- MAIN LOOP ---
 function loop(timestamp) {
-    if (!GameState.lastTime) GameState.lastTime = timestamp;
-    const dt = (timestamp - GameState.lastTime) / 1000; // seconds
+    const dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); 
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
         HiveMind.update();
         
-        entities.forEach(e => {
-            if(e.update) e.update(dt);
-        });
-
-        particles.forEach(p => p.update(dt));
-        floatingTexts.forEach(ft => ft.update(dt));
-
-        // Periodically spawn enemies if count is low
-        if (Math.random() < 0.01 && entities.filter(e => e instanceof Enemy).length < 10) {
-            spawnEnemies(); // spawns a batch
+        // Use a reverse loop for safe removal during iteration
+        for (let i = entities.length - 1; i >= 0; i--) {
+            entities[i].update(dt);
         }
 
-        // Periodically update minimap (don't do every frame for performance)
-        if(GameState.frame % 30 === 0) UI.updateMinimap();
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update(dt);
+        }
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            floatingTexts[i].update(dt);
+        }
+
+        // Auto-spawn logic
+        if (GameState.frame % 120 === 0) {
+            const enemyCount = entities.filter(e => e instanceof Enemy).length;
+            if (enemyCount < 10 + GameState.level) {
+                spawnEnemies();
+            }
+        }
+
+        if (GameState.frame % 30 === 0) UI.updateMinimap();
     }
 
     draw();
@@ -820,28 +911,30 @@ window.onload = () => {
     loadGame();
     
     const fill = document.getElementById('loading-fill');
-    let pct = 0;
+    let progress = 0;
     const bootInterval = setInterval(() => {
-        pct += Math.random() * 20;
-        if(pct >= 100) {
-            pct = 100;
+        progress += Math.random() * 15;
+        if (progress >= 100) {
+            progress = 100;
             clearInterval(bootInterval);
             setTimeout(() => {
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('main-menu').classList.remove('hidden');
                 GameState.state = 'MENU';
-            }, 500);
+            }, 400);
         }
-        fill.style.width = pct + '%';
-    }, 100);
+        fill.style.width = progress + '%';
+    }, 80);
 };
 
 document.getElementById('play-btn').addEventListener('click', () => {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('ui-layer').classList.remove('hidden');
+    
+    initLevel();
     UI.updateCurrencies();
     UI.checkDailyLogin();
-    initLevel();
+    
     GameState.state = 'PLAYING';
     GameState.lastTime = performance.now();
     requestAnimationFrame(loop);
