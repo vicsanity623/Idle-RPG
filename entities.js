@@ -22,8 +22,8 @@ class Player {
         this.vx = 0;
         this.vy = 0;
         this.speed = 250; 
-        this.color = '#bb86fc';
-        
+this.color = '#bb86fc';
+
         this.hp = this.getMaxHp();
         this.skills = [
             { id: 'pot', cdMax: 10, current: 0 },
@@ -31,6 +31,8 @@ class Player {
             { id: 'aura', cdMax: 5, current: 0 },
             { id: 'dash', cdMax: 3, current: 0 }
         ];
+        this.skillHpBonus = 0; // Initialize skill HP bonus
+        this.applySkillEffects(); // Apply skill effects on initialization
     }
 
     getMaxHp() { 
@@ -38,7 +40,7 @@ class Player {
         return Math.floor(100 + (PlayerData.level * 20) + 
             (g.Armor.hp || 0) + (g.Head.hp || 0) + 
             (g.Legs.hp || 0) + (g.Robe.hp || 0) + 
-            (g.Necklace.hp || 0)); 
+            (g.Necklace.hp || 0) + this.skillHpBonus); // Added skillHpBonus
     }
 
     getAttackPower() { 
@@ -74,6 +76,19 @@ class Player {
     getAttackSpeedFactor() {
         const g = PlayerData.gear;
         return Math.max(0.3, 1.0 - (g.Boots.atkSpeed || 0));
+    }
+
+    applySkillEffects() {
+        // Reset bonuses before applying
+        this.skillHpBonus = 0;
+        // Example: Iterate through learned skills and apply their passive effects
+        // This assumes PlayerData.learnedSkills is an array of skill IDs
+        // and there's a global SkillsData object mapping IDs to effects.
+        // For this example, we'll hardcode a simple HP bonus if a specific skill is learned.
+        if (PlayerData.learnedSkills && PlayerData.learnedSkills.includes('hp_mastery')) {
+            this.skillHpBonus += 100; // Example: +100 HP from 'hp_mastery' skill
+        }
+        // Other skill effects would go here (e.g., attack power, defense, etc.)
     }
 
     update(dt) {
