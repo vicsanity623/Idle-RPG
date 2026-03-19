@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Endless Dungeons of Fate</title>
+    <style>
+        :root {
+            --primary: #bb86fc;
+            --bg-dark: #121212;
+            --hp-color: #ff5252;
+            --xp-color: #03dac6;
+            --gold: #ffd700;
+            --shard: #00e5ff;
+            --panel-bg: rgba(18, 18, 18, 0.85);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #000; overflow: hidden; touch-action: none; color: white; }
+        
+        /* Canvases */
+        #game-canvas { position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        /* Screens */
+        .screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; background: var(--bg-dark); transition: opacity 0.5s; }
+        .hidden { opacity: 0; pointer-events: none; }
+        
+        /* Boot & Main Menu */
+        #loading-bar { width: 200px; height: 10px; border: 1px solid var(--primary); margin-top: 20px; border-radius: 5px; overflow: hidden; }
+        #loading-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
+        .title { font-size: 3rem; text-shadow: 0 0 10px var(--primary); text-align: center; margin-bottom: 20px; }
+        .btn { padding: 15px 40px; font-size: 1.5rem; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.3s; box-shadow: 0 0 15px rgba(187, 134, 252, 0.3); }
+        .btn:active { background: var(--primary); color: #000; }
+        
+        /* UI Layer */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; }
+        
+        /* Top Left: Player Stats */
+        #player-ui { position: absolute; top: 20px; left: 20px; display: flex; align-items: center; gap: 15px; pointer-events: auto; }
+        .avatar-box { width: 60px; height: 60px; border: 2px solid var(--primary); border-radius: 50%; background: #333; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 10px var(--primary); cursor: pointer;}
+        .bars { width: 150px; display: flex; flex-direction: column; gap: 8px; }
+        .bar-container { width: 100%; height: 15px; background: #333; border-radius: 8px; border: 1px solid #555; overflow: hidden; position: relative;}
+        .bar-fill { height: 100%; transition: width 0.3s ease-out; }
+        #hp-fill { background: var(--hp-color); width: 100%; box-shadow: 0 0 8px var(--hp-color); }
+        #xp-fill { background: var(--xp-color); width: 0%; box-shadow: 0 0 8px var(--xp-color); }
+        .bar-text { position: absolute; width: 100%; text-align: center; font-size: 0.7rem; top: 1px; font-weight: bold; text-shadow: 1px 1px 2px #000;}
+
+        /* Top Right: Minimap & Level */
+        #minimap-container { position: absolute; top: 20px; right: 20px; text-align: right; pointer-events: auto;}
+        #level-text { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 5px; text-shadow: 0 0 5px var(--primary);}
+        #minimap { width: 120px; height: 120px; background: rgba(0,0,0,0.5); border: 2px solid var(--primary); border-radius: 8px; }
+        
+        /* Currencies */
+        #currencies { position: absolute; top: 170px; right: 20px; display: flex; flex-direction: column; gap: 5px; text-align: right; font-weight: bold; font-size: 1.1rem; text-shadow: 1px 1px 2px #000;}
+        .gold-text { color: var(--gold); }
+        .shard-text { color: var(--shard); }
+
+        /* Bottom: Hotbar */
+        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto;}
+        .slot { width: 50px; height: 50px; border: 2px solid #555; background: rgba(0,0,0,0.6); border-radius: 8px; display: flex; justify-content: center; align-items: center; position: relative; }
+        .slot img { width: 80%; opacity: 0.8; }
+        .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0,0,0,0.7); transition: height 0.1s linear;}
+        .slot-key { position: absolute; top: -10px; right: -5px; background: var(--primary); color: #000; font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; font-weight: bold;}
+
+        /* Inventory Modal */
+        #inventory-modal { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(10px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 50; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+        .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #555; padding-bottom: 10px; margin-bottom: 15px; }
+        .close-btn { background: var(--hp-color); border: none; padding: 5px 15px; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .gear-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; overflow-y: auto; padding-right: 5px;}
+        .gear-item { background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 8px; padding: 10px; text-align: center; }
+        .gear-item h4 { font-size: 0.9rem; color: var(--primary); margin-bottom: 5px; text-transform: capitalize;}
+        .gear-item p { font-size: 0.8rem; margin: 2px 0; }
+        .upgrade-btn { margin-top: 8px; background: var(--shard); border: none; padding: 5px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; color: #000; }
+        .upgrade-btn:disabled { background: #555; cursor: not-allowed; }
+
+        /* Daily Login Popup */
+        #daily-login { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel-bg); border: 2px solid var(--gold); padding: 30px; border-radius: 12px; text-align: center; display: none; z-index: 60; pointer-events: auto; }
+        
+        /* Joystick Zone */
+        #joystick-zone { position: absolute; bottom: 0; left: 0; width: 50vw; height: 50vh; pointer-events: auto; }
+        .joystick-base { position: absolute; width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; display: none; transform: translate(-50%, -50%); pointer-events: none;}
+        .joystick-stick { position: absolute; width: 40px; height: 40px; background: rgba(187, 134, 252, 0.5); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;}
+        
+        /* Notifications */
+        #notification { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2rem; color: var(--gold); text-shadow: 0 0 5px #000; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen">
+        <h1 class="title">Dungeons of Fate</h1>
+        <p>Initializing Neural AI & Generating Realms...</p>
+        <div id="loading-bar"><div id="loading-fill"></div></div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen hidden">
+        <h1 class="title">Dungeons of Fate</h1>
+        <button id="play-btn" class="btn">Play Game</button>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="hidden">
+        
+        <!-- Player Stats -->
+        <div id="player-ui">
+            <div class="avatar-box" id="avatar-btn" onclick="UI.toggleInventory()">Lv<span id="p-level">1</span></div>
+            <div class="bars">
+                <div class="bar-container">
+                    <div id="hp-fill" class="bar-fill"></div>
+                    <div class="bar-text" id="hp-text">100 / 100</div>
+                </div>
+                <div class="bar-container">
+                    <div id="xp-fill" class="bar-fill"></div>
+                    <div class="bar-text" id="xp-text">0 / 100</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Minimap & Currencies -->
+        <div id="minimap-container">
+            <div id="level-text">Depth: <span id="d-level">1</span></div>
+            <canvas id="minimap" width="100" height="100"></canvas>
+        </div>
+        <div id="currencies">
+            <div class="gold-text">🪙 <span id="c-gold">0</span></div>
+            <div class="shard-text">💎 <span id="c-shard">0</span></div>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification"></div>
+
+        <!-- Hotbar -->
+        <div id="hotbar">
+            <div class="slot"><div class="slot-key">Pot</div><span style="font-size: 24px;">🧪</span><div class="cooldown-overlay" id="cd-0"></div></div>
+            <div class="slot"><div class="slot-key">Atk</div><span style="font-size: 24px;">⚔️</span><div class="cooldown-overlay" id="cd-1"></div></div>
+            <div class="slot"><div class="slot-key">Aura</div><span style="font-size: 24px;">🔥</span><div class="cooldown-overlay" id="cd-2"></div></div>
+            <div class="slot"><div class="slot-key">Dash</div><span style="font-size: 24px;">⚡</span><div class="cooldown-overlay" id="cd-3"></div></div>
+        </div>
+
+        <!-- Invisible Joystick -->
+        <div id="joystick-zone">
+            <div id="j-base" class="joystick-base"><div id="j-stick" class="joystick-stick"></div></div>
+        </div>
+
+        <!-- Inventory Modal -->
+        <div id="inventory-modal">
+            <div class="inv-header">
+                <h2>Equipment & Upgrades</h2>
+                <button class="close-btn" onclick="UI.toggleInventory()">X</button>
+            </div>
+            <div class="gear-grid" id="gear-grid">
+                <!-- Gear populated by JS -->
+            </div>
+        </div>
+
+        <!-- Daily Login -->
+        <div id="daily-login">
+            <h2>Daily Reward!</h2>
+            <p>Welcome back, hero.</p>
+            <p style="color:var(--gold); font-weight:bold; margin: 10px 0;">+500 Gold, +50 Shards</p>
+            <button class="btn" style="padding: 10px 20px; font-size: 1rem;" onclick="UI.claimDaily()">Claim</button>
+        </div>
+    </div>
+
+    <!-- Main Game Logic -->
+    <script src="main.js"></script>
+</body>
+</html>
