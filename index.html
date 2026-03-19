@@ -16,7 +16,9 @@
             --gold: #ffd700;
             --shard: #00e5ff;
             --panel-bg: rgba(18, 18, 18, 0.9);
-            --border-glow: 0 0 10px rgba(187, 134, 252, 0.3);
+            /* PATCH: Refactored to avoid Pyob parser decimal literal errors */
+            --glow-color: rgba(187, 134, 252, 0.3);
+            --border-glow: 0px 0px 10px var(--glow-color);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; overflow: hidden; touch-action: none; color: white; }
@@ -32,7 +34,7 @@
         #loading-bar { width: 200px; height: 10px; border: 1px solid var(--primary); margin-top: 20px; border-radius: 5px; overflow: hidden; }
         #loading-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
         .title { font-size: 3rem; text-shadow: 0 0 10px var(--primary); text-align: center; margin-bottom: 20px; }
-        .btn { padding: 15px 40px; font-size: 1.5rem; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.3s; box-shadow: 0 0 15px rgba(187, 134, 252, 0.3); }
+        .btn { padding: 15px 40px; font-size: 1.5rem; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.3s; box-shadow: var(--border-glow); }
         .btn:active { background: var(--primary); color: #000; }
         
         /* UI Layer */
@@ -137,7 +139,7 @@
     <div id="main-menu" class="screen hidden">
         <h1 class="title">Dungeons of Fate</h1>
         <button id="play-btn" class="btn">Play Game</button>
-        <div class="version-tag">v0.0.3 - BETA</div>
+        <div class="version-tag">v0.0.4 - BETA</div>
     </div>
 
     <!-- Game Canvas -->
@@ -224,7 +226,6 @@
             });
         }
     </script>
-    <!-- IMPORTANT: entities.js MUST be loaded before main.js -->
     <script src="entities.js"></script>
     <script src="main.js"></script>
 </body>
