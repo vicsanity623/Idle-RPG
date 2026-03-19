@@ -8,6 +8,51 @@ const TILE_SIZE = 64;
 const MAP_SIZE = 40; // 40x40 tiles
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
+// Define Skill Tree structure
+const SKILLS = {
+    'HP_BOOST_1': {
+        id: 'HP_BOOST_1',
+        name: 'Vitality Training',
+        description: 'Increases maximum HP by 20 per level.',
+        maxLevel: 5,
+        cost: (level) => 1 + level, // Cost in skill points
+        effect: (level) => ({ hp: level * 20 }),
+        prerequisites: [],
+        position: { x: 0, y: 0 } // For potential visual tree layout
+    },
+    'ATK_BOOST_1': {
+        id: 'ATK_BOOST_1',
+        name: 'Combat Prowess',
+        description: 'Increases base attack power by 5 per level.',
+        maxLevel: 5,
+        cost: (level) => 1 + level,
+        effect: (level) => ({ atk: level * 5 }),
+        prerequisites: [],
+        position: { x: 1, y: 0 }
+    },
+    'CRIT_CHANCE_1': {
+        id: 'CRIT_CHANCE_1',
+        name: 'Precision Strike',
+        description: 'Increases critical hit chance by 1% per level.',
+        maxLevel: 3,
+        cost: (level) => 2 + level,
+        effect: (level) => ({ critChance: level * 1 }),
+        prerequisites: ['ATK_BOOST_1'], // Requires ATK_BOOST_1 at any level
+        position: { x: 2, y: 0 }
+    },
+    'REGEN_BOOST_1': {
+        id: 'REGEN_BOOST_1',
+        name: 'Rapid Recovery',
+        description: 'Increases HP regeneration by 0.2 per second per level.',
+        maxLevel: 3,
+        cost: (level) => 2 + level,
+        effect: (level) => ({ regen: level * 0.2 }),
+        prerequisites: ['HP_BOOST_1'],
+        position: { x: 0, y: 1 }
+    }
+    // Add more skills here
+};
+
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
@@ -40,6 +85,8 @@ let PlayerData = {
     level: 1,
     xp: 0,
     maxXp: 100,
+    skillPoints: 0, // NEW: Skill points for talent system
+    learnedSkills: {}, // NEW: Object to store learned skills and their levels { skillId: level }
     gear: {
         'Weapon':   { level: 1, atk: 10, critMult: 0.05 },
         'Armor':    { level: 1, hp: 50, def: 5 },
@@ -136,8 +183,10 @@ function gainXp(amt) {
         PlayerData.xp -= PlayerData.maxXp;
         PlayerData.level++;
         PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        PlayerData.skillPoints += 1; // NEW: Award 1 skill point on level up
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
+        UI.updateSkillPointsDisplay(); // NEW: Update skill points UI
     }
     UI.updateStats();
     saveGame();
@@ -252,6 +301,10 @@ const UI = {
         document.getElementById('c-gold').innerText = PlayerData.gold;
         document.getElementById('c-shard').innerText = PlayerData.shards;
     },
+    updateSkillPointsDisplay: () => { // NEW: Update skill points display
+        const spEl = document.getElementById('skill-points-display');
+        if (spEl) spEl.innerText = PlayerData.skillPoints;
+    },
     updateHotbar: (skills) => {
         skills.forEach((s, i) => {
             const overlay = document.getElementById(`cd-${i}`);
@@ -282,19 +335,40 @@ const UI = {
             mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
         }
     },
-    toggleInventory: () => {
+    toggleInventory: (tab = 'gear') => { // MODIFIED: Added tab parameter
         const modal = document.getElementById('inventory-modal');
         if (modal.style.display === 'flex') {
             modal.style.display = 'none';
         } else {
             modal.style.display = 'flex';
-            UI.renderInventory();
+            if (tab === 'skills') {
+                UI.showSkillsTab();
+            } else {
+                UI.showGearTab();
+            }
         }
+    },
+    showGearTab: () => { // NEW: Function to show gear tab
+        document.getElementById('gear-tab-btn').classList.add('active');
+        document.getElementById('skills-tab-btn').classList.remove('active');
+        document.getElementById('gear-content').style.display = 'flex';
+        document.getElementById('skills-content').style.display = 'none';
+        UI.renderInventory();
+    },
+    showSkillsTab: () => { // NEW: Function to show skills tab
+        document.getElementById('gear-tab-btn').classList.remove('active');
+        document.getElementById('skills-tab-btn').classList.add('active');
+        document.getElementById('gear-content').style.display = 'none';
+        document.getElementById('skills-content').style.display = 'flex';
+        UI.renderSkills();
+        UI.updateSkillPointsDisplay();
     },
     renderInventory: () => {
         // 1. Stats Sheet
         const sheet = document.getElementById('stats-sheet');
         if (sheet && player) {
+            // Ensure player stats are updated before rendering
+            player.applySkillEffects(); // NEW: Apply skill effects before rendering stats
             sheet.innerHTML = `
                 <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
                 <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
@@ -335,6 +409,90 @@ const UI = {
             grid.appendChild(div);
         });
         UI.updateCurrencies();
+    },
+
+    renderSkills: () => { // NEW: Method to render the skill tree
+        const skillTreeContainer = document.getElementById('skills-grid');
+        skillTreeContainer.innerHTML = ''; // Clear previous skills
+
+        const skillPointsDisplay = document.getElementById('skill-points-display');
+        if (skillPointsDisplay) skillPointsDisplay.innerText = PlayerData.skillPoints;
+
+        Object.values(SKILLS).forEach(skill => {
+            const currentLevel = PlayerData.learnedSkills[skill.id] || 0;
+            const nextLevel = currentLevel + 1;
+            const cost = skill.cost(currentLevel);
+            const canAfford = PlayerData.skillPoints >= cost;
+            const isMaxLevel = currentLevel >= skill.maxLevel;
+
+            // Check prerequisites
+            const hasPrerequisites = skill.prerequisites.every(prereqId => PlayerData.learnedSkills[prereqId] > 0);
+            const canUpgrade = canAfford && !isMaxLevel && hasPrerequisites;
+
+            let effectText = '';
+            if (skill.effect) {
+                const nextEffect = skill.effect(nextLevel);
+                for (const key in nextEffect) {
+                    effectText += `${key.toUpperCase()}: +${nextEffect[key]} `;
+                }
+            }
+
+            const skillDiv = document.createElement('div');
+            skillDiv.className = 'skill-node';
+            if (isMaxLevel) skillDiv.classList.add('max-level');
+            else if (currentLevel > 0) skillDiv.classList.add('learned');
+            if (!hasPrerequisites) skillDiv.classList.add('locked');
+
+            skillDiv.innerHTML = `
+                <h4 style="color:var(--primary)">${skill.name}</h4>
+                <p>${skill.description}</p>
+                <p>Level: ${currentLevel} / ${skill.maxLevel}</p>
+                <p style="font-size:0.7rem; color:#03dac6; min-height:20px;">${effectText}</p>
+                <button class="upgrade-btn" ${!canUpgrade ? 'disabled' : ''} onclick="UI.upgradeSkill('${skill.id}')">
+                    ${isMaxLevel ? 'MAX LEVEL' : `Upgrade (${cost} SP)`}
+                </button>
+                ${!hasPrerequisites && !isMaxLevel ? `<p class="prereq-text">Requires: ${skill.prerequisites.join(', ')}</p>` : ''}
+            `;
+            skillTreeContainer.appendChild(skillDiv);
+        });
+    },
+
+    upgradeSkill: (skillId) => { // NEW: Method to handle skill upgrades
+        const skill = SKILLS[skillId];
+        if (!skill) {
+            UI.notify("Skill not found!");
+            return;
+        }
+
+        const currentLevel = PlayerData.learnedSkills[skillId] || 0;
+        const nextLevel = currentLevel + 1;
+        const cost = skill.cost(currentLevel);
+
+        // Check prerequisites
+        const hasPrerequisites = skill.prerequisites.every(prereqId => PlayerData.learnedSkills[prereqId] > 0);
+
+        if (currentLevel >= skill.maxLevel) {
+            UI.notify(`${skill.name} is already at max level!`);
+            return;
+        }
+        if (PlayerData.skillPoints < cost) {
+            UI.notify("Not enough Skill Points!");
+            return;
+        }
+        if (!hasPrerequisites) {
+            UI.notify(`Requires: ${skill.prerequisites.map(id => SKILLS[id].name).join(', ')}`);
+            return;
+        }
+
+        PlayerData.skillPoints -= cost;
+        PlayerData.learnedSkills[skillId] = nextLevel;
+
+        player.applySkillEffects(); // NEW: Re-apply all skill effects to update player stats
+        UI.renderSkills(); // Re-render the skill tree to update button states
+        UI.updateStats(); // Update player stats display
+        UI.updateSkillPointsDisplay(); // Update skill points display
+        saveGame();
+        UI.notify(`${skill.name} upgraded to Level ${nextLevel}!`);
     },
 
     upgradeGear: (type) => {
@@ -398,6 +556,9 @@ function loadGame() {
             // Deep merge gear to handle potential version updates
             PlayerData = { ...PlayerData, ...data };
             if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
+            // NEW: Ensure learnedSkills is initialized if not present in old save
+            if (!PlayerData.learnedSkills) PlayerData.learnedSkills = {};
+            if (player) player.applySkillEffects(); // NEW: Apply skill effects on load
         } catch(e) { console.error("Save Corrupted", e); }
     }
 }
@@ -504,6 +665,7 @@ function loop(timestamp) {
             GameState.level++;
             UI.notify(`Entering Depth ${GameState.level}`);
             initLevel();
+            player.applySkillEffects(); // NEW: Apply skill effects after level init
             GameState.pendingLevelUp = false;
         }
 
@@ -566,8 +728,13 @@ document.getElementById('play-btn').addEventListener('click', () => {
     initLevel();
     UI.updateCurrencies();
     UI.checkDailyLogin();
-    
+    UI.updateSkillPointsDisplay(); // NEW: Update skill points display on game start
+
     GameState.state = 'PLAYING';
     GameState.lastTime = performance.now();
     requestAnimationFrame(loop);
 });
+
+// NEW: Add event listeners for inventory tab switching
+document.getElementById('gear-tab-btn').addEventListener('click', () => UI.showGearTab());
+document.getElementById('skills-tab-btn').addEventListener('click', () => UI.showSkillsTab());
