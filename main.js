@@ -495,6 +495,7 @@ function draw() {
 function loop(timestamp) {
     const dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); 
     GameState.lastTime = timestamp;
+    GameState.deltaTime = dt; // Assign the calculated delta time
 
     if (GameState.state === 'PLAYING') {
         // FIX: SAFE LEVEL TRANSITION
