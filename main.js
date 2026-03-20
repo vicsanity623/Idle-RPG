@@ -368,7 +368,6 @@ const UI = {
         const sheet = document.getElementById('stats-sheet');
         if (sheet && player) {
             // Ensure player stats are updated before rendering
-            player.applySkillEffects(); // NEW: Apply skill effects before rendering stats
             sheet.innerHTML = `
                 <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
                 <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
