@@ -249,6 +249,11 @@
         </div>
 
         <!-- Inventory Modal -->
+<div id="approved-feature" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel-bg); border: 2px solid var(--primary); padding: 20px; border-radius: 12px; text-align: center; display: none; z-index: 50; pointer-events: auto; box-shadow: 0 0 30px rgba(0,0,0,0.9);">
+    <h2>APPROVED Feature</h2>
+    <p>This feature has been approved.</p>
+    <button class="btn" style="padding: 10px 20px; font-size: 1rem;" onclick="UI.showApprovedFeature()">Show Approved Feature</button>
+</div>
         <div id="inventory-modal">
             <div class="inv-header">
                 <div class="tab-buttons">
@@ -315,6 +320,11 @@
     </div>
 
     <script>
+// Add a function to show the approved feature
+function showApprovedFeature() {
+    document.getElementById("approved-feature").style.display = "block";
+}
+</script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
