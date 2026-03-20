@@ -387,7 +387,12 @@ const UI = {
 
 // --- SAVE / LOAD ---
 function saveGame() {
-    localStorage.setItem('dof_save', JSON.stringify(PlayerData));
+    try {
+        localStorage.setItem('dof_save', JSON.stringify(PlayerData));
+    } catch (e) {
+        console.error("Failed to save game:", e);
+        UI.notify("Save failed: Storage full!");
+    }
 }
 
 function loadGame() {
