@@ -225,6 +225,30 @@
             color: #777;
             cursor: not-allowed;
         }
+        /* Dungeon Preview Styling */
+        #dungeon-preview {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--panel-bg);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            z-index: 70;
+            pointer-events: auto;
+            backdrop-filter: blur(10px);
+        }
+        #dungeon-preview h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        #dungeon-preview-canvas {
+            border: 1px solid #555;
+            background: #000;
+        }
+        .hidden { opacity: 0; pointer-events: none; } /* Ensure this is defined for general use */
     </style>
 </head>
 <body>
@@ -240,6 +264,7 @@
     <div id="main-menu" class="screen hidden">
         <h1 class="title">Dungeons of Fate</h1>
         <button id="play-btn" class="btn">Play Game</button>
+        <button id="generate-dungeon-btn" class="btn" onclick="generateDungeon()">Generate Dungeon</button>
         <div class="version-tag">v0.0.4 - BETA</div>
     </div>
 
@@ -353,6 +378,12 @@
             <p style="color:var(--gold); font-weight:bold; margin: 10px 0;">+500 Gold, +50 Shards</p>
             <button class="btn" style="padding: 10px 20px; font-size: 1rem;" onclick="UI.claimDaily()">Claim</button>
         </div>
+    </div>
+
+    <!-- New HTML layout for Dungeon Preview -->
+    <div id="dungeon-preview" class="hidden">
+        <h3>Dungeon Preview</h3>
+        <canvas id="dungeon-preview-canvas" width="300" height="300"></canvas>
     </div>
 
     <script>
