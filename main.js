@@ -550,7 +550,7 @@ const UI = {
 UI.renderSkills = (player) => renderSkills(player);
 
 UI.upgradeSkill = (skillId) => {
-    const player = Player; // Make sure to pass the player instance
+    // Ensure the global 'player' instance is passed, not the 'Player' class constructor.
     upgradeSkill(skillId, player, PlayerData, saveGame, UI.notify);
 };
 
