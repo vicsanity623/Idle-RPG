@@ -450,7 +450,7 @@ const UI = {
                 <button class="upgrade-btn" ${!canUpgrade ? 'disabled' : ''} onclick="UI.upgradeSkill('${skill.id}')">
                     ${isMaxLevel ? 'MAX LEVEL' : `Upgrade (${cost} SP)`}
                 </button>
-                ${!hasPrerequisites && !isMaxLevel ? `<p class="prereq-text">Requires: ${skill.prerequisites.join(', ')}</p>` : ''}
+                ${!hasPrerequisites && !isMaxLevel ? `<p class="prereq-text">Requires: ${skill.prerequisites.map(id => SKILLS[id].name).join(', ')}</p>` : ''}
             `;
             skillTreeContainer.appendChild(skillDiv);
         });
