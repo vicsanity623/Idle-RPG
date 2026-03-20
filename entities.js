@@ -273,7 +273,9 @@ class Loot {
             spawnFloatingText(this.x, this.y, `+5 Shards (Gear)`, '#bb86fc');
         }
         UI.updateCurrencies();
-        saveGame();
+        if (typeof saveGame === 'function') {
+            saveGame();
+        }
     }
     draw(ctx) {
         ctx.fillStyle = this.type === 'gold' ? '#ffd700' : this.type === 'shard' ? '#00e5ff' : '#bb86fc';
