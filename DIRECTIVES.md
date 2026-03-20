@@ -1,6 +1,12 @@
 # CORE ARCHITECTURAL DIRECTIVES
 
-### IMMEDIATE MISSION OBJECTIVES
+### 🎯 IMMEDIATE MISSION OBJECTIVES
+
+- **TASK 0 (CRITICAL - Refactor): Extract Player logic to dedicated module.**
+    - **Action:** Move the `Player` class out of `entities.js` and into `player.js`.
+    - **Dependency Fix:** Ensure `player.js` correctly imports required constants (like `TILE_SIZE`) and handles its relation to `PlayerData`.
+    - **Import Sync:** Update `entities.js`, `main.js`, and `index.html` to correctly import the new `Player` module.
+    - **Validation:** The game must successfully launch without "Player is not defined" errors.
 - **TASK 1 (Persistence):** Implement a global `saveGame()` and `loadGame()` system in `main.js`. 
     - Use `localStorage` to save the `PlayerData` and other objects like dungeon depth level and save the object as a JSON string.
     - Ensure the game auto-loads on page refresh.
