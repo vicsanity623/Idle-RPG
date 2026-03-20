@@ -14,7 +14,8 @@ const HiveMind = {
 };
 
 // --- PLAYER CLASS ---
-class Player {
+import { Player } from './player';
+// [Player class logic moved to player.js]
     constructor(x, y) {
         this.x = x;
         this.y = y;
