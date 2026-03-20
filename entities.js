@@ -125,7 +125,9 @@ class Player {
                 let isCrit = Math.random() * 100 < this.getCritChance();
                 if (isCrit) damage *= this.getCritMultiplier();
                 target.takeDamage(damage, isCrit);
-                spawnProjectile(this.x, this.y, target.x, target.y);
+                for (let i = 0; i < randomInt(3, 5); i++) {
+                    particles.push(new Particle(this.x, this.y, this.color)); 
+                }
                 this.skills[1].current = this.skills[1].cdMax * this.getAttackSpeedFactor(); 
             }
         }
