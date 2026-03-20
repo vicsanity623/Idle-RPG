@@ -64,8 +64,7 @@ class Inventory {
             console.log(`Upgraded skill ${skillId}. Player stats updated.`);
             this.updateSkillNodeVisual(skillId, player); // Update the visual state of the skill node
             this.displaySkillPreview(skillId, player); // Refresh preview for the upgraded skill
-            // Optionally, update the main stats sheet if visible
-            this.updateStatsSheet(player); // Update the main stats sheet
+            // The main stats sheet update is handled by main.js after UI.upgradeSkill returns.
         } else {
             console.log(`Cannot upgrade skill ${skillId}. Not enough points or max level.`);
             // Provide UI feedback to the user (e.g., a temporary message or visual cue)
