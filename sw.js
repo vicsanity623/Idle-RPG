@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dungeons-of-fate-v1';
+const CACHE_NAME = 'dungeons-of-fate-v1.0.1';
 
 // List of files to cache for offline use
 // Using relative paths ensures compatibility with GitHub Pages subdirectories
