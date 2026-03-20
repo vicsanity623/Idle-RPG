@@ -511,6 +511,7 @@ const UI = {
             if (gear.atkSpeed !== undefined) gear.atkSpeed = Math.min(0.6, gear.atkSpeed + 0.01); // Cap speed boost
 
             UI.renderInventory();
+            player.applySkillEffects(); // Apply gear effects to update player stats
             UI.updateStats();
             saveGame();
             UI.notify(`${type} specialized!`);
