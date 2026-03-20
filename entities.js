@@ -166,6 +166,7 @@ return (g.Robe.regen || 0) + (g.Necklace.regen || 0) +
      * @param {string} skillIdToSimulate - The ID of the skill to simulate learning.
      * @returns {object} An object containing 'current' and 'projected' stats.
      */
+    // This method is a core component of the interactive skill tree preview feature.
     getProjectedStats(skillIdToSimulate) {
         // Store current skill bonuses to revert after simulation
         const originalSkillHpBonus = this.skillHpBonus;
