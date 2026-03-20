@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
     './index.html',
     './entities.js',
     './main.js',
+    './inventory.js',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'
