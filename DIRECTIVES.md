@@ -2,7 +2,7 @@
 
 ### IMMEDIATE MISSION OBJECTIVES
 - **TASK 1 (Persistence):** Implement a global `saveGame()` and `loadGame()` system in `main.js`. 
-    - Use `localStorage` to save the `PlayerData` object as a JSON string.
+    - Use `localStorage` to save the `PlayerData` and other objects like dungeon depth level and save the object as a JSON string.
     - Ensure the game auto-loads on page refresh.
 - **TASK 2 (Visual Juice):** Implement a projectile particle system.
     - When a player attacks, spawn 3-5 small particles using the `Particle` class in `entities.js`.
