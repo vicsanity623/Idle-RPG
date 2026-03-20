@@ -49,34 +49,32 @@ const SKILLS = {
 };
 
 // Method to render the skill tree in the UI
-export const renderSkills = (player) => {
+export const renderSkills = (player, skillsData) => { // Added skillsData param
     const skillTreeContainer = document.getElementById('skills-grid');
-    skillTreeContainer.innerHTML = ''; // Clear previous skills
+    if (!skillTreeContainer) return;
+    skillTreeContainer.innerHTML = ''; 
 
     const skillPointsDisplay = document.getElementById('skill-points-display');
     if (skillPointsDisplay) {
         skillPointsDisplay.innerText = player.skillPoints;
     }
 
-    Object.values(SKILLS).forEach(skill => {
+    // Use skillsData instead of the local SKILLS constant for flexibility
+    Object.values(skillsData).forEach(skill => {
         const currentLevel = player.learnedSkills[skill.id] || 0;
         const nextLevel = currentLevel + 1;
         const cost = skill.cost(currentLevel);
         const canAfford = player.skillPoints >= cost;
         const isMaxLevel = currentLevel >= skill.maxLevel;
 
-        // Check prerequisites
-        const hasPrerequisites = skill.prerequisites.every(prereqId => player.learnedSkills[prereqId] > 0);
+        const hasPrerequisites = skill.prerequisites.every(prereqId => (player.learnedSkills[prereqId] || 0) > 0);
         const canUpgrade = canAfford && !isMaxLevel && hasPrerequisites;
 
         let effectText = '';
         if (skill.effect) {
-            const currentEffect = skill.effect(currentLevel);
             const nextEffect = skill.effect(nextLevel);
             for (const key in nextEffect) {
-                const currentVal = currentEffect[key] || 0;
-                const incrementalVal = nextEffect[key] - currentVal;
-                effectText += `${key.toUpperCase()}: +${incrementalVal} `;
+                effectText += `${key.toUpperCase()}: +${nextEffect[key]} `;
             }
         }
 
@@ -91,48 +89,34 @@ export const renderSkills = (player) => {
             <p>${skill.description}</p>
             <p>Level: ${currentLevel} / ${skill.maxLevel}</p>
             <p style="font-size:0.7rem; color:#03dac6; min-height:20px;">${effectText}</p>
-            <button class="upgrade-btn" ${!canUpgrade ? 'disabled' : ''} onclick="handleUpgradeSkill('${skill.id}')">
+            <button class="upgrade-btn" ${!canUpgrade ? 'disabled' : ''} onclick="UI.upgradeSkill('${skill.id}')">
                 ${isMaxLevel ? 'MAX LEVEL' : `Upgrade (${cost} SP)`}
             </button>
-            ${!hasPrerequisites && !isMaxLevel ? `<p class="prereq-text">Requires: ${skill.prerequisites.map(id => SKILLS[id].name).join(', ')}</p>` : ''}
+            ${!hasPrerequisites && !isMaxLevel ? `<p class="prereq-text">Requires: ${skill.prerequisites.map(id => skillsData[id].name).join(', ')}</p>` : ''}
         `;
         skillTreeContainer.appendChild(skillDiv);
     });
 };
 
 // Method to handle skill upgrades
-export const upgradeSkill = (skillId, player, saveGame, uiNotify) => {
-    const skill = SKILLS[skillId];
-    if (!skill) {
-        uiNotify("Skill not found!");
-        return;
-    }
+export const upgradeSkill = (skillId, player, skillsData, saveGame, uiNotify) => {
+    const skill = skillsData[skillId];
+    if (!skill) return;
 
     const currentLevel = player.learnedSkills[skillId] || 0;
-    const nextLevel = currentLevel + 1;
     const cost = skill.cost(currentLevel);
+    const hasPrerequisites = skill.prerequisites.every(prereqId => (player.learnedSkills[prereqId] || 0) > 0);
 
-    // Check prerequisites
-    const hasPrerequisites = skill.prerequisites.every(prereqId => player.learnedSkills[prereqId] > 0);
-
-    if (currentLevel >= skill.maxLevel) {
-        uiNotify(`${skill.name} is already at max level!`);
-        return;
-    }
-    if (player.skillPoints < cost) {
-        uiNotify("Not enough Skill Points!");
-        return;
-    }
-    if (!hasPrerequisites) {
-        uiNotify(`Requires: ${skill.prerequisites.map(id => SKILLS[id].name).join(', ')}`);
+    if (currentLevel >= skill.maxLevel || player.skillPoints < cost || !hasPrerequisites) {
+        uiNotify("Cannot upgrade skill!");
         return;
     }
 
     player.skillPoints -= cost;
-    player.learnedSkills[skillId] = nextLevel;
+    player.learnedSkills[skillId] = currentLevel + 1;
 
-    player.applySkillEffects(); // Re-apply all skill effects to update player stats
-    renderSkills(player); // Re-render the skill tree to update button states
+    player.applySkillEffects(); 
+    renderSkills(player, skillsData); 
     saveGame();
-    uiNotify(`${skill.name} upgraded to Level ${nextLevel}!`);
+    uiNotify(`${skill.name} upgraded!`);
 };
