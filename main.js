@@ -3,58 +3,12 @@
  * Core engine and system managers.
  */
 
+import { SKILLS, renderSkills, upgradeSkill } from './skills.js';
+
 // --- CONFIG & GLOBALS ---
 const TILE_SIZE = 64;
 const MAP_SIZE = 40; // 40x40 tiles
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
-
-// Import skill management functions
-import { renderSkills, upgradeSkill } from './skills.js';
-
-// Define Skill Tree structure
-const SKILLS = {
-    'HP_BOOST_1': {
-        id: 'HP_BOOST_1',
-        name: 'Vitality Training',
-        description: 'Increases maximum HP by 20 per level.',
-        maxLevel: 5,
-        cost: (level) => 1 + level, // Cost in skill points
-        effect: (level) => ({ hp: level * 20 }),
-        prerequisites: [],
-        position: { x: 0, y: 0 } // For potential visual tree layout
-    },
-    'ATK_BOOST_1': {
-        id: 'ATK_BOOST_1',
-        name: 'Combat Prowess',
-        description: 'Increases base attack power by 5 per level.',
-        maxLevel: 5,
-        cost: (level) => 1 + level,
-        effect: (level) => ({ atk: level * 5 }),
-        prerequisites: [],
-        position: { x: 1, y: 0 }
-    },
-    'CRIT_CHANCE_1': {
-        id: 'CRIT_CHANCE_1',
-        name: 'Precision Strike',
-        description: 'Increases critical hit chance by 1% per level.',
-        maxLevel: 3,
-        cost: (level) => 2 + level,
-        effect: (level) => ({ critChance: level * 1 }),
-        prerequisites: ['ATK_BOOST_1'], // Requires ATK_BOOST_1 at any level
-        position: { x: 2, y: 0 }
-    },
-    'REGEN_BOOST_1': {
-        id: 'REGEN_BOOST_1',
-        name: 'Rapid Recovery',
-        description: 'Increases HP regeneration by 0.2 per second per level.',
-        maxLevel: 3,
-        cost: (level) => 2 + level,
-        effect: (level) => ({ regen: level * 0.2 }),
-        prerequisites: ['HP_BOOST_1'],
-        position: { x: 0, y: 1 }
-    }
-    // Add more skills here
-};
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -78,7 +32,7 @@ const GameState = {
     lastTime: 0,
     deltaTime: 0,
     frame: 0,
-    pendingLevelUp: false // FIX: Track if we need to change levels safely
+    pendingLevelUp: false 
 };
 
 // Persistent Data
@@ -88,8 +42,8 @@ let PlayerData = {
     level: 1,
     xp: 0,
     maxXp: 100,
-    skillPoints: 0, // NEW: Skill points for talent system
-    learnedSkills: {}, // NEW: Object to store learned skills and their levels { skillId: level }
+    skillPoints: 0,
+    learnedSkills: {}, // { skillId: level }
     gear: {
         'Weapon':   { level: 1, atk: 10, critMult: 0.05 },
         'Armor':    { level: 1, hp: 50, def: 5 },
@@ -100,7 +54,7 @@ let PlayerData = {
         'Ring':     { level: 1, atk: 8, critChance: 1.5 },
         'Earrings': { level: 1, critMult: 0.1, regen: 0.2 },
         'Necklace': { level: 1, regen: 1.0, hp: 10 },
-        'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } // atkSpeed is a CD reduction factor
+        'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } 
     }
 };
 
@@ -113,9 +67,9 @@ let floatingTexts = [];
 let portal = null;
 let player = null;
 
-// --- MAP GENERATION (Cellular Automata / Drunkard's Walk) ---
+// --- MAP GENERATION ---
 function generateMap() {
-    mapGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(1)); // 1 = wall, 0 = floor
+    mapGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(1)); 
     exploredGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(false));
     
     let x = Math.floor(MAP_SIZE / 2);
@@ -123,14 +77,12 @@ function generateMap() {
     let floorCount = 0;
     const maxFloors = (MAP_SIZE * MAP_SIZE) * 0.4;
     
-    // Start area
     for(let i=-2; i<=2; i++) {
         for(let j=-2; j<=2; j++) {
             mapGrid[y+i][x+j] = 0;
         }
     }
 
-    // Drunkard's walk
     while (floorCount < maxFloors) {
         const dir = randomInt(0, 3);
         if (dir === 0 && y > 2) y--;
@@ -140,18 +92,14 @@ function generateMap() {
 
         if (mapGrid[y][x] === 1) {
             mapGrid[y][x] = 0;
-            // Carve thicker paths
             if(Math.random() > 0.5) mapGrid[y+1][x] = 0;
             if(Math.random() > 0.5) mapGrid[y][x+1] = 0;
             floorCount++;
         }
     }
-
-    // Place portal at the last walker position
     portal = { x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, radius: 30 };
 }
 
-// Map Collision Helper
 function isWall(x, y) {
     const col = Math.floor(x / TILE_SIZE);
     const row = Math.floor(y / TILE_SIZE);
@@ -162,22 +110,15 @@ function isWall(x, y) {
 // --- ENGINE FUNCTIONS ---
 
 function spawnFloatingText(x, y, text, color) {
-    floatingTexts.push(new FloatingText(x, y, text, color));
-}
-
-function spawnLoot(x, y, type) {
-    entities.push(new Loot(x, y, type));
-}
-
-function spawnProjectile(x1, y1, x2, y2) {
-    // Simple visual line via particles
-    for(let i=0; i<5; i++) {
-        particles.push(new Particle(x2, y2, '#fff'));
+    if (typeof FloatingText !== 'undefined') {
+        floatingTexts.push(new FloatingText(x, y, text, color));
     }
 }
 
-function spawnAura(x, y) {
-    for(let i=0; i<20; i++) particles.push(new Particle(x, y, '#ff9800'));
+function spawnLoot(x, y, type) {
+    if (typeof Loot !== 'undefined') {
+        entities.push(new Loot(x, y, type));
+    }
 }
 
 function gainXp(amt) {
@@ -186,10 +127,9 @@ function gainXp(amt) {
         PlayerData.xp -= PlayerData.maxXp;
         PlayerData.level++;
         PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
-        PlayerData.skillPoints += 1; // NEW: Award 1 skill point on level up
-        player.hp = player.getMaxHp();
+        PlayerData.skillPoints += 1; 
+        if (player) player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
-        // UI.updateSkillPointsDisplay() is now handled by renderSkills
     }
     UI.updateStats();
     saveGame();
@@ -197,7 +137,6 @@ function gainXp(amt) {
 
 function die() {
     GameState.state = 'DEAD';
-    // Lose half loot
     PlayerData.gold = Math.floor(PlayerData.gold / 2);
     PlayerData.shards = Math.floor(PlayerData.shards / 2);
     UI.notify("YOU DIED. Lost 50% Wealth.");
@@ -211,8 +150,6 @@ function die() {
 }
 
 function levelUpDungeon() {
-    // FIX: Don't call initLevel immediately. Set a flag.
-    // This prevents clearing the entities array while the loop is still using it.
     GameState.pendingLevelUp = true;
 }
 
@@ -223,8 +160,11 @@ function spawnEnemies() {
         do {
             ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE;
             ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE;
-        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
-        entities.push(new Enemy(ex, ey));
+        } while (isWall(ex, ey) || (player && Math.hypot(ex - player.x, ey - player.y) < 300));
+        
+        if (typeof Enemy !== 'undefined') {
+            entities.push(new Enemy(ex, ey));
+        }
     }
 }
 
@@ -237,13 +177,20 @@ function initLevel() {
     const startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     const startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     
-    if(!player) player = new Player(startX, startY);
-    else { player.x = startX; player.y = startY; }
+    if(!player) {
+        if (typeof Player !== 'undefined') {
+            player = new Player(startX, startY);
+        }
+    } else { 
+        player.x = startX; 
+        player.y = startY; 
+    }
     
-    entities.push(player);
+    if (player) entities.push(player);
     spawnEnemies();
     
-    document.getElementById('d-level').innerText = GameState.level;
+    const dLv = document.getElementById('d-level');
+    if (dLv) dLv.innerText = GameState.level;
     UI.updateMinimap();
 }
 
@@ -256,44 +203,48 @@ const jZone = document.getElementById('joystick-zone');
 const jBase = document.getElementById('j-base');
 const jStick = document.getElementById('j-stick');
 
-jZone.addEventListener('touchstart', (e) => {
-    if(GameState.state !== 'PLAYING') return;
-    const touch = e.changedTouches[0];
-    Input.joystick.active = true;
-    Input.joystick.x = touch.clientX;
-    Input.joystick.y = touch.clientY;
-    
-    jBase.style.display = 'block';
-    jBase.style.left = touch.clientX + 'px';
-    jBase.style.top = touch.clientY + 'px';
-    jStick.style.transform = `translate(-50%, -50%)`;
-});
+if (jZone) {
+    jZone.addEventListener('touchstart', (e) => {
+        if(GameState.state !== 'PLAYING') return;
+        const touch = e.changedTouches[0];
+        Input.joystick.active = true;
+        Input.joystick.x = touch.clientX;
+        Input.joystick.y = touch.clientY;
+        
+        jBase.style.display = 'block';
+        jBase.style.left = touch.clientX + 'px';
+        jBase.style.top = touch.clientY + 'px';
+        jStick.style.transform = `translate(-50%, -50%)`;
+    });
 
-jZone.addEventListener('touchmove', (e) => {
-    if(!Input.joystick.active) return;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - Input.joystick.x;
-    const dy = touch.clientY - Input.joystick.y;
-    Input.joystick.angle = Math.atan2(dy, dx);
-    
-    const dist = Math.min(50, Math.hypot(dx, dy));
-    const sx = Math.cos(Input.joystick.angle) * dist;
-    const sy = Math.sin(Input.joystick.angle) * dist;
-    
-    jStick.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
-});
+    jZone.addEventListener('touchmove', (e) => {
+        if(!Input.joystick.active) return;
+        const touch = e.changedTouches[0];
+        const dx = touch.clientX - Input.joystick.x;
+        const dy = touch.clientY - Input.joystick.y;
+        Input.joystick.angle = Math.atan2(dy, dx);
+        
+        const dist = Math.min(50, Math.hypot(dx, dy));
+        const sx = Math.cos(Input.joystick.angle) * dist;
+        const sy = Math.sin(Input.joystick.angle) * dist;
+        
+        jStick.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
+    });
 
-const endJoystick = () => {
-    Input.joystick.active = false;
-    jBase.style.display = 'none';
-};
-jZone.addEventListener('touchend', endJoystick);
-jZone.addEventListener('touchcancel', endJoystick);
-
+    const endJoystick = () => {
+        Input.joystick.active = false;
+        jBase.style.display = 'none';
+    };
+    jZone.addEventListener('touchend', endJoystick);
+    jZone.addEventListener('touchcancel', endJoystick);
+}
 
 // --- UI MANAGER ---
-const UI = {
+// We define the core UI logic here. 
+// Note: Skills functions are imported and linked at the bottom.
+export const UI = {
     updateStats: () => {
+        if (!player) return;
         document.getElementById('p-level').innerText = PlayerData.level;
         document.getElementById('hp-fill').style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
         document.getElementById('hp-text').innerText = `${Math.floor(player.hp)} / ${Math.floor(player.getMaxHp())}`;
@@ -304,19 +255,13 @@ const UI = {
         document.getElementById('c-gold').innerText = PlayerData.gold;
         document.getElementById('c-shard').innerText = PlayerData.shards;
     },
-    updateSkillPointsDisplay: () => { // NEW: Update skill points display
+    updateSkillPointsDisplay: () => {
         const spEl = document.getElementById('skill-points-display');
         if (spEl) spEl.innerText = PlayerData.skillPoints;
     },
-    updateHotbar: (skills) => {
-        skills.forEach((s, i) => {
-            const overlay = document.getElementById(`cd-${i}`);
-            const pct = (s.current / s.cdMax) * 100;
-            overlay.style.height = `${pct}%`;
-        });
-    },
     updateMinimap: () => {
         const mmCanvas = document.getElementById('minimap');
+        if (!mmCanvas || !player) return;
         const mmCtx = mmCanvas.getContext('2d');
         mmCtx.clearRect(0,0,100,100);
         const cellW = 100 / MAP_SIZE;
@@ -329,48 +274,40 @@ const UI = {
                 }
             }
         }
-        // Draw Player
         mmCtx.fillStyle = '#bb86fc';
         mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
-        // Draw Portal if explored
         if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
             mmCtx.fillStyle = '#00e5ff';
             mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
         }
     },
-    toggleInventory: (tab = 'gear') => { // MODIFIED: Added tab parameter
+    toggleInventory: (tab = 'gear') => {
         const modal = document.getElementById('inventory-modal');
         if (modal.style.display === 'flex') {
             modal.style.display = 'none';
         } else {
             modal.style.display = 'flex';
-            if (tab === 'skills') {
-                UI.showSkillsTab();
-            } else {
-                UI.showGearTab();
-            }
+            if (tab === 'skills') UI.showSkillsTab();
+            else UI.showGearTab();
         }
     },
-    showGearTab: () => { // NEW: Function to show gear tab
+    showGearTab: () => {
         document.getElementById('gear-tab-btn').classList.add('active');
         document.getElementById('skills-tab-btn').classList.remove('active');
         document.getElementById('gear-content').style.display = 'flex';
         document.getElementById('skills-content').style.display = 'none';
         UI.renderInventory();
     },
-    showSkillsTab: () => { // NEW: Function to show skills tab
+    showSkillsTab: () => {
         document.getElementById('gear-tab-btn').classList.remove('active');
         document.getElementById('skills-tab-btn').classList.add('active');
         document.getElementById('gear-content').style.display = 'none';
         document.getElementById('skills-content').style.display = 'flex';
-        UI.renderSkills(player); // Pass player instance
-        // UI.updateSkillPointsDisplay() is now handled by renderSkills
+        UI.renderSkills(); 
     },
     renderInventory: () => {
-        // 1. Stats Sheet
         const sheet = document.getElementById('stats-sheet');
         if (sheet && player) {
-            // Ensure player stats are updated before rendering
             sheet.innerHTML = `
                 <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
                 <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
@@ -381,14 +318,11 @@ const UI = {
             `;
         }
 
-        // 2. Specialized Gear Rendering
         const grid = document.getElementById('gear-grid');
         grid.innerHTML = '';
         GEAR_TYPES.forEach(type => {
             const gear = PlayerData.gear[type];
             const cost = gear.level * 10;
-            
-            // Generate a string describing the bonuses
             let bonusText = "";
             if (gear.atk) bonusText += `Atk: +${Math.floor(gear.atk)} `;
             if (gear.hp) bonusText += `HP: +${Math.floor(gear.hp)} `;
@@ -412,119 +346,42 @@ const UI = {
         });
         UI.updateCurrencies();
     },
-
-    renderSkills: () => { // NEW: Method to render the skill tree
-        const skillTreeContainer = document.getElementById('skills-grid');
-        skillTreeContainer.innerHTML = ''; // Clear previous skills
-
-        const skillPointsDisplay = document.getElementById('skill-points-display');
-        if (skillPointsDisplay) skillPointsDisplay.innerText = PlayerData.skillPoints;
-
-        Object.values(SKILLS).forEach(skill => {
-            const currentLevel = PlayerData.learnedSkills[skill.id] || 0;
-            const nextLevel = currentLevel + 1;
-            const cost = skill.cost(currentLevel);
-            const canAfford = PlayerData.skillPoints >= cost;
-            const isMaxLevel = currentLevel >= skill.maxLevel;
-
-            // Check prerequisites
-            const hasPrerequisites = skill.prerequisites.every(prereqId => PlayerData.learnedSkills[prereqId] > 0);
-            const canUpgrade = canAfford && !isMaxLevel && hasPrerequisites;
-
-            let effectText = '';
-            if (skill.effect) {
-                const nextEffect = skill.effect(nextLevel);
-                for (const key in nextEffect) {
-                    effectText += `${key.toUpperCase()}: +${nextEffect[key]} `;
-                }
-            }
-
-            const skillDiv = document.createElement('div');
-            skillDiv.className = 'skill-node';
-            if (isMaxLevel) skillDiv.classList.add('max-level');
-            else if (currentLevel > 0) skillDiv.classList.add('learned');
-            if (!hasPrerequisites) skillDiv.classList.add('locked');
-
-            skillDiv.innerHTML = `
-                <h4 style="color:var(--primary)">${skill.name}</h4>
-                <p>${skill.description}</p>
-                <p>Level: ${currentLevel} / ${skill.maxLevel}</p>
-                <p style="font-size:0.7rem; color:#03dac6; min-height:20px;">${effectText}</p>
-                <button class="upgrade-btn" ${!canUpgrade ? 'disabled' : ''} onclick="UI.upgradeSkill('${skill.id}')">
-                    ${isMaxLevel ? 'MAX LEVEL' : `Upgrade (${cost} SP)`}
-                </button>
-                ${!hasPrerequisites && !isMaxLevel ? `<p class="prereq-text">Requires: ${skill.prerequisites.map(id => SKILLS[id].name).join(', ')}</p>` : ''}
-            `;
-            skillTreeContainer.appendChild(skillDiv);
-        });
+    // Helper methods that link to imported skill logic
+    renderSkills: () => {
+        if (!player) return;
+        renderSkills(player, SKILLS);
     },
-
-    upgradeSkill: (skillId) => { // NEW: Method to handle skill upgrades
-        const skill = SKILLS[skillId];
-        if (!skill) {
-            UI.notify("Skill not found!");
-            return;
-        }
-
-        const currentLevel = PlayerData.learnedSkills[skillId] || 0;
-        const nextLevel = currentLevel + 1;
-        const cost = skill.cost(currentLevel);
-
-        // Check prerequisites
-        const hasPrerequisites = skill.prerequisites.every(prereqId => PlayerData.learnedSkills[prereqId] > 0);
-
-        if (currentLevel >= skill.maxLevel) {
-            UI.notify(`${skill.name} is already at max level!`);
-            return;
-        }
-        if (PlayerData.skillPoints < cost) {
-            UI.notify("Not enough Skill Points!");
-            return;
-        }
-        if (!hasPrerequisites) {
-            UI.notify(`Requires: ${skill.prerequisites.map(id => SKILLS[id].name).join(', ')}`);
-            return;
-        }
-
-        PlayerData.skillPoints -= cost;
-        PlayerData.learnedSkills[skillId] = nextLevel;
-
-        player.applySkillEffects(); // NEW: Re-apply all skill effects to update player stats
-        UI.renderSkills(); // Re-render the skill tree to update button states
-        UI.updateStats(); // Update player stats display
-        UI.updateSkillPointsDisplay(); // Update skill points display
-        saveGame();
-        UI.notify(`${skill.name} upgraded to Level ${nextLevel}!`);
+    upgradeSkill: (skillId) => {
+        if (!player) return;
+        // Crucial: Pass 'player' instance, not just PlayerData
+        upgradeSkill(skillId, player, SKILLS, saveGame, UI.notify);
     },
-
     upgradeGear: (type) => {
         const gear = PlayerData.gear[type];
         const cost = gear.level * 10;
         if (PlayerData.shards >= cost) {
             PlayerData.shards -= cost;
             gear.level++;
-
-            // Apply logic-based specialized scaling
             if (gear.atk !== undefined) gear.atk += randomInt(3, 7);
             if (gear.hp !== undefined) gear.hp += randomInt(15, 30);
             if (gear.def !== undefined) gear.def += randomInt(2, 5);
             if (gear.regen !== undefined) gear.regen += 0.2;
             if (gear.critChance !== undefined) gear.critChance += 0.4;
             if (gear.critMult !== undefined) gear.critMult += 0.03;
-            if (gear.atkSpeed !== undefined) gear.atkSpeed = Math.min(0.6, gear.atkSpeed + 0.01); // Cap speed boost
+            if (gear.atkSpeed !== undefined) gear.atkSpeed = Math.min(0.6, gear.atkSpeed + 0.01);
 
             UI.renderInventory();
-            player.applySkillEffects(); // Apply gear effects to update player stats
+            if (player) player.applySkillEffects();
             UI.updateStats();
             saveGame();
-            UI.notify(`${type} specialized!`);
+            UI.notify(`${type} upgraded!`);
         }
     },
     notify: (msg) => {
         const el = document.getElementById('notification');
+        if (!el) return;
         el.innerText = msg;
         el.style.opacity = 1;
-        // Clean restart of the fade animation
         if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
         UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
     },
@@ -532,7 +389,8 @@ const UI = {
         const lastLogin = localStorage.getItem('dof_lastLogin');
         const today = new Date().toDateString();
         if (lastLogin !== today) {
-            document.getElementById('daily-login').style.display = 'block';
+            const daily = document.getElementById('daily-login');
+            if (daily) daily.style.display = 'block';
         }
     },
     claimDaily: () => {
@@ -546,13 +404,8 @@ const UI = {
     }
 };
 
-// Add to UI object (overwriting existing methods)
-UI.renderSkills = (playerInstance) => renderSkills(playerInstance, PlayerData, SKILLS);
-
-UI.upgradeSkill = (skillId) => {
-    // Ensure the global 'player' instance is passed, not the 'Player' class constructor.
-    upgradeSkill(skillId, player, PlayerData, SKILLS, saveGame, UI.notify);
-};
+// Make UI globally accessible for HTML onclick attributes
+window.UI = UI;
 
 // --- SAVE / LOAD ---
 function saveGame() {
@@ -564,12 +417,9 @@ function loadGame() {
     if (save) {
         try {
             const data = JSON.parse(save);
-            // Deep merge gear to handle potential version updates
             PlayerData = { ...PlayerData, ...data };
             if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
-            // NEW: Ensure learnedSkills is initialized if not present in old save
             if (!PlayerData.learnedSkills) PlayerData.learnedSkills = {};
-            if (player) player.applySkillEffects(); // Apply skill effects on load
         } catch(e) { console.error("Save Corrupted", e); }
     }
 }
@@ -594,16 +444,11 @@ function drawMap(camX, camY) {
             }
 
             if (mapGrid[r][c] === 1) {
-                ctx.fillStyle = '#1e1e1e'; // Wall
+                ctx.fillStyle = '#1e1e1e';
                 ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-                ctx.strokeStyle = '#2a2a2a';
-                ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
             } else {
-                ctx.fillStyle = '#161616'; // Floor
+                ctx.fillStyle = '#161616';
                 ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-                // Subtle floor detail
-                ctx.fillStyle = '#1a1a1a';
-                ctx.fillRect(screenX + TILE_SIZE/4, screenY + TILE_SIZE/4, TILE_SIZE/2, TILE_SIZE/2);
             }
         }
     }
@@ -613,13 +458,10 @@ function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') return;
+    if ((GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') || !player) return;
 
-    // Camera follow player
     let camX = player.x - canvas.width / 2;
     let camY = player.y - canvas.height / 2;
-    
-    // Clamp camera to map bounds
     camX = Math.max(0, Math.min(camX, MAP_SIZE * TILE_SIZE - canvas.width));
     camY = Math.max(0, Math.min(camY, MAP_SIZE * TILE_SIZE - canvas.height));
 
@@ -627,23 +469,17 @@ function draw() {
     drawMap(camX, camY);
     ctx.translate(-camX, -camY);
 
-    // Render Portal
     if (portal) {
         const pRow = Math.floor(portal.y/TILE_SIZE);
         const pCol = Math.floor(portal.x/TILE_SIZE);
         if (exploredGrid[pRow] && exploredGrid[pRow][pCol]) {
-            const glow = Math.abs(Math.sin(Date.now()/500)) * 20;
-            ctx.shadowBlur = glow;
-            ctx.shadowColor = '#00e5ff';
             ctx.fillStyle = '#00e5ff';
             ctx.beginPath();
             ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0;
         }
     }
 
-    // Entities (Loot, Enemies, Player) sorted by Y for depth
     entities.sort((a, b) => a.y - b.y).forEach(e => {
         if (e.draw) e.draw(ctx);
     });
@@ -652,57 +488,29 @@ function draw() {
     floatingTexts.forEach(ft => ft.draw(ctx));
 
     ctx.restore();
-
-    if (GameState.state === 'DEAD') {
-        ctx.fillStyle = 'rgba(100, 0, 0, 0.4)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 40px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText("YOU HAVE FALLEN", canvas.width/2, canvas.height/2);
-    }
 }
 
 // --- MAIN LOOP ---
 function loop(timestamp) {
     const dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); 
     GameState.lastTime = timestamp;
-    GameState.deltaTime = dt; // Assign the calculated delta time
 
-    if (GameState.state === 'PLAYING') {
-        // FIX: SAFE LEVEL TRANSITION
-        // Check for the level-up flag here, before we iterate through the entities.
+    if (GameState.state === 'PLAYING' && player) {
         if (GameState.pendingLevelUp) {
             GameState.level++;
             UI.notify(`Entering Depth ${GameState.level}`);
             initLevel();
-            player.applySkillEffects(); // Apply skill effects after level init
+            player.applySkillEffects();
             GameState.pendingLevelUp = false;
         }
 
-        HiveMind.update();
+        if (typeof HiveMind !== 'undefined') HiveMind.update();
         
-        // Use a reverse loop for safe removal during iteration
-        for (let i = entities.length - 1; i >= 0; i--) {
-            entities[i].update(dt);
-        }
+        for (let i = entities.length - 1; i >= 0; i--) entities[i].update(dt);
+        for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt);
+        for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
 
-        for (let i = particles.length - 1; i >= 0; i--) {
-            particles[i].update(dt);
-        }
-
-        for (let i = floatingTexts.length - 1; i >= 0; i--) {
-            floatingTexts[i].update(dt);
-        }
-
-        // Auto-spawn logic
-        if (GameState.frame % 120 === 0) {
-            const enemyCount = entities.filter(e => e instanceof Enemy).length;
-            if (enemyCount < 10 + GameState.level) {
-                spawnEnemies();
-            }
-        }
-
+        if (GameState.frame % 120 === 0) spawnEnemies();
         if (GameState.frame % 30 === 0) UI.updateMinimap();
     }
 
@@ -728,7 +536,7 @@ window.onload = () => {
                 GameState.state = 'MENU';
             }, 400);
         }
-        fill.style.width = progress + '%';
+        if (fill) fill.style.width = progress + '%';
     }, 80);
 };
 
@@ -737,17 +545,17 @@ document.getElementById('play-btn').addEventListener('click', () => {
     document.getElementById('ui-layer').classList.remove('hidden');
     
     initLevel();
-    player.applySkillEffects(); // Apply skill effects after initializing player
-    UI.renderSkills(player); // Ensure skills are rendered in UI
+    if (player) {
+        player.applySkillEffects();
+        UI.renderSkills(); 
+    }
     UI.updateCurrencies();
     UI.checkDailyLogin();
-    // UI.updateSkillPointsDisplay() is now handled by renderSkills
 
     GameState.state = 'PLAYING';
     GameState.lastTime = performance.now();
     requestAnimationFrame(loop);
 });
 
-// NEW: Add event listeners for inventory tab switching
 document.getElementById('gear-tab-btn').addEventListener('click', () => UI.showGearTab());
 document.getElementById('skills-tab-btn').addEventListener('click', () => UI.showSkillsTab());
