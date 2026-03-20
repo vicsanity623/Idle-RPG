@@ -462,7 +462,6 @@ class FloatingText {
         ctx.fillStyle = this.color;
         ctx.globalAlpha = Math.max(0, this.life);
         ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center'; // Center the text horizontally
         ctx.fillText(this.text, this.x, this.y);
         ctx.globalAlpha = 1.0;
     }
