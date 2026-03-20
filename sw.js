@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dungeons-of-fate-v1';
+const CACHE_NAME = 'dungeons-of-fate-v1.0.1';
 
 // List of files to cache for offline use
 // Using relative paths ensures compatibility with GitHub Pages subdirectories
@@ -8,6 +8,7 @@ const ASSETS_TO_CACHE = [
     './entities.js',
     './main.js',
     './inventory.js',
+    './player.js',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'
