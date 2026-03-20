@@ -402,7 +402,11 @@ const UI = {
 // --- SAVE / LOAD ---
 function saveGame() {
     try {
-        localStorage.setItem('dof_save', JSON.stringify(PlayerData));
+        const saveData = {
+            ...PlayerData,
+            gear: { ...PlayerData.gear }
+        };
+        localStorage.setItem('dof_save', JSON.stringify(saveData));
     } catch (e) {
         console.error("Failed to save game:", e);
         UI.notify("Save failed: Storage full!");
@@ -414,9 +418,11 @@ function loadGame() {
     if (save) {
         try {
             const data = JSON.parse(save);
+            // Initialize gear if it's not present in the save data
+            if (!data.gear) data.gear = {};
             // Deep merge gear to handle potential version updates
             PlayerData = { ...PlayerData, ...data };
-            if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
+            PlayerData.gear = { ...PlayerData.gear, ...data.gear };
         } catch(e) { console.error("Save Corrupted", e); }
     }
 }
