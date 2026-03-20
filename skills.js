@@ -105,18 +105,18 @@ export const upgradeSkill = (skillId, player, playerData, saveGame, uiNotify) =>
         return;
     }
 
-    const currentLevel = playerData.learnedSkills[skillId] || 0;
+    const currentLevel = player.learnedSkills[skillId] || 0;
     const nextLevel = currentLevel + 1;
     const cost = skill.cost(currentLevel);
 
     // Check prerequisites
-    const hasPrerequisites = skill.prerequisites.every(prereqId => playerData.learnedSkills[prereqId] > 0);
+    const hasPrerequisites = skill.prerequisites.every(prereqId => player.learnedSkills[prereqId] > 0);
 
     if (currentLevel >= skill.maxLevel) {
         uiNotify(`${skill.name} is already at max level!`);
         return;
     }
-    if (playerData.skillPoints < cost) {
+    if (player.skillPoints < cost) {
         uiNotify("Not enough Skill Points!");
         return;
     }
@@ -125,8 +125,8 @@ export const upgradeSkill = (skillId, player, playerData, saveGame, uiNotify) =>
         return;
     }
 
-    playerData.skillPoints -= cost;
-    playerData.learnedSkills[skillId] = nextLevel;
+    player.skillPoints -= cost;
+    player.learnedSkills[skillId] = nextLevel;
 
     player.applySkillEffects(); // Re-apply all skill effects to update player stats
     renderSkills(player); // Re-render the skill tree to update button states
