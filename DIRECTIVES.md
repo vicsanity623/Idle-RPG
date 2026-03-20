@@ -21,11 +21,10 @@
 - **TYPE SAFETY:** Every new function MUST have JSDoc comments or clear variable naming to indicate types.
 - **ERROR HANDLING:** All `localStorage` interactions must be wrapped in `try/catch` blocks to prevent browser crashes if the quota is full.
 
-### 🛡️ HTML & UI HYGIENE (CRITICAL)
-- **NO LEAKS:** Do not inject "Status" text (like "APPROVED" or "Evolution Log") directly into the HTML body. 
-- **STRICT TAGS:** All JavaScript logic MUST be inside `<script>` tags. All CSS must be inside `<style>` tags.
-- **SANITY CHECK:** Before submitting a PR for index.html, ensure no raw code is visible outside of the game canvas.
-- **REVERT:** If you see any raw Javascript (like 'navigator.serviceWorker') appearing as text on the screen, that is a FAILURE. Fix it immediately.
+### 🛡️ UI & HTML HYGIENE (CRITICAL)
+- **NO SCAFOLDING:** Never inject bot logs, "APPROVED" tags, or LIBRARIAN notes into index.html or any UI file.
+- **STRICT ENCAPSULATION:** All logic MUST be inside <script> tags. All styles MUST be inside <style> tags.
+- **VISUAL SANITY:** If you see raw Javascript code appearing as text in the HTML body, the iteration is a FAILURE. Revert and fix.
 
 ### PROHIBITED ACTIONS
 - DO NOT perform "minor formatting cleanups" or "variable renaming" unless they are required to finish a Task listed above.
