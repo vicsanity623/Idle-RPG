@@ -65,7 +65,7 @@ class Inventory {
             this.updateSkillNodeVisual(skillId, player); // Update the visual state of the skill node
             this.displaySkillPreview(skillId, player); // Refresh preview for the upgraded skill
             // Optionally, update the main stats sheet if visible
-            // UI.updateStatsSheet(player); // This would be a call to a global UI instance
+            this.updateStatsSheet(player); // Update the main stats sheet
         } else {
             console.log(`Cannot upgrade skill ${skillId}. Not enough points or max level.`);
             // Provide UI feedback to the user (e.g., a temporary message or visual cue)
@@ -169,6 +169,17 @@ class Inventory {
 
             this.skillTreeGrid.appendChild(skillNode);
         });
+    }
+
+    /**
+     * NEW FEATURE: Updates the main player stats sheet.
+     * @param {object} player - The player object whose stats are to be displayed.
+     */
+    updateStatsSheet(player) {
+        // Placeholder for actual stat sheet update logic
+        // This method would typically read player.stats and update this.statsSheet.innerHTML
+        console.log('Updating player stats sheet...');
+        // Example: this.statsSheet.innerHTML = `Health: ${player.health}, Attack: ${player.attack}`;
     }
 
     claimDaily() {
