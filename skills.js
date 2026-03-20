@@ -71,9 +71,12 @@ export const renderSkills = (player) => {
 
         let effectText = '';
         if (skill.effect) {
+            const currentEffect = skill.effect(currentLevel);
             const nextEffect = skill.effect(nextLevel);
             for (const key in nextEffect) {
-                effectText += `${key.toUpperCase()}: +${nextEffect[key]} `;
+                const currentVal = currentEffect[key] || 0;
+                const incrementalVal = nextEffect[key] - currentVal;
+                effectText += `${key.toUpperCase()}: +${incrementalVal} `;
             }
         }
 
