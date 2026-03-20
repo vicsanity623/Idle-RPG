@@ -8,6 +8,9 @@ const TILE_SIZE = 64;
 const MAP_SIZE = 40; // 40x40 tiles
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
+// Import skill management functions
+import { renderSkills, upgradeSkill } from './skills.js';
+
 // Define Skill Tree structure
 const SKILLS = {
     'HP_BOOST_1': {
@@ -186,7 +189,7 @@ function gainXp(amt) {
         PlayerData.skillPoints += 1; // NEW: Award 1 skill point on level up
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
-        UI.updateSkillPointsDisplay(); // NEW: Update skill points UI
+        // UI.updateSkillPointsDisplay() is now handled by renderSkills
     }
     UI.updateStats();
     saveGame();
@@ -360,8 +363,8 @@ const UI = {
         document.getElementById('skills-tab-btn').classList.add('active');
         document.getElementById('gear-content').style.display = 'none';
         document.getElementById('skills-content').style.display = 'flex';
-        UI.renderSkills();
-        UI.updateSkillPointsDisplay();
+        UI.renderSkills(player); // Pass player instance
+        // UI.updateSkillPointsDisplay() is now handled by renderSkills
     },
     renderInventory: () => {
         // 1. Stats Sheet
@@ -543,6 +546,14 @@ const UI = {
     }
 };
 
+// Add to UI object (overwriting existing methods)
+UI.renderSkills = (player) => renderSkills(player);
+
+UI.upgradeSkill = (skillId) => {
+    const player = Player; // Make sure to pass the player instance
+    upgradeSkill(skillId, player, PlayerData, saveGame, UI.notify);
+};
+
 // --- SAVE / LOAD ---
 function saveGame() {
     localStorage.setItem('dof_save', JSON.stringify(PlayerData));
@@ -558,7 +569,7 @@ function loadGame() {
             if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
             // NEW: Ensure learnedSkills is initialized if not present in old save
             if (!PlayerData.learnedSkills) PlayerData.learnedSkills = {};
-            if (player) player.applySkillEffects(); // NEW: Apply skill effects on load
+            if (player) player.applySkillEffects(); // Apply skill effects on load
         } catch(e) { console.error("Save Corrupted", e); }
     }
 }
@@ -665,7 +676,7 @@ function loop(timestamp) {
             GameState.level++;
             UI.notify(`Entering Depth ${GameState.level}`);
             initLevel();
-            player.applySkillEffects(); // NEW: Apply skill effects after level init
+            player.applySkillEffects(); // Apply skill effects after level init
             GameState.pendingLevelUp = false;
         }
 
@@ -726,9 +737,11 @@ document.getElementById('play-btn').addEventListener('click', () => {
     document.getElementById('ui-layer').classList.remove('hidden');
     
     initLevel();
+    player.applySkillEffects(); // Apply skill effects after initializing player
+    UI.renderSkills(player); // Ensure skills are rendered in UI
     UI.updateCurrencies();
     UI.checkDailyLogin();
-    UI.updateSkillPointsDisplay(); // NEW: Update skill points display on game start
+    // UI.updateSkillPointsDisplay() is now handled by renderSkills
 
     GameState.state = 'PLAYING';
     GameState.lastTime = performance.now();
