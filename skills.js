@@ -101,7 +101,7 @@ export const renderSkills = (player) => {
 };
 
 // Method to handle skill upgrades
-export const upgradeSkill = (skillId, player, playerData, saveGame, uiNotify) => {
+export const upgradeSkill = (skillId, player, saveGame, uiNotify) => {
     const skill = SKILLS[skillId];
     if (!skill) {
         uiNotify("Skill not found!");
