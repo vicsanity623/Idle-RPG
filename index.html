@@ -124,6 +124,107 @@
             pointer-events: none;
             text-shadow: 0 0 5px var(--primary);
         }
+
+        /* NEW CSS for Skill Tree Feature */
+        .modal-tab {
+            font-size: 1.2rem;
+            color: #888;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-bottom-color 0.2s;
+        }
+        .modal-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        .modal-tab:hover {
+            color: var(--primary);
+        }
+
+        #skills-tab-content h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--xp-color);
+        }
+
+        #skill-tree-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .skill-category {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(187, 134, 252, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .skill-category h4 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(187, 134, 252, 0.2);
+            padding-bottom: 5px;
+        }
+
+        .skill-node {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            transition: 0.2s;
+        }
+        .skill-node:hover {
+            border-color: var(--shard);
+            background: rgba(0, 229, 255, 0.05);
+        }
+
+        .skill-node h5 {
+            font-size: 1rem;
+            color: var(--shard);
+            margin-bottom: 5px;
+        }
+
+        .skill-node p {
+            font-size: 0.8rem;
+            color: #ccc;
+        }
+
+        .skill-level {
+            font-weight: bold;
+            color: var(--xp-color);
+        }
+        .skill-max-level {
+            color: #aaa;
+        }
+
+        .skill-upgrade-btn {
+            margin-top: 10px;
+            background: var(--xp-color);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #000;
+            transition: 0.2s;
+            align-self: flex-start; /* Align button to start of flex item */
+        }
+        .skill-upgrade-btn:active {
+            transform: scale(0.95);
+        }
+        .skill-upgrade-btn:disabled {
+            background: #444;
+            color: #777;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -189,21 +290,58 @@
             <div id="j-base" class="joystick-base"><div id="j-stick" class="joystick-stick"></div></div>
         </div>
 
-        <!-- Inventory Modal -->
+        <!-- Inventory Modal (MODIFIED) -->
         <div id="inventory-modal">
             <div class="inv-header">
-                <h2>Character Info</h2>
+                <div style="display: flex; gap: 10px;">
+                    <h2 id="inv-tab-character" class="modal-tab active" onclick="UI.showInventoryTab('character')">Character</h2>
+                    <h2 id="inv-tab-skills" class="modal-tab" onclick="UI.showInventoryTab('skills')">Skills</h2>
+                </div>
                 <button class="close-btn" onclick="UI.toggleInventory()">X</button>
             </div>
             <div class="modal-body">
-                <!-- Stats Section -->
-                <div class="stats-panel" id="stats-sheet">
+                <!-- Character Tab Content (EXISTING, now wrapped) -->
+                <div id="character-tab-content">
+                    <!-- Stats Section -->
+                    <div class="stats-panel" id="stats-sheet">
                     <!-- Populated by JS -->
                 </div>
         
                 <h3>Equipment</h3>
                 <div class="gear-grid" id="gear-grid">
                     <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Skills Tab Content (NEW) -->
+            <div id="skills-tab-content" class="hidden">
+                <h3>Available Skill Points: <span id="skill-points-display">0</span></h3>
+                <div id="skill-tree-grid">
+                    <div class="skill-category">
+                        <h4>Combat Skills</h4>
+                        <div class="skill-node" data-skill-id="1">
+                            <h5>Power Attack</h5>
+                            <p>Increases attack damage by 5% per level.</p>
+                            <p>Level: <span class="skill-level">0</span>/<span class="skill-max-level">5</span></p>
+                            <button class="skill-upgrade-btn" onclick="UI.upgradeSkill(1)">Upgrade (1 SP)</button>
+                        </div>
+                        <div class="skill-node" data-skill-id="2">
+                            <h5>Swift Strikes</h5>
+                            <p>Increases attack speed by 3% per level.</p>
+                            <p>Level: <span class="skill-level">0</span>/<span class="skill-max-level">3</span></p>
+                            <button class="skill-upgrade-btn" onclick="UI.upgradeSkill(2)">Upgrade (1 SP)</button>
+                        </div>
+                    </div>
+                    <div class="skill-category">
+                        <h4>Defensive Skills</h4>
+                        <div class="skill-node" data-skill-id="3">
+                            <h5>Iron Skin</h5>
+                            <p>Reduces incoming damage by 2% per level.</p>
+                            <p>Level: <span class="skill-level">0</span>/<span class="skill-max-level">5</span></p>
+                            <button class="skill-upgrade-btn" onclick="UI.upgradeSkill(3)">Upgrade (1 SP)</button>
+                        </div>
+                    </div>
+                    <!-- More skill categories and nodes would be dynamically populated by JS -->
                 </div>
             </div>
         </div>
