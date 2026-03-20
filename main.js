@@ -119,10 +119,24 @@ function spawnLoot(x, y, type) {
     entities.push(new Loot(x, y, type));
 }
 
+/**
+ * Spawns a burst of particles at a target location, simulating a projectile impact.
+ * These particles will have a random velocity and fade out over 0.5 seconds.
+ * @param {number} x1 - Origin X (unused for impact particles, but kept for signature)
+ * @param {number} y1 - Origin Y (unused for impact particles, but kept for signature)
+ * @param {number} x2 - Target X (impact location)
+ * @param {number} y2 - Target Y (impact location)
+ */
 function spawnProjectile(x1, y1, x2, y2) {
-    // Simple visual line via particles
-    for(let i=0; i<5; i++) {
-        particles.push(new Particle(x2, y2, '#fff'));
+    const numParticles = randomInt(3, 5); // Spawn 3-5 particles as per directive
+    for(let i=0; i<numParticles; i++) {
+        const angle = randomFloat(0, Math.PI * 2); // Random direction for burst
+        const speed = randomFloat(80, 180); // Random speed for burst effect (pixels/sec)
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        const life = 0.5; // 0.5 seconds fade as per directive
+        // Assuming Particle constructor takes x, y, color, vx, vy, life
+        particles.push(new Particle(x2, y2, '#fff', vx, vy, life));
     }
 }
 
