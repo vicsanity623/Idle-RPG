@@ -161,6 +161,9 @@ return (g.Robe.regen || 0) + (g.Necklace.regen || 0) +
         this.skillCritChanceBonus = bonuses.critChanceBonus;
         this.skillCritMultiplierBonus = bonuses.critMultiplierBonus;
         this.skillAttackSpeedFactorBonus = bonuses.attackSpeedFactorBonus;
+
+        const newMaxHp = this.getMaxHp();
+        this.hp = Math.min(this.hp + Math.max(0, newMaxHp - oldMaxHp), newMaxHp);
     }
 
     /**
