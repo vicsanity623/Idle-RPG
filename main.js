@@ -28,7 +28,6 @@ const GameState = {
     level: 1,
     camera: { x: 0, y: 0 },
     lastTime: 0,
-    deltaTime: 0,
     frame: 0,
     pendingLevelUp: false // FIX: Track if we need to change levels safely
 };
