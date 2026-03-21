@@ -120,11 +120,85 @@ function spawnLoot(x, y, type) {
     entities.push(new Loot(x, y, type));
 }
 
-function spawnProjectile(x1, y1, x2, y2) {
-    // Simple visual line via particles
-    for(let i=0; i<5; i++) {
-        particles.push(new Particle(x2, y2, '#fff'));
+class Projectile {
+    /**
+     * @param {number} x - Starting X coordinate.
+     * @param {number} y - Starting Y coordinate.
+     * @param {number} targetX - Target X coordinate.
+     * @param {number} targetY - Target Y coordinate.
+     * @param {number} speed - Speed of the projectile in pixels/second.
+     * @param {number} damage - Damage dealt by the projectile.
+     * @param {string} color - Color of the projectile.
+     */
+    constructor(x, y, targetX, targetY, speed, damage, color = '#bb86fc') {
+        this.x = x;
+        this.y = y;
+        this.speed = speed;
+        this.damage = damage;
+        this.color = color;
+        this.radius = 5;
+        this.lifetime = 1.5; // seconds
+        this.currentLifetime = 0;
+        this.isAlive = true; // For cleanup in main loop
+
+        const angle = Math.atan2(targetY - y, targetX - x);
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
     }
+
+    update(dt) {
+        if (!this.isAlive) return;
+
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.currentLifetime += dt;
+
+        // Check for collision with enemies (simplified for now)
+        for (let i = 0; i < entities.length; i++) {
+            const entity = entities[i];
+            // Assuming Enemy class exists and has x, y, radius, takeDamage
+            if (entity instanceof Enemy && entity.isAlive) {
+                const dist = Math.hypot(this.x - entity.x, this.y - entity.y);
+                if (dist < this.radius + entity.radius) {
+                    entity.takeDamage(this.damage);
+                    this.isAlive = false; // Mark projectile for removal
+                    spawnAura(this.x, this.y); // Burst effect
+                    break; // Projectile hits one target
+                }
+            }
+        }
+
+        if (this.currentLifetime >= this.lifetime) {
+            this.isAlive = false; // Mark for removal
+        }
+    }
+
+    draw(ctx) {
+        if (!this.isAlive) return;
+        ctx.save();
+        ctx.shadowBlur = 15; // SOTA rendering technique
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.globalCompositeOperation = 'lighter'; // SOTA rendering technique for glowing effect
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+/**
+ * Spawns a projectile from a starting point to a target point.
+ * @param {number} x1 - Starting X coordinate.
+ * @param {number} y1 - Starting Y coordinate.
+ * @param {number} x2 - Target X coordinate.
+ * @param {number} y2 - Target Y coordinate.
+ */
+function spawnProjectile(x1, y1, x2, y2) {
+    const projectileSpeed = 500; // pixels per second
+    // Assuming player exists and has getAttackPower method
+    const projectileDamage = player.getAttackPower(); 
+    entities.push(new Projectile(x1, y1, x2, y2, projectileSpeed, projectileDamage));
 }
 
 function spawnAura(x, y) {
