@@ -3,6 +3,9 @@
  * Core engine and system managers.
  */
 
+// --- IMPORTS ---
+import { Player, Enemy, Loot, Particle, FloatingText, HiveMind } from './entities.js';
+
 // --- CONFIG & GLOBALS ---
 const TILE_SIZE = 64;
 const MAP_SIZE = 40; // 40x40 tiles
