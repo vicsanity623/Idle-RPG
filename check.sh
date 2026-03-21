@@ -7,7 +7,7 @@ echo "📦 Installing testing dependencies..."
 python3 -m pip install --upgrade pip --quiet
 python3 -m pip install pytest selenium --quiet
 
-# 2. Automatically generate/fix test_main.py (Super handy for mobile devs!)
+# 2. Automatically generate the test file
 echo "🔧 Setting up headless testing environment..."
 mkdir -p tests
 cat << 'EOF' > tests/test_main.py
@@ -72,17 +72,13 @@ class TestMainJS(unittest.TestCase):
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        # Ensure the background browser doesn't throttle our requestAnimationFrame loop
-        chrome_options.add_argument("--disable-background-timer-throttling")
-        chrome_options.add_argument("--disable-backgrounding-occluded-windows")
-        chrome_options.add_argument("--disable-renderer-backgrounding")
         
         cls.driver = webdriver.Chrome(options=chrome_options)
         file_uri = f"file://{cls.test_html_path}"
         cls.driver.get(file_uri)
         cls.driver.execute_script("localStorage.clear();")
 
-        # FIX: Wait 2.5 seconds to ensure the game loading screen is 100% finished
+        # Wait for boot animation to finish
         time.sleep(2.5) 
         cls.driver.execute_script("document.getElementById('play-btn').click();")
         time.sleep(0.5)
@@ -105,11 +101,11 @@ class TestMainJS(unittest.TestCase):
         self.assertEqual(level, 1, "Game should initialize at Depth Level 1")
 
     def test_02_level_up_saves_depth(self):
-        # Force state to PLAYING just in case, then trigger portal logic
-        self.driver.execute_script("GameState.state = 'PLAYING'; levelUpDungeon();")
+        # 1. Trigger the level up flag
+        self.driver.execute_script("levelUpDungeon();")
         
-        # Wait a moment for loop to process it
-        time.sleep(0.5)
+        # 2. FORCE the game loop to run one frame. (Headless Chrome pauses requestAnimationFrame)
+        self.driver.execute_script("loop(performance.now());")
         
         level = self.get_game_state_level()
         self.assertEqual(level, 2, "GameState.level should increment to 2")
