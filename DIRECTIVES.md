@@ -2,14 +2,6 @@
 
 ### 🎯 MANDATORY MISSION OBJECTIVES (IN ORDER)
 
-- **TASK 0: SOTA Projectile & Particle Effects Architecture**
-    - **Step 0:** Do not Remove inline onclick from avatar button, if you removed this put it back and revert that change.
-    - **Step 1:** Build a robust `Projectile` class utilizing vector math (`Math.atan2`, `Math.cos`, `Math.sin`) to accurately shoot from the player to the targeted enemy.
-    - **Step 2:** Implement SOTA rendering techniques for the projectiles. Use `ctx.shadowBlur` for glowing effects, `ctx.globalCompositeOperation = 'lighter'` for additive blending, and dynamic color shifts (e.g., fading from bright cyan core to deep blue trails).
-    - **Step 3:** Create an impact event. When a projectile hits an enemy hitbox, it must instantly destroy itself and spawn a burst of 10-15 micro-particles that scatter and fade out over time using easing functions.
-    - **Step 4:** Ensure strict memory management. Projectiles and particles MUST be removed from their respective arrays when they exceed their lifespan, hit a target, or go off-screen.
-    - **FAILURE CONDITION:** Projectiles cause framerate drops (memory leaks), fail to register collisions, or look like basic flat shapes without glowing/trail effects.
-
 - **TASK 1: Advanced Enemy AI & Aggro Balancing**
     - Implement a dynamic Aggro Radius. Enemies must detect the player and begin chasing from further away, reducing "idle" time.
     - Integrate "Flocking" or Separation logic. Enemies chasing the player must NOT perfectly overlap into a single sprite; they should fan out and surround the player.
