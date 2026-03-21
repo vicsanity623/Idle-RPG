@@ -14,7 +14,7 @@ const HiveMind = {
 };
 
 // --- PLAYER CLASS ---
-class Player {
+import { Player } from './player';
     constructor(x, y) {
         this.x = x;
         this.y = y;
