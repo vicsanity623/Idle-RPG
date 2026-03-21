@@ -2,6 +2,12 @@
 
 ### 🎯 MANDATORY MISSION OBJECTIVES (IN ORDER)
 
+- **TASK 0: Mandatory End-to-End Test Generation**
+    - For every new feature, class, or mechanic added to the game (e.g., AI logic, UI updates, Combat mechanics), you MUST create corresponding End-to-End (E2E) test units inside the `tests/` folder.
+    - Tests must validate the game from a full systems perspective (simulating the game loop, checking state changes, verifying UI values) to ensure zero regressions during launch.
+    - Follow the established testing architecture (Python + Selenium headless browser testing) so it integrates seamlessly with our `check.sh` CI/CD pipeline.
+    - **FAILURE CONDITION:** Submitting new code or modified features without a passing E2E test file in the `tests/` directory that explicitly verifies the new behavior.
+
 - **TASK 1: Advanced Enemy AI & Aggro Balancing**
     - Implement a dynamic Aggro Radius. Enemies must detect the player and begin chasing from further away, reducing "idle" time.
     - Integrate "Flocking" or Separation logic. Enemies chasing the player must NOT perfectly overlap into a single sprite; they should fan out and surround the player.
@@ -38,3 +44,4 @@ Before finalizing a PR, you MUST verify:
 2. Is there duplicate HTML? (If yes, fix).
 3. Is there "Bot-Talk" in the code? (If yes, fix).
 4. Do projectiles actually hit the enemies and trigger a visual burst? (If no, fix).
+5. Are there complete E2E tests in the `tests/` folder for the new features? (If no, fix).
