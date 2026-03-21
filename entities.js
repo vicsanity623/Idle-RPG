@@ -31,6 +31,7 @@ class Player {
             { id: 'aura', cdMax: 5, current: 0 },
             { id: 'dash', cdMax: 3, current: 0 }
         ];
+        this.lastMoveAngle = 0; // Track last movement direction for dash
     }
 
     getMaxHp() { 
@@ -84,6 +85,7 @@ class Player {
         if (Input.joystick.active) {
             this.vx = Math.cos(Input.joystick.angle) * this.speed;
             this.vy = Math.sin(Input.joystick.angle) * this.speed;
+            this.lastMoveAngle = Input.joystick.angle; // Update last move angle
         } else {
             this.vx = 0; this.vy = 0;
         }
@@ -145,6 +147,25 @@ class Player {
             spawnFloatingText(this.x, this.y, "HEALED", '#0f0');
             this.skills[0].current = this.skills[0].cdMax;
         }
+
+        // Manual Dash Skill (index 3)
+        if (Input.dashPressed && this.skills[3].current <= 0) {
+            const dashDistance = 150; // Pixels to dash
+            const dashAngle = this.lastMoveAngle; // Use last movement direction
+            const targetX = this.x + Math.cos(dashAngle) * dashDistance;
+            const targetY = this.y + Math.sin(dashAngle) * dashDistance;
+
+            // Check if the target position is a wall. If not, perform the dash.
+            // For simplicity, if the target is a wall, the dash is blocked and cooldown is not consumed.
+            if (!isWall(targetX, targetY)) {
+                this.x = targetX;
+                this.y = targetY;
+                spawnFloatingText(this.x, this.y, "DASH!", '#00ffff');
+                this.skills[3].current = this.skills[3].cdMax; // Start cooldown
+            }
+            Input.dashPressed = false; // Consume the input regardless of success to prevent re-triggering
+        }
+
         UI.updateHotbar(this.skills);
     }
 
