@@ -38,6 +38,7 @@ let PlayerData = {
     gold: 0,
     shards: 0,
     level: 1,
+    dungeonLevel: 1,
     xp: 0,
     maxXp: 100,
     gear: {
@@ -144,23 +145,21 @@ function gainXp(amt) {
 }
 
 function die() {
-    GameState.state = 'DEAD';
-    // Lose half loot
+    GameState.state = 'DEAD'
     PlayerData.gold = Math.floor(PlayerData.gold / 2);
     PlayerData.shards = Math.floor(PlayerData.shards / 2);
     UI.notify("YOU DIED. Lost 50% Wealth.");
+    
+    GameState.level = 1;
     saveGame();
     
     setTimeout(() => {
-        GameState.level = 1;
         initLevel();
         GameState.state = 'PLAYING';
     }, 2000);
 }
 
 function levelUpDungeon() {
-    // FIX: Don't call initLevel immediately. Set a flag.
-    // This prevents clearing the entities array while the loop is still using it.
     GameState.pendingLevelUp = true;
 }
 
@@ -344,7 +343,6 @@ const UI = {
             PlayerData.shards -= cost;
             gear.level++;
 
-            // Apply logic-based specialized scaling
             if (gear.atk !== undefined) gear.atk += randomInt(3, 7);
             if (gear.hp !== undefined) gear.hp += randomInt(15, 30);
             if (gear.def !== undefined) gear.def += randomInt(2, 5);
@@ -363,7 +361,6 @@ const UI = {
         const el = document.getElementById('notification');
         el.innerText = msg;
         el.style.opacity = 1;
-        // Clean restart of the fade animation
         if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
         UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
     },
@@ -387,6 +384,7 @@ const UI = {
 
 // --- SAVE / LOAD ---
 function saveGame() {
+    PlayerData.dungeonLevel = GameState.level; 
     localStorage.setItem('dof_save', JSON.stringify(PlayerData));
 }
 
@@ -395,9 +393,11 @@ function loadGame() {
     if (save) {
         try {
             const data = JSON.parse(save);
-            // Deep merge gear to handle potential version updates
             PlayerData = { ...PlayerData, ...data };
             if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
+            if (PlayerData.dungeonLevel) {
+                GameState.level = PlayerData.dungeonLevel;
+            }
         } catch(e) { console.error("Save Corrupted", e); }
     }
 }
@@ -497,18 +497,16 @@ function loop(timestamp) {
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
-        // FIX: SAFE LEVEL TRANSITION
-        // Check for the level-up flag here, before we iterate through the entities.
         if (GameState.pendingLevelUp) {
             GameState.level++;
             UI.notify(`Entering Depth ${GameState.level}`);
             initLevel();
             GameState.pendingLevelUp = false;
+            saveGame();
         }
 
         HiveMind.update();
         
-        // Use a reverse loop for safe removal during iteration
         for (let i = entities.length - 1; i >= 0; i--) {
             entities[i].update(dt);
         }
