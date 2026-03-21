@@ -2,25 +2,26 @@
 
 ### 🎯 MANDATORY MISSION OBJECTIVES (IN ORDER)
 
-- **TASK 0 (CRITICAL - MODULARITY): Atomic Player Extraction**
-    - **Step 1:** Create `player.js`. Use `export class Player`.
-    - **Step 2:** DELETE the `Player` class from `entities.js` entirely. DO NOT leave a placeholder.
-    - **Step 3:** Update `index.html` script tags to `<script type="module" src="player.js"></script>`. 
-    - **Step 4:** All internal imports MUST use the `.js` extension (e.g., `import { Player } from './player.js'`).
-    - **FAILURE CONDITION:** If the game has two definitions of 'Player', the patch is a failure.
+- **TASK 0: SOTA Projectile & Particle Effects Architecture**
+    - **Step 1:** Build a robust `Projectile` class utilizing vector math (`Math.atan2`, `Math.cos`, `Math.sin`) to accurately shoot from the player to the targeted enemy.
+    - **Step 2:** Implement SOTA rendering techniques for the projectiles. Use `ctx.shadowBlur` for glowing effects, `ctx.globalCompositeOperation = 'lighter'` for additive blending, and dynamic color shifts (e.g., fading from bright cyan core to deep blue trails).
+    - **Step 3:** Create an impact event. When a projectile hits an enemy hitbox, it must instantly destroy itself and spawn a burst of 10-15 micro-particles that scatter and fade out over time using easing functions.
+    - **Step 4:** Ensure strict memory management. Projectiles and particles MUST be removed from their respective arrays when they exceed their lifespan, hit a target, or go off-screen.
+    - **FAILURE CONDITION:** Projectiles cause framerate drops (memory leaks), fail to register collisions, or look like basic flat shapes without glowing/trail effects.
 
-- **TASK 1 (PERSISTENCE): Robust Save/Load System**
-    - Implement `saveGame()` and `loadGame()` in `main.js`.
-    - Use `localStorage` to persist the `PlayerData` object.
-    - All storage logic MUST be wrapped in `try/catch` blocks.
-    - Logic must verify data integrity before loading to prevent save-corruption crashes.
+- **TASK 1: Advanced Enemy AI & Aggro Balancing**
+    - Implement a dynamic Aggro Radius. Enemies must detect the player and begin chasing from further away, reducing "idle" time.
+    - Integrate "Flocking" or Separation logic. Enemies chasing the player must NOT perfectly overlap into a single sprite; they should fan out and surround the player.
+    - Create distinct AI states: `IDLE`, `CHASING`, `WINDUP`, and `ATTACKING`. Enemies must telegraph their attacks (e.g., flashing red or pausing for 0.2s) before dealing damage.
+    - Scale AI intelligence and aggression with `GameState.level` (Depth). Deeper floors should have enemies that move faster and have larger aggro detection zones.
 
-- **TASK 2 (VISUAL): Particle System Implementation**
-    - Hook into the attack logic to trigger 3-5 particles on impact.
-    - Use the existing `Particle` class. Ensure they are pushed to the global `particles` array.
+- **TASK 2: Combat Polish & Player Feedback**
+    - Sync the new Projectile system with the player's Attack Speed (`atkSpeed`) stat and Auto-Attack loop.
+    - Add subtle camera Screen Shake when the player takes damage or lands a Critical Hit to elevate the game feel.
 
-- **TASK 3 (UI): Advanced Stat Overlay**
-    - Create a clean overlay in `index.html` for Crit, Regen, and Defense.
+- **TASK 3: Performance Profiling**
+    - Cap the maximum number of active particles on screen (e.g., max 200) to ensure the SOTA effects do not crash mobile browsers. 
+    - Verify that the new Enemy AI distance calculations (using `Math.hypot`) are optimized and don't stall the main `requestAnimationFrame` loop.
 
 ### 🏗️ CODING & UI STANDARDS (NON-NEGOTIABLE)
 
@@ -29,7 +30,7 @@
     - 🚫 **NO LEAKS:** Never inject "LIBRARIAN" logs, "Iteration" notes, or "AI Thoughts" into any `.html` or `.js` file.
     - 🚫 **NO SCAFFOLDING:** Any text that is not part of the game's UI is a critical error.
     - **ENCAPSULATION:** All JS must stay in `<script>` tags. All CSS must stay in `<style>` tags.
-- **MODULARITY:** Keep `main.js` under 600 lines. Extract logic to new files as needed.
+- **MODULARITY:** Keep `main.js` under 600 lines. Extract logic to new files as needed (e.g., move AI and Particle logic to a `combat.js` or `entities.js` file if necessary).
 - **TYPE SAFETY:** Use clear naming or JSDoc. `const` is preferred over `let` unless the value changes.
 
 ### 🚫 PROHIBITED ACTIONS
@@ -43,3 +44,4 @@ Before finalizing a PR, you MUST verify:
 1. Does the console show `SyntaxError`? (If yes, fix).
 2. Is there duplicate HTML? (If yes, fix).
 3. Is there "Bot-Talk" in the code? (If yes, fix).
+4. Do projectiles actually hit the enemies and trigger a visual burst? (If no, fix).
