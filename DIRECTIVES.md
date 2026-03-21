@@ -3,6 +3,7 @@
 ### 🎯 MANDATORY MISSION OBJECTIVES (IN ORDER)
 
 - **TASK 0: SOTA Projectile & Particle Effects Architecture**
+    - **Step 0:** Do not Remove inline onclick from avatar button, if you removed this put it back and revert that change.
     - **Step 1:** Build a robust `Projectile` class utilizing vector math (`Math.atan2`, `Math.cos`, `Math.sin`) to accurately shoot from the player to the targeted enemy.
     - **Step 2:** Implement SOTA rendering techniques for the projectiles. Use `ctx.shadowBlur` for glowing effects, `ctx.globalCompositeOperation = 'lighter'` for additive blending, and dynamic color shifts (e.g., fading from bright cyan core to deep blue trails).
     - **Step 3:** Create an impact event. When a projectile hits an enemy hitbox, it must instantly destroy itself and spawn a burst of 10-15 micro-particles that scatter and fade out over time using easing functions.
