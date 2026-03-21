@@ -568,9 +568,3 @@ document.getElementById('play-btn').addEventListener('click', () => {
     GameState.lastTime = performance.now();
     requestAnimationFrame(loop);
 });
-
-document.getElementById('avatar-btn').addEventListener('click', () => {
-    if (GameState.state === 'PLAYING') {
-        UI.toggleInventory();
-    }
-});
