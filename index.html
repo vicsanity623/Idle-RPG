@@ -190,7 +190,24 @@
         </div>
 
         <!-- Inventory Modal -->
-        <div id="inventory-modal">
+        <div id="inventory-modal" style="display: none;">
+    <!-- Inventory Modal & Advanced Scrolling -->
+    <div class="inv-header">
+        <h2>Character Info</h2>
+        <button class="close-btn" onclick="UI_Manager.toggleInventory()">X</button>
+    </div>
+    <div class="modal-body">
+        <!-- Stats Section -->
+        <div class="stats-panel" id="stats-sheet">
+            <!-- Populated by JS -->
+        </div>
+
+        <h3>Equipment</h3>
+        <div class="gear-grid" id="gear-grid">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+</div>
             <div class="inv-header">
                 <h2>Character Info</h2>
                 <button class="close-btn" onclick="UI.toggleInventory()">X</button>
@@ -227,6 +244,7 @@
         }
     </script>
     <script src="entities.js"></script>
-    <script src="main.js"></script>
+    <script src="ui_manager.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
