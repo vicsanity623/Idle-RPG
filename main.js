@@ -3,6 +3,9 @@
  * Core engine and system managers.
  */
 
+// Import the Player class
+import { Player } from './player.js';
+
 // --- CONFIG & GLOBALS ---
 const TILE_SIZE = 64;
 const MAP_SIZE = 40; // 40x40 tiles
@@ -40,6 +43,8 @@ let PlayerData = {
     dungeonLevel: 1,
     xp: 0,
     maxXp: 100,
+    talentPoints: 0, // NEW: Talent points for skill tree
+    unlockedTalents: {}, // NEW: Object to store unlocked talent IDs
     gear: {
         'Weapon':   { level: 1, atk: 10, critMult: 0.05 },
         'Armor':    { level: 1, hp: 50, def: 5 },
@@ -53,6 +58,111 @@ let PlayerData = {
         'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } // atkSpeed is a CD reduction factor
     }
 };
+
+// --- SKILL TREE DATA & LOGIC (NEW) ---
+const SKILL_TREE_NODES = [
+    {
+        id: 'atk_1',
+        name: 'Basic Attack Boost',
+        description: '+5 Attack Power',
+        cost: 1,
+        prerequisites: [],
+        effect: { stat: 'atk', value: 5 }
+    },
+    {
+        id: 'hp_1',
+        name: 'Health Boost',
+        description: '+25 Max HP',
+        cost: 1,
+        prerequisites: [],
+        effect: { stat: 'hp', value: 25 }
+    },
+    {
+        id: 'crit_chance_1',
+        name: 'Critical Eye',
+        description: '+1.0% Critical Chance',
+        cost: 1,
+        prerequisites: [],
+        effect: { stat: 'critChance', value: 1.0 }
+    },
+    {
+        id: 'gold_find_1',
+        name: 'Greedy Touch',
+        description: '+5% Gold Find',
+        cost: 1,
+        prerequisites: [],
+        effect: { stat: 'goldFind', value: 0.05 } // Multiplier
+    },
+    {
+        id: 'atk_2',
+        name: 'Advanced Attack Boost',
+        description: '+10 Attack Power',
+        cost: 2,
+        prerequisites: ['atk_1'],
+        effect: { stat: 'atk', value: 10 }
+    },
+    {
+        id: 'hp_2',
+        name: 'Vitality Boost',
+        description: '+50 Max HP',
+        cost: 2,
+        prerequisites: ['hp_1'],
+        effect: { stat: 'hp', value: 50 }
+    },
+    {
+        id: 'crit_mult_1',
+        name: 'Lethal Strikes',
+        description: '+0.1x Critical Multiplier',
+        cost: 2,
+        prerequisites: ['crit_chance_1'],
+        effect: { stat: 'critMult', value: 0.1 }
+    },
+    {
+        id: 'xp_gain_1',
+        name: 'Focused Learning',
+        description: '+10% XP Gain',
+        cost: 2,
+        prerequisites: [],
+        effect: { stat: 'xpGain', value: 0.10 } // Multiplier
+    }
+    // Add more nodes as the game evolves
+];
+
+/**
+ * Aggregates all active talent effects from unlocked talents.
+ * This function is globally available for Player class to use.
+ * @param {Object.<string, boolean>} unlockedTalents - Map of talent IDs to true if unlocked.
+ * @returns {Object} An object containing aggregated stat bonuses.
+ */
+function getAggregatedTalentEffects(unlockedTalents) {
+    const effects = {
+        atk: 0,
+        hp: 0,
+        def: 0,
+        regen: 0,
+        critChance: 0,
+        critMult: 0,
+        atkSpeed: 0, // Reduction factor
+        goldFind: 0, // Percentage bonus
+        xpGain: 0 // Percentage bonus
+    };
+
+    SKILL_TREE_NODES.forEach(node => {
+        if (unlockedTalents[node.id]) {
+            if (node.effect.stat === 'atk') effects.atk += node.effect.value;
+            else if (node.effect.stat === 'hp') effects.hp += node.effect.value;
+            else if (node.effect.stat === 'def') effects.def += node.effect.value;
+            else if (node.effect.stat === 'regen') effects.regen += node.effect.value;
+            else if (node.effect.stat === 'critChance') effects.critChance += node.effect.value;
+            else if (node.effect.stat === 'critMult') effects.critMult += node.effect.value;
+            else if (node.effect.stat === 'atkSpeed') effects.atkSpeed += node.effect.value;
+            else if (node.effect.stat === 'goldFind') effects.goldFind += node.effect.value;
+            else if (node.effect.stat === 'xpGain') effects.xpGain += node.effect.value;
+        }
+    });
+
+    return effects;
+}
 
 // Entities
 let mapGrid = [];
@@ -205,13 +315,23 @@ function spawnAura(x, y) {
 }
 
 function gainXp(amt) {
-    PlayerData.xp += amt;
+    // Apply XP gain bonus from talents
+    const talentEffects = getAggregatedTalentEffects(PlayerData.unlockedTalents);
+    const actualAmt = amt * (1 + talentEffects.xpGain);
+
+    PlayerData.xp += actualAmt;
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
         PlayerData.level++;
         PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
+
+        // NEW: Award talent point every 5 levels
+        if (PlayerData.level % 5 === 0) {
+            PlayerData.talentPoints++;
+            spawnFloatingText(player.x, player.y - 60, "TALENT POINT!", '#ffeb3b');
+        }
     }
     UI.updateStats();
     saveGame();
@@ -319,9 +439,13 @@ const UI = {
         document.getElementById('hp-text').innerText = `${Math.floor(player.hp)} / ${Math.floor(player.getMaxHp())}`;
         document.getElementById('xp-fill').style.width = `${(PlayerData.xp / PlayerData.maxXp) * 100}%`;
         document.getElementById('xp-text').innerText = `${Math.floor(PlayerData.xp)} / ${PlayerData.maxXp}`;
+        document.getElementById('talent-points').innerText = PlayerData.talentPoints; // NEW: Update talent points display
     },
     updateCurrencies: () => {
-        document.getElementById('c-gold').innerText = PlayerData.gold;
+        // Apply gold find bonus from talents
+        const talentEffects = getAggregatedTalentEffects(PlayerData.unlockedTalents);
+        const goldDisplay = Math.floor(PlayerData.gold * (1 + talentEffects.goldFind));
+        document.getElementById('c-gold').innerText = goldDisplay;
         document.getElementById('c-shard').innerText = PlayerData.shards;
     },
     updateHotbar: (skills) => {
@@ -361,6 +485,8 @@ const UI = {
         } else {
             modal.style.display = 'flex';
             UI.renderInventory();
+            // Close other modals if open
+            document.getElementById('skill-tree-modal').style.display = 'none';
         }
     },
     renderInventory: () => {
@@ -430,6 +556,66 @@ const UI = {
             UI.notify(`${type} specialized!`);
         }
     },
+    // NEW: Skill Tree UI functions
+    toggleSkillTree: () => {
+        const modal = document.getElementById('skill-tree-modal');
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+        } else {
+            modal.style.display = 'flex';
+            UI.renderSkillTree();
+            // Close other modals if open
+            document.getElementById('inventory-modal').style.display = 'none';
+        }
+    },
+    renderSkillTree: () => {
+        const treeContainer = document.getElementById('skill-tree-grid');
+        treeContainer.innerHTML = ''; // Clear previous rendering
+
+        SKILL_TREE_NODES.forEach(node => {
+            const isUnlocked = PlayerData.unlockedTalents[node.id];
+            const canUnlock = PlayerData.talentPoints >= node.cost &&
+                              node.prerequisites.every(prereq => PlayerData.unlockedTalents[prereq]);
+
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = `skill-node ${isUnlocked ? 'unlocked' : ''} ${canUnlock && !isUnlocked ? 'available' : ''}`;
+            nodeDiv.innerHTML = `
+                <h4>${node.name}</h4>
+                <p>${node.description}</p>
+                <p>Cost: ${node.cost} TP</p>
+            `;
+            if (!isUnlocked && canUnlock) {
+                nodeDiv.onclick = () => UI.unlockTalent(node.id);
+            } else if (isUnlocked) {
+                nodeDiv.title = "Already unlocked";
+            } else {
+                nodeDiv.title = "Prerequisites not met or not enough TP";
+            }
+            treeContainer.appendChild(nodeDiv);
+        });
+        document.getElementById('talent-points').innerText = PlayerData.talentPoints;
+    },
+    unlockTalent: (talentId) => {
+        const node = SKILL_TREE_NODES.find(n => n.id === talentId);
+        if (!node) return;
+
+        const isUnlocked = PlayerData.unlockedTalents[node.id];
+        const canUnlock = PlayerData.talentPoints >= node.cost &&
+                          node.prerequisites.every(prereq => PlayerData.unlockedTalents[prereq]);
+
+        if (!isUnlocked && canUnlock) {
+            PlayerData.talentPoints -= node.cost;
+            PlayerData.unlockedTalents[node.id] = true;
+            UI.notify(`Talent "${node.name}" unlocked!`);
+            UI.renderSkillTree();
+            UI.updateStats(); // Stats might change
+            saveGame();
+        } else if (isUnlocked) {
+            UI.notify("Talent already unlocked.");
+        } else {
+            UI.notify("Cannot unlock talent: insufficient points or prerequisites not met.");
+        }
+    },
     notify: (msg) => {
         const el = document.getElementById('notification');
         el.innerText = msg;
@@ -471,6 +657,9 @@ function loadGame() {
             if (PlayerData.dungeonLevel) {
                 GameState.level = PlayerData.dungeonLevel;
             }
+            // Ensure new properties are initialized if not in old save
+            if (PlayerData.talentPoints === undefined) PlayerData.talentPoints = 0;
+            if (PlayerData.unlockedTalents === undefined) PlayerData.unlockedTalents = {};
         } catch(e) { console.error("Save Corrupted", e); }
     }
 }
