@@ -582,6 +582,9 @@ function loop(timestamp) {
         
         for (let i = entities.length - 1; i >= 0; i--) {
             entities[i].update(dt);
+            if (entities[i].isAlive === false) { // Assuming all entities have an isAlive property for cleanup
+                entities.splice(i, 1);
+            }
         }
 
         for (let i = particles.length - 1; i >= 0; i--) {
