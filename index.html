@@ -215,7 +215,7 @@
         
         <!-- Player Stats -->
         <div id="player-ui">
-            <div class="avatar-box" id="avatar-btn" onclick="UIHelper.toggleInventory()">Lv<span id="p-level">1</span></div>
+            <div class="avatar-box" id="avatar-btn" onclick="inventoryManager.toggleInventory()">Lv<span id="p-level">1</span></div>
             <div class="bars">
                 <div class="bar-container">
                     <div id="hp-fill" class="bar-fill"></div>
@@ -314,6 +314,10 @@
 <script src="ui.js"></script>
 <script src="entities.js"></script>
 <script src="main.js"></script>
+<script src="inventory_manager.js"></script>
 <script src="ui_helper.js"></script>
+<script>
+    const inventoryManager = new InventoryManager();
+</script>
 </body>
 </html>
