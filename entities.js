@@ -250,6 +250,33 @@ class Player {
         spawnFloatingText(this.x, this.y, `Equipped ${itemToEquip.name}`, '#bb86fc');
         saveGame();
     }
+
+    // --- NEW: PLAYER GEAR UNEQUIPPING METHOD ---
+    unequipItem(slot) {
+        // Validate the slot and check if an item is actually equipped there
+        if (!slot || !PlayerData.equipped[slot]) {
+            console.error("PYOB ARCHITECT: No item equipped in this slot to unequip, or invalid slot provided.");
+            return;
+        }
+
+        const itemToUnequip = PlayerData.equipped[slot];
+
+        // Add the item back to the player's inventory
+        PlayerData.inventory.push(itemToUnequip);
+
+        // Remove the item from the equipped slot
+        PlayerData.equipped[slot] = null; // Set the slot to null to indicate it's empty
+
+        // Recalculate player stats based on the updated equipped gear
+        // This method is assumed to exist in PlayerData.js and updates PlayerData.gear
+        PlayerData.recalculateGearStats();
+
+        // Update UI elements to reflect the changes
+        UI.updateStats(); // Update player stats display
+        UI.updateInventory(); // Refresh the inventory display
+        spawnFloatingText(this.x, this.y, `Unequipped ${itemToUnequip.name}`, '#bb86fc'); // Visual feedback
+        saveGame(); // Persist the changes
+    }
 }
 
 // --- ENEMY CLASS ---
