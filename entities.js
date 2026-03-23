@@ -1,5 +1,6 @@
 // --- E2E Test for Skill Upgrade Feature ---
 // File: tests/e2e_skill_upgrade.js
+(function() { // Start E2E Test Scope
 
 // Mock global dependencies for testing environment
 const mockPlayerData = {
@@ -387,7 +388,7 @@ class Enemy {
 }
 
 // --- HiveMind (copied for test context) ---
-const HiveMind = {
+const HiveMind = { // Local mock for E2E tests
     flankWeight: 0,
     packSize: 0,
     update: function() {
@@ -395,6 +396,8 @@ const HiveMind = {
         this.flankWeight = Math.min(1.0, this.packSize / 20); 
     }
 };
+// For E2E tests, this local HiveMind is used.
+// The actual HiveMind definition is further down in this file.
 
 // --- Test Suite ---
 console.log("--- Running E2E Skill Upgrade Tests ---");
@@ -515,7 +518,10 @@ console.assert(upgradedPotSkill.current === upgradedPotSkill.cdMax, "Test 6 Fail
 console.assert(mockFloatingTexts.some(t => t.text === 'HEALED'), "Test 6 Failed: Floating text for heal not shown.");
 console.log("Test 6 Passed: Pot skill stats (heal multiplier) applied correctly in handleSkills.");
 
-console.log("--- All E2E Skill Upgrade Tests Complete ---");/**
+console.log("--- All E2E Skill Upgrade Tests Complete ---");
+})(); // End E2E Test Scope
+
+/**
  * entities.js
  * Contains Player, Enemy, Loot, and Particle logic.
  */
@@ -634,7 +640,7 @@ class Player {
             skill.damageMultiplier = base.dmgMult + (skill.level - 1) * damageImprovementPerLevel;
         } else if (skill.id === 'aura') {
             skill.damageMultiplier = base.dmgMult + (skill.level - 1) * damageImprovementPerLevel;
-            skill.radius = base.radius + (skill.level - 1) * base.radius * radiusImproveLevel;
+            skill.radius = base.radius + (skill.level - 1) * base.radius * radiusImprovementPerLevel;
         } else if (skill.id === 'dash') {
             skill.distance = base.distance + (skill.level - 1) * base.distance * distanceImprovementPerLevel;
         }
