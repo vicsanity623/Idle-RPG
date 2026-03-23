@@ -194,8 +194,8 @@ class Projectile {
  * @param {number} y2 - Target Y coordinate.
  */
 function spawnProjectile(x1, y1, x2, y2) {
+    if (!player) return; // Add null check for player object
     const projectileSpeed = 500; // pixels per second
-    // Assuming player exists and has getAttackPower method
     const projectileDamage = player.getAttackPower(); 
     entities.push(new Projectile(x1, y1, x2, y2, projectileSpeed, projectileDamage));
 }
