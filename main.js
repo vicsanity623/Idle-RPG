@@ -311,9 +311,8 @@ jZone.addEventListener('touchend', endJoystick);
 jZone.addEventListener('touchcancel', endJoystick);
 
 
-// Ensure UI is declared only once
-// Ensure UI is declared only once in the global scope
-UI = {
+// --- UI MANAGER ---
+const UI = {
     updateStats: () => {
         document.getElementById('p-level').innerText = PlayerData.level;
         document.getElementById('hp-fill').style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
@@ -567,7 +566,7 @@ function draw() {
 
 // --- MAIN LOOP ---
 function loop(timestamp) {
-    const dt = Math.min(0.1, Math.max(0.016, (timestamp - GameState.lastTime) / 1000)); 
+    const dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); 
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
@@ -583,9 +582,6 @@ function loop(timestamp) {
         
         for (let i = entities.length - 1; i >= 0; i--) {
             entities[i].update(dt);
-            if (entities[i].isAlive === false) { // Assuming all entities have an isAlive property for cleanup
-                entities.splice(i, 1);
-            }
         }
 
         for (let i = particles.length - 1; i >= 0; i--) {

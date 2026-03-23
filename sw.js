@@ -7,7 +7,6 @@ const ASSETS_TO_CACHE = [
     './index.html',
     './entities.js',
     './main.js',
-    './ui_helper.js',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'
@@ -44,6 +43,30 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event - Cache-First Strategy
 // Checks cache first, if not found, fetches from network and caches it.
-import { applyCachingStrategy } from './cachingStrategies.js';
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request)
+            .then((cachedResponse) => {
+                // Return cached version if found
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                
+                // Otherwise fetch from network
+                return fetch(event.request).then((networkResponse) => {
+                    // Don't cache if not a valid response
+                    if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                        return networkResponse;
+                    }
 
-self.addEventListener('fetch', applyCachingStrategy);
+                    // Clone response and add to cache for next time
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+
+                    return networkResponse;
+                });
+            })
+    );
+});
