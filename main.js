@@ -574,7 +574,9 @@ function loop(timestamp) {
             saveGame();
         }
 
-        HiveMind.update();
+        if (typeof HiveMind !== 'undefined' && typeof HiveMind.update === 'function') {
+            HiveMind.update();
+        }
         
         for (let i = entities.length - 1; i >= 0; i--) {
             entities[i].update(dt);
