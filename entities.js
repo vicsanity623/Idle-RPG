@@ -3,15 +3,18 @@
  * Contains Player, Enemy, Loot, and Particle logic.
  */
 
-// --- HIVE MIND AI ---
-const HiveMind = {
-    flankWeight: 0,
-    packSize: 0,
-    update: function() {
-        this.packSize = entities.filter(e => e instanceof Enemy).length;
-        this.flankWeight = Math.min(1.0, this.packSize / 20); 
-    }
-};
+// --- GLOBAL CONSTANTS & HIVE MIND AI ---
+// REF NO: Magic Number Refactor by Pyob
+const PLAYER_ATTACK_RANGE = 200,
+      dashDistance = 150, // Pixels to dash
+      HiveMind = {
+          flankWeight: 0,
+          packSize: 0,
+          update: function() {
+              this.packSize = entities.filter(e => e instanceof Enemy).length;
+              this.flankWeight = Math.min(1.0, this.packSize / 20); 
+          }
+      };
 
 // --- PLAYER CLASS ---
 class Player {
@@ -35,7 +38,7 @@ class Player {
     }
 
     getMaxHp() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return Math.floor(100 + (PlayerData.level * 20) + 
             (g.Armor.hp || 0) + (g.Head.hp || 0) + 
             (g.Legs.hp || 0) + (g.Robe.hp || 0) + 
@@ -43,37 +46,37 @@ class Player {
     }
 
     getAttackPower() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return Math.floor(10 + (PlayerData.level * 2) + 
             (g.Weapon.atk || 0) + (g.Fists.atk || 0) + 
             (g.Ring.atk || 0)); 
     }
 
     getDefense() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return Math.floor((g.Armor.def || 0) + (g.Head.def || 0) + 
             (g.Legs.def || 0) + (g.Boots.def || 0)); 
     }
 
     getRegen() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return (g.Robe.regen || 0) + (g.Necklace.regen || 0) + 
             (g.Earrings.regen || 0); 
     }
 
     getCritChance() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         let base = 5 + (g.Fists.critChance || 0) + (g.Ring.critChance || 0);
         return Math.min(75, base); 
     }
 
     getCritMultiplier() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return 1.5 + (g.Weapon.critMult || 0) + (g.Earrings.critMult || 0); 
     }
 
     getAttackSpeedFactor() {
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return Math.max(0.3, 1.0 - (g.Boots.atkSpeed || 0));
     }
 
@@ -90,8 +93,8 @@ class Player {
             this.vx = 0; this.vy = 0;
         }
 
-        const nextX = this.x + this.vx * dt;
-        const nextY = this.y + this.vy * dt;
+        let nextX = this.x + this.vx * dt;
+        let nextY = this.y + this.vy * dt;
         if (!isWall(nextX, this.y)) this.x = nextX;
         if (!isWall(this.x, nextY)) this.y = nextY;
 
@@ -105,8 +108,8 @@ class Player {
     }
 
     updateFog() {
-        const col = Math.floor(this.x / TILE_SIZE);
-        const row = Math.floor(this.y / TILE_SIZE);
+        let col = Math.floor(this.x / TILE_SIZE);
+        let row = Math.floor(this.y / TILE_SIZE);
         for(let r = row-4; r <= row+4; r++) {
             for(let c = col-4; c <= col+4; c++) {
                 if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
@@ -116,9 +119,6 @@ class Player {
 
     handleSkills(dt) {
         this.skills.forEach(s => { if(s.current > 0) s.current -= dt; });
-
-        // REF NO: Magic Number Refactor by Pyob
-        const PLAYER_ATTACK_RANGE = 200; 
 
         if (this.skills[1].current <= 0) {
             let target = this.getNearestEnemy(PLAYER_ATTACK_RANGE);
@@ -150,10 +150,9 @@ class Player {
 
         // Manual Dash Skill (index 3)
         if (Input.dashPressed && this.skills[3].current <= 0) {
-            const dashDistance = 150; // Pixels to dash
-            const dashAngle = this.lastMoveAngle; // Use last movement direction
-            const targetX = this.x + Math.cos(dashAngle) * dashDistance;
-            const targetY = this.y + Math.sin(dashAngle) * dashDistance;
+            let dashAngle = this.lastMoveAngle; // Use last movement direction
+            let targetX = this.x + Math.cos(dashAngle) * dashDistance;
+            let targetY = this.y + Math.sin(dashAngle) * dashDistance;
 
             // Check if the target position is a wall. If not, perform the dash.
             // For simplicity, if the target is a wall, the dash is blocked and cooldown is not consumed.
@@ -173,7 +172,7 @@ class Player {
         let nearest = null; let minDist = range;
         entities.forEach(e => {
             if (e instanceof Enemy) {
-                const d = Math.hypot(this.x - e.x, this.y - e.y);
+                let d = Math.hypot(this.x - e.x, this.y - e.y);
                 if (d < minDist) { minDist = d; nearest = e; }
             }
         });
@@ -181,8 +180,8 @@ class Player {
     }
 
     takeDamage(amt) {
-        const reduction = Math.min(amt * 0.8, this.getDefense());
-        const finalDamage = Math.max(1, amt - reduction);
+        let reduction = Math.min(amt * 0.8, this.getDefense());
+        let finalDamage = Math.max(1, amt - reduction);
         this.hp -= finalDamage;
         spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
         if (this.hp <= 0) die();
@@ -202,7 +201,7 @@ class Enemy {
         this.y = y;
         this.radius = 15;
         this.speed = randomFloat(80, 130) * Math.pow(1.02, GameState.level); 
-        const hpMultiplier = Math.pow(1.1, GameState.level);
+        let hpMultiplier = Math.pow(1.1, GameState.level);
         this.hp = 30 * hpMultiplier;
         this.maxHp = this.hp;
         this.damage = 5 * hpMultiplier;
@@ -212,9 +211,9 @@ class Enemy {
 
     update(dt) {
         if (!player) return;
-        const dx = player.x - this.x;
-        const dy = player.y - this.y;
-        const dist = Math.hypot(dx, dy);
+        let dx = player.x - this.x;
+        let dy = player.y - this.y;
+        let dist = Math.hypot(dx, dy);
 
         if (dist < player.radius + this.radius + 5) {
             this.attackCooldown -= dt;
@@ -223,13 +222,13 @@ class Enemy {
                 this.attackCooldown = 1.0;
             }
         } else if (dist < 600) {
-            const angleToPlayer = Math.atan2(dy, dx);
-            const flankOffset = (this.id > 0.5 ? 1 : -1) * (Math.PI / 2) * HiveMind.flankWeight;
-            const targetAngle = angleToPlayer + flankOffset;
+            let angleToPlayer = Math.atan2(dy, dx);
+            let flankOffset = (this.id > 0.5 ? 1 : -1) * (Math.PI / 2) * HiveMind.flankWeight;
+            let targetAngle = angleToPlayer + flankOffset;
             let vx = Math.cos(targetAngle) * this.speed;
             let vy = Math.sin(targetAngle) * this.speed;
-            const nextX = this.x + vx * dt;
-            const nextY = this.y + vy * dt;
+            let nextX = this.x + vx * dt;
+            let nextY = this.y + vy * dt;
             if (!isWall(nextX, this.y)) this.x = nextX;
             if (!isWall(this.x, nextY)) this.y = nextY;
         }
@@ -237,14 +236,14 @@ class Enemy {
 
     takeDamage(amt, isCrit) {
         this.hp -= amt;
-        const color = isCrit ? '#ff0' : '#fff';
-        const text = isCrit ? `CRIT ${Math.floor(amt)}` : Math.floor(amt);
+        let color = isCrit ? '#ff0' : '#fff';
+        let text = isCrit ? `CRIT ${Math.floor(amt)}` : Math.floor(amt);
         spawnFloatingText(this.x, this.y, text, color);
         if (this.hp <= 0) this.die();
     }
 
     die() {
-        const idx = entities.indexOf(this);
+        let idx = entities.indexOf(this);
         if(idx > -1) entities.splice(idx, 1);
         gainXp(10 * GameState.level);
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
@@ -283,7 +282,7 @@ class Loot {
     }
     pickup() {
         if (this.type === 'gold') {
-            const amt = randomInt(5, 15) * GameState.level;
+            let amt = randomInt(5, 15) * GameState.level;
             PlayerData.gold += amt;
             spawnFloatingText(this.x, this.y, `+${amt} Gold`, '#ffd700');
         } else if (this.type === 'shard') {
@@ -334,8 +333,8 @@ class FloatingText {
 class Particle {
     constructor(x, y, color) {
         this.x = x; this.y = y; this.color = color;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 100;
+        let angle = Math.random() * Math.PI * 2;
+        let speed = Math.random() * 100;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.life = 0.5; this.size = randomFloat(2, 5);
