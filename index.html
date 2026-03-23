@@ -66,9 +66,19 @@
         .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0,0,0,0.7); transition: height 0.1s linear;}
         .slot-key { position: absolute; top: -10px; right: -5px; background: var(--primary); color: #000; font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; font-weight: bold;}
 
-        /* Inventory Modal & Advanced Scrolling */
-        #inventory-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 50; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
-        .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
+        /* Generic Modal Base & Header */
+        .modal-base {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90vw; max-width: 600px; height: 80vh;
+            background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px;
+            backdrop-filter: blur(15px); padding: 20px;
+            display: none; flex-direction: column; pointer-events: auto; z-index: 50;
+            box-shadow: 0 0 30px rgba(0,0,0,0.9);
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0;
+        }
         .modal-body { flex: 1; overflow-y: auto; padding-right: 8px; }
         .modal-body h3 { margin: 15px 0 10px 0; font-size: 1.1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
 
@@ -89,6 +99,16 @@
         .upgrade-btn:active { transform: scale(0.95); }
         .upgrade-btn:disabled { background: #444; color: #777; cursor: not-allowed; }
         .close-btn { background: var(--hp-color); border: none; padding: 5px 15px; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        /* Quest Log Specific Styles */
+        .quest-item {
+            background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 8px;
+            padding: 10px; margin-bottom: 10px; transition: 0.2s;
+        }
+        .quest-item:hover { border-color: var(--primary); background: rgba(187, 134, 252, 0.05); }
+        .quest-item h4 { font-size: 1rem; color: var(--primary); margin-bottom: 5px; }
+        .quest-item p { font-size: 0.85rem; margin: 2px 0; color: #ccc; }
+        .quest-item .quest-progress { font-weight: bold; color: var(--xp-color); }
 
         /* Custom Scrollbar */
         .modal-body::-webkit-scrollbar { width: 6px; }
@@ -167,6 +187,7 @@
             <div id="level-text">Depth: <span id="d-level">1</span></div>
             <canvas id="minimap" width="120" height="120"></canvas>
         </div>
+        <button id="quest-btn" class="btn" style="position: absolute; top: 140px; right: 20px; padding: 8px 15px; font-size: 1rem; width: 120px; pointer-events: auto;" onclick="UI.toggleQuestLog()">Quests</button>
         <div id="currencies">
             <div class="gold-text">🪙 <span id="c-gold">0</span></div>
             <div class="shard-text">💎 <span id="c-shard">0</span></div>
@@ -189,8 +210,8 @@
         </div>
 
         <!-- Inventory Modal -->
-        <div id="inventory-modal">
-            <div class="inv-header">
+        <div id="inventory-modal" class="modal-base">
+            <div class="modal-header">
                 <h2>Character Info</h2>
                 <button class="close-btn" onclick="UI.toggleInventory()">X</button>
             </div>
@@ -203,6 +224,35 @@
                 <h3>Equipment</h3>
                 <div class="gear-grid" id="gear-grid">
                     <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quest Log Modal -->
+        <div id="quest-log-modal" class="modal-base">
+            <div class="modal-header">
+                <h2>Quest Log</h2>
+                <button class="close-btn" onclick="UI.toggleQuestLog()">X</button>
+            </div>
+            <div class="modal-body" id="quest-list">
+                <!-- Example Quests - Populated by JS -->
+                <div class="quest-item">
+                    <h4>Defeat 5 Goblins</h4>
+                    <p>Current: <span class="quest-progress">3/5</span></p>
+                    <div class="bar-container" style="height: 10px; margin-top: 5px;">
+                        <div class="bar-fill" style="background: var(--xp-color); width: 60%;"></div>
+                    </div>
+                    <p>Reward: 100 Gold, 10 XP</p>
+                    <button class="upgrade-btn" disabled>Claim Reward</button>
+                </div>
+                <div class="quest-item">
+                    <h4>Reach Depth 5</h4>
+                    <p>Current: <span class="quest-progress">1/5</span></p>
+                    <div class="bar-container" style="height: 10px; margin-top: 5px;">
+                        <div class="bar-fill" style="background: var(--xp-color); width: 20%;"></div>
+                    </div>
+                    <p>Reward: 200 Gold, 20 Shards</p>
+                    <button class="upgrade-btn" disabled>Claim Reward</button>
                 </div>
             </div>
         </div>
