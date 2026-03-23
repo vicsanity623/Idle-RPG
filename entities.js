@@ -3,37 +3,40 @@
  * Contains Player, Enemy, Loot, and Particle logic.
  */
 
-// --- GLOBAL GAME DATA ---
-// This object holds player-specific data that persists across levels and game sessions.
-// It is crucial for the new Inventory & Gear Management feature.
-const PlayerData = {
-    level: 1,
-    gold: 0,
-    shards: 0,
-    inventory: [], // Stores collected gear items
-    gear: {        // Stores currently equipped gear items by slot
-        Head: null,
-        Armor: null,
-        Legs: null,
-        Boots: null,
-        Weapon: null,
-        Fists: null, // Default unarmed slot, can be replaced by a weapon
-        Ring: null,
-        Necklace: null,
-        Earrings: null,
-        Robe: null   // Default clothing slot, can be replaced by armor
-    }
-};
-
-// --- HIVE MIND AI ---
-const HiveMind = {
-    flankWeight: 0,
-    packSize: 0,
-    update: function() {
-        this.packSize = entities.filter(e => e instanceof Enemy).length;
-        this.flankWeight = Math.min(1.0, this.packSize / 20); 
-    }
-};
+// --- GLOBAL CONSTANTS & CONFIG ---
+const PLAYER_ATTACK_RANGE = 200,
+      dashDistance = 150,
+      HiveMind = {
+          flankWeight: 0,
+          packSize: 0,
+          update: function() {
+              this.packSize = entities.filter(e => e instanceof Enemy).length;
+              this.flankWeight = Math.min(1.0, this.packSize / 20); 
+          }
+      },
+      generateRandomGear = (level) => {
+          let gearTemplates = [
+              { slot: 'Head', name: 'Helmet', stats: { def: 2, hp: 5 } },
+              { slot: 'Armor', name: 'Chestplate', stats: { def: 4, hp: 10 } },
+              { slot: 'Legs', name: 'Greaves', stats: { def: 3, hp: 7 } },
+              { slot: 'Boots', name: 'Boots', stats: { def: 1, atkSpeed: 0.05 } },
+              { slot: 'Weapon', name: 'Sword', stats: { atk: 5, critMult: 0.1 } },
+              { slot: 'Ring', name: 'Ring', stats: { atk: 2, critChance: 2 } },
+              { slot: 'Necklace', name: 'Amulet', stats: { hp: 8, regen: 0.5 } },
+              { slot: 'Earrings', name: 'Earrings', stats: { regen: 0.2, critMult: 0.05 } }
+          ];
+          let chosenTemplate = gearTemplates[Math.floor(Math.random() * gearTemplates.length)];
+          let item = {
+              id: `gear_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+              name: `${chosenTemplate.name} of Level ${level}`,
+              slot: chosenTemplate.slot,
+              stats: {}
+          };
+          for (let stat in chosenTemplate.stats) {
+              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2));
+          }
+          return item;
+      };
 
 // --- PLAYER CLASS ---
 class Player {
@@ -45,7 +48,7 @@ class Player {
         this.vy = 0;
         this.speed = 250; 
         this.color = '#bb86fc';
-        
+
         this.hp = this.getMaxHp();
         this.skills = [
             { id: 'pot', cdMax: 10, current: 0 },
@@ -53,50 +56,50 @@ class Player {
             { id: 'aura', cdMax: 5, current: 0 },
             { id: 'dash', cdMax: 3, current: 0 }
         ];
-        this.lastMoveAngle = 0; // Track last movement direction for dash
+        this.lastMoveAngle = 0; 
     }
 
     getMaxHp() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return Math.floor(100 + (PlayerData.level * 20) + 
-            (g.Armor.hp || 0) + (g.Head.hp || 0) + 
-            (g.Legs.hp || 0) + (g.Robe.hp || 0) + 
-            (g.Necklace.hp || 0)); 
+            (g.Armor?.hp || 0) + (g.Head?.hp || 0) + 
+            (g.Legs?.hp || 0) + (g.Robe?.hp || 0) + 
+            (g.Necklace?.hp || 0)); 
     }
 
     getAttackPower() { 
-        const g = PlayerData.gear;
+        let g = PlayerData.gear;
         return Math.floor(10 + (PlayerData.level * 2) + 
-            (g.Weapon.atk || 0) + (g.Fists.atk || 0) + 
-            (g.Ring.atk || 0)); 
+            (g.Weapon?.atk || 0) + (g.Fists?.atk || 0) + 
+            (g.Ring?.atk || 0)); 
     }
 
     getDefense() { 
-        const g = PlayerData.gear;
-        return Math.floor((g.Armor.def || 0) + (g.Head.def || 0) + 
-            (g.Legs.def || 0) + (g.Boots.def || 0)); 
+        let g = PlayerData.gear;
+        return Math.floor((g.Armor?.def || 0) + (g.Head?.def || 0) + 
+            (g.Legs?.def || 0) + (g.Boots?.def || 0)); 
     }
 
     getRegen() { 
-        const g = PlayerData.gear;
-        return (g.Robe.regen || 0) + (g.Necklace.regen || 0) + 
-            (g.Earrings.regen || 0); 
+        let g = PlayerData.gear;
+        return (g.Robe?.regen || 0) + (g.Necklace?.regen || 0) + 
+            (g.Earrings?.regen || 0); 
     }
 
     getCritChance() { 
-        const g = PlayerData.gear;
-        let base = 5 + (g.Fists.critChance || 0) + (g.Ring.critChance || 0);
+        let g = PlayerData.gear;
+        let base = 5 + (g.Fists?.critChance || 0) + (g.Ring?.critChance || 0);
         return Math.min(75, base); 
     }
 
     getCritMultiplier() { 
-        const g = PlayerData.gear;
-        return 1.5 + (g.Weapon.critMult || 0) + (g.Earrings.critMult || 0); 
+        let g = PlayerData.gear;
+        return 1.5 + (g.Weapon?.critMult || 0) + (g.Earrings?.critMult || 0); 
     }
 
     getAttackSpeedFactor() {
-        const g = PlayerData.gear;
-        return Math.max(0.3, 1.0 - (g.Boots.atkSpeed || 0));
+        let g = PlayerData.gear;
+        return Math.max(0.3, 1.0 - (g.Boots?.atkSpeed || 0));
     }
 
     update(dt) {
@@ -107,13 +110,13 @@ class Player {
         if (Input.joystick.active) {
             this.vx = Math.cos(Input.joystick.angle) * this.speed;
             this.vy = Math.sin(Input.joystick.angle) * this.speed;
-            this.lastMoveAngle = Input.joystick.angle; // Update last move angle
+            this.lastMoveAngle = Input.joystick.angle; 
         } else {
             this.vx = 0; this.vy = 0;
         }
 
-        const nextX = this.x + this.vx * dt;
-        const nextY = this.y + this.vy * dt;
+        let nextX = this.x + this.vx * dt;
+        let nextY = this.y + this.vy * dt;
         if (!isWall(nextX, this.y)) this.x = nextX;
         if (!isWall(this.x, nextY)) this.y = nextY;
 
@@ -127,8 +130,8 @@ class Player {
     }
 
     updateFog() {
-        const col = Math.floor(this.x / TILE_SIZE);
-        const row = Math.floor(this.y / TILE_SIZE);
+        let col = Math.floor(this.x / TILE_SIZE);
+        let row = Math.floor(this.y / TILE_SIZE);
         for(let r = row-4; r <= row+4; r++) {
             for(let c = col-4; c <= col+4; c++) {
                 if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
@@ -138,9 +141,6 @@ class Player {
 
     handleSkills(dt) {
         this.skills.forEach(s => { if(s.current > 0) s.current -= dt; });
-
-        // REF NO: Magic Number Refactor by Pyob
-        const PLAYER_ATTACK_RANGE = 200; 
 
         if (this.skills[1].current <= 0) {
             let target = this.getNearestEnemy(PLAYER_ATTACK_RANGE);
@@ -170,22 +170,18 @@ class Player {
             this.skills[0].current = this.skills[0].cdMax;
         }
 
-        // Manual Dash Skill (index 3)
         if (Input.dashPressed && this.skills[3].current <= 0) {
-            const dashDistance = 150; // Pixels to dash
-            const dashAngle = this.lastMoveAngle; // Use last movement direction
-            const targetX = this.x + Math.cos(dashAngle) * dashDistance;
-            const targetY = this.y + Math.sin(dashAngle) * dashDistance;
+            let dashAngle = this.lastMoveAngle; 
+            let targetX = this.x + Math.cos(dashAngle) * dashDistance;
+            let targetY = this.y + Math.sin(dashAngle) * dashDistance;
 
-            // Check if the target position is a wall. If not, perform the dash.
-            // For simplicity, if the target is a wall, the dash is blocked and cooldown is not consumed.
             if (!isWall(targetX, targetY)) {
                 this.x = targetX;
                 this.y = targetY;
                 spawnFloatingText(this.x, this.y, "DASH!", '#00ffff');
-                this.skills[3].current = this.skills[3].cdMax; // Start cooldown
+                this.skills[3].current = this.skills[3].cdMax; 
             }
-            Input.dashPressed = false; // Consume the input regardless of success to prevent re-triggering
+            Input.dashPressed = false; 
         }
 
         UI.updateHotbar(this.skills);
@@ -195,7 +191,7 @@ class Player {
         let nearest = null; let minDist = range;
         entities.forEach(e => {
             if (e instanceof Enemy) {
-                const d = Math.hypot(this.x - e.x, this.y - e.y);
+                let d = Math.hypot(this.x - e.x, this.y - e.y);
                 if (d < minDist) { minDist = d; nearest = e; }
             }
         });
@@ -203,8 +199,8 @@ class Player {
     }
 
     takeDamage(amt) {
-        const reduction = Math.min(amt * 0.8, this.getDefense());
-        const finalDamage = Math.max(1, amt - reduction);
+        let reduction = Math.min(amt * 0.8, this.getDefense());
+        let finalDamage = Math.max(1, amt - reduction);
         this.hp -= finalDamage;
         spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
         if (this.hp <= 0) die();
@@ -224,7 +220,7 @@ class Enemy {
         this.y = y;
         this.radius = 15;
         this.speed = randomFloat(80, 130) * Math.pow(1.02, GameState.level); 
-        const hpMultiplier = Math.pow(1.1, GameState.level);
+        let hpMultiplier = Math.pow(1.1, GameState.level);
         this.hp = 30 * hpMultiplier;
         this.maxHp = this.hp;
         this.damage = 5 * hpMultiplier;
@@ -234,9 +230,9 @@ class Enemy {
 
     update(dt) {
         if (!player) return;
-        const dx = player.x - this.x;
-        const dy = player.y - this.y;
-        const dist = Math.hypot(dx, dy);
+        let dx = player.x - this.x;
+        let dy = player.y - this.y;
+        let dist = Math.hypot(dx, dy);
 
         if (dist < player.radius + this.radius + 5) {
             this.attackCooldown -= dt;
@@ -245,13 +241,13 @@ class Enemy {
                 this.attackCooldown = 1.0;
             }
         } else if (dist < 600) {
-            const angleToPlayer = Math.atan2(dy, dx);
-            const flankOffset = (this.id > 0.5 ? 1 : -1) * (Math.PI / 2) * HiveMind.flankWeight;
-            const targetAngle = angleToPlayer + flankOffset;
+            let angleToPlayer = Math.atan2(dy, dx);
+            let flankOffset = (this.id > 0.5 ? 1 : -1) * (Math.PI / 2) * HiveMind.flankWeight;
+            let targetAngle = angleToPlayer + flankOffset;
             let vx = Math.cos(targetAngle) * this.speed;
             let vy = Math.sin(targetAngle) * this.speed;
-            const nextX = this.x + vx * dt;
-            const nextY = this.y + vy * dt;
+            let nextX = this.x + vx * dt;
+            let nextY = this.y + vy * dt;
             if (!isWall(nextX, this.y)) this.x = nextX;
             if (!isWall(this.x, nextY)) this.y = nextY;
         }
@@ -259,14 +255,14 @@ class Enemy {
 
     takeDamage(amt, isCrit) {
         this.hp -= amt;
-        const color = isCrit ? '#ff0' : '#fff';
-        const text = isCrit ? `CRIT ${Math.floor(amt)}` : Math.floor(amt);
+        let color = isCrit ? '#ff0' : '#fff';
+        let text = isCrit ? `CRIT ${Math.floor(amt)}` : Math.floor(amt);
         spawnFloatingText(this.x, this.y, text, color);
         if (this.hp <= 0) this.die();
     }
 
     die() {
-        const idx = entities.indexOf(this);
+        let idx = entities.indexOf(this);
         if(idx > -1) entities.splice(idx, 1);
         gainXp(10 * GameState.level);
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
@@ -284,32 +280,6 @@ class Enemy {
         ctx.fillStyle = '#ff0000';
         ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.hp/this.maxHp), 4);
     }
-}
-
-// Proposed new helper function (would ideally be moved to `game.js` or `utils.js`)
-function generateRandomGear(level) {
-    const gearTemplates = [
-        { slot: 'Head', name: 'Helmet', stats: { def: 2, hp: 5 } },
-        { slot: 'Armor', name: 'Chestplate', stats: { def: 4, hp: 10 } },
-        { slot: 'Legs', name: 'Greaves', stats: { def: 3, hp: 7 } },
-        { slot: 'Boots', name: 'Boots', stats: { def: 1, atkSpeed: 0.05 } },
-        { slot: 'Weapon', name: 'Sword', stats: { atk: 5, critMult: 0.1 } },
-        { slot: 'Ring', name: 'Ring', stats: { atk: 2, critChance: 2 } },
-        { slot: 'Necklace', name: 'Amulet', stats: { hp: 8, regen: 0.5 } },
-        { slot: 'Earrings', name: 'Earrings', stats: { regen: 0.2, critMult: 0.05 } },
-    ];
-    const chosenTemplate = gearTemplates[Math.floor(Math.random() * gearTemplates.length)];
-    const item = {
-        id: `gear_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // Unique ID
-        name: `${chosenTemplate.name} of Level ${level}`,
-        slot: chosenTemplate.slot,
-        stats: {}
-    };
-    // Scale stats by level, adding some randomness
-    for (const stat in chosenTemplate.stats) {
-        item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2));
-    }
-    return item;
 }
 
 // --- LOOT CLASS ---
@@ -331,27 +301,26 @@ class Loot {
     }
     pickup() {
         if (this.type === 'gold') {
-            const amt = randomInt(5, 15) * GameState.level;
+            let amt = randomInt(5, 15) * GameState.level;
             PlayerData.gold += amt;
             spawnFloatingText(this.x, this.y, `+${amt} Gold`, '#ffd700');
         } else if (this.type === 'shard') {
             PlayerData.shards += 1;
             spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
         } else if (this.type === 'gear') {
-            // NEW LOGIC: Generate a gear item and add it to the player's inventory
-            const newGear = generateRandomGear(GameState.level);
-            if (!PlayerData.inventory) { // Ensure inventory array exists
+            let newGear = generateRandomGear(GameState.level);
+            if (!PlayerData.inventory) { 
                 PlayerData.inventory = [];
             }
             PlayerData.inventory.push(newGear);
             spawnFloatingText(this.x, this.y, `+ ${newGear.name}`, '#bb86fc');
-            // Trigger a UI update for the inventory display
-            if (typeof UI.updateInventoryDisplay === 'function') {
+            
+            if (typeof UI !== 'undefined' && typeof UI.updateInventoryDisplay === 'function') {
                 UI.updateInventoryDisplay();
             }
         }
-        UI.updateCurrencies();
-        saveGame();
+        if (typeof UI !== 'undefined' && UI.updateCurrencies) UI.updateCurrencies();
+        if (typeof saveGame !== 'undefined') saveGame();
     }
     draw(ctx) {
         ctx.fillStyle = this.type === 'gold' ? '#ffd700' : this.type === 'shard' ? '#00e5ff' : '#bb86fc';
@@ -391,8 +360,8 @@ class FloatingText {
 class Particle {
     constructor(x, y, color) {
         this.x = x; this.y = y; this.color = color;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 100;
+        let angle = Math.random() * Math.PI * 2;
+        let speed = Math.random() * 100;
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
         this.life = 0.5; this.size = randomFloat(2, 5);
@@ -411,3 +380,22 @@ class Particle {
         ctx.globalAlpha = 1.0;
     }
 }
+
+// --- UI EVENT LISTENERS BINDING ---
+// Restores missing inline onclick HTML functionality
+window.addEventListener('DOMContentLoaded', () => {
+    let avatarBtn = document.getElementById('avatar-btn');
+    if (avatarBtn) {
+        avatarBtn.addEventListener('click', () => {
+            if (typeof UI !== 'undefined' && UI.toggleInventory) UI.toggleInventory();
+        });
+    }
+    
+    let dailyLogin = document.getElementById('daily-login');
+    if (dailyLogin) {
+        let claimBtn = dailyLogin.querySelector('button') || dailyLogin;
+        claimBtn.addEventListener('click', () => {
+            if (typeof UI !== 'undefined' && UI.claimDaily) UI.claimDaily();
+        });
+    }
+});
