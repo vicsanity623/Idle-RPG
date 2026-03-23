@@ -9,8 +9,10 @@ class UI {
         // Logic to claim daily reward
         console.log("Claiming daily reward...");
         // Update gold and shards display
-        document.getElementById("c-gold").innerText = parseInt(document.getElementById("c-gold").innerText) + 500;
-        document.getElementById("c-shard").innerText = parseInt(document.getElementById("c-shard").innerText) + 50;
+        const currentGold = parseInt(document.getElementById("c-gold").innerText, 10) || 0;
+        const currentShard = parseInt(document.getElementById("c-shard").innerText, 10) || 0;
+        document.getElementById("c-gold").innerText = currentGold + 500;
+        document.getElementById("c-shard").innerText = currentShard + 50;
         // Hide daily login modal
         document.getElementById("daily-login").style.display = "none";
     }
