@@ -215,7 +215,7 @@
         
         <!-- Player Stats -->
         <div id="player-ui">
-            <div class="avatar-box" id="avatar-btn" onclick="UI.toggleInventory()">Lv<span id="p-level">1</span></div>
+            <div class="avatar-box" id="avatar-btn" onclick="UIHelper.toggleInventory()">Lv<span id="p-level">1</span></div>
             <div class="bars">
                 <div class="bar-container">
                     <div id="hp-fill" class="bar-fill"></div>
@@ -258,7 +258,7 @@
         <div id="inventory-modal">
             <div class="inv-header">
                 <h2>Character Info</h2>
-                <button class="close-btn" onclick="UI.toggleInventory()">X</button>
+                <button class="close-btn" onclick="UIHelper.toggleInventory()">X</button>
             </div>
             <div class="modal-body">
                 <!-- Stats Section -->
@@ -298,7 +298,7 @@
             <h2>Daily Reward!</h2>
             <p>Welcome back, hero.</p>
             <p style="color:var(--gold); font-weight:bold; margin: 10px 0;">+500 Gold, +50 Shards</p>
-            <button class="btn" style="padding: 10px 20px; font-size: 1rem;" onclick="UI.claimDaily()">Claim</button>
+            <button class="btn" style="padding: 10px 20px; font-size: 1rem;" onclick="UIHelper.claimDaily()">Claim</button>
         </div>
     </div>
 
@@ -311,8 +311,9 @@
             });
         }
     </script>
-    <script src="ui.js"></script>
-    <script src="entities.js"></script>
-    <script src="main.js"></script>
+<script src="ui.js"></script>
+<script src="entities.js"></script>
+<script src="main.js"></script>
+<script src="ui_helper.js"></script>
 </body>
 </html>
