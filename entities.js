@@ -60,10 +60,10 @@ class Player {
 
     getMaxHp() { 
         let g = PlayerData.gear;
-        return Math.floor(100 + (PlayerData.level * 20) + 
-            (g.Armor.hp || 0) + (g.Head.hp || 0) + 
-            (g.Legs.hp || 0) + (g.Robe.hp || 0) + 
-            (g.Necklace.hp || 0)); 
+return Math.floor(100 + (PlayerData.level * 20) +
+            (g.Armor?.hp || 0) + (g.Head?.hp || 0) +
+            (g.Legs?.hp || 0) + (g.Robe?.hp || 0) +
+            (g.Necklace?.hp || 0));
     }
 
     getAttackPower() { 
