@@ -66,6 +66,10 @@ self.addEventListener('fetch', (event) => {
                     });
 
                     return networkResponse;
+                })
+                .catch((error) => {
+                    console.log('[Service Worker] Network request failed:', error, 'Serving cached index.html as fallback.');
+                    return caches.match('./index.html'); // Fallback to cached index.html
                 });
             })
     );
