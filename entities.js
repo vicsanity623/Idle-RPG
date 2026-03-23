@@ -196,8 +196,7 @@ class Player {
         this._calculateSkillStats(skill); // Recalculate all stats for the skill
 
         spawnFloatingText(this.x, this.y, `${skill.id.toUpperCase()} Lvl ${skill.level}!`, '#00ff00');
-        UI.updateCurrencies(); // Update shard display in the UI
-        // A new UI.updateSkillPanel() function would be called here to refresh the skill panel display.
+        UI.updateCurrencies(); // Update shard display in the UI (now also refreshes skill panel if open)
         saveGame(); // Persist the changes
         return true;
     }
