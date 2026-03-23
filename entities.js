@@ -16,6 +16,27 @@ const PLAYER_ATTACK_RANGE = 200,
           }
       };
 
+// --- NEW: GEAR ITEM CLASS ---
+class GearItem {
+    constructor(id, name, slot, stats) {
+        this.id = id || Math.random().toString(36).substring(2, 9); // Unique ID
+        this.name = name;
+        this.slot = slot; // e.g., 'Weapon', 'Armor', 'Head', 'Ring', 'Necklace', 'Earrings', 'Legs', 'Boots', 'Robe', 'Fists'
+        // Stats object can contain: hp, def, atk, critChance, critMult, regen, atkSpeed
+        this.stats = stats; 
+    }
+
+    getDescription() {
+        let desc = `${this.name} (${this.slot})\n`;
+        for (const stat in this.stats) {
+            if (this.stats[stat] !== 0) {
+                desc += `${stat.toUpperCase()}: ${this.stats[stat] > 0 ? '+' : ''}${this.stats[stat]}\n`;
+            }
+        }
+        return desc;
+    }
+}
+
 // --- PLAYER CLASS ---
 class Player {
     constructor(x, y) {
@@ -192,6 +213,43 @@ class Player {
         ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
     }
+
+    // --- NEW: PLAYER GEAR EQUIPPING METHOD ---
+    equipItem(itemToEquip) {
+        if (!itemToEquip || !(itemToEquip instanceof GearItem)) {
+            console.error("Invalid item provided for equipping.");
+            return;
+        }
+        // Ensure the item is in the player's inventory
+        if (!PlayerData.inventory.find(item => item.id === itemToEquip.id)) {
+            console.error("Item not found in inventory.");
+            return;
+        }
+
+        const slot = itemToEquip.slot;
+        const currentlyEquipped = PlayerData.equipped[slot];
+
+        // Remove item from inventory
+        PlayerData.inventory = PlayerData.inventory.filter(item => item.id !== itemToEquip.id);
+
+        // If there was an item equipped in this slot, move it back to inventory
+        if (currentlyEquipped) {
+            PlayerData.inventory.push(currentlyEquipped);
+        }
+
+        // Equip the new item
+        PlayerData.equipped[slot] = itemToEquip;
+
+        // Recalculate player stats based on new equipped gear
+        // This method is assumed to exist in PlayerData.js and updates PlayerData.gear
+        PlayerData.recalculateGearStats();
+
+        // Update UI to reflect changes
+        UI.updateStats();
+        UI.updateInventory(); // Assumed UI method to refresh inventory display
+        spawnFloatingText(this.x, this.y, `Equipped ${itemToEquip.name}`, '#bb86fc');
+        saveGame();
+    }
 }
 
 // --- ENEMY CLASS ---
@@ -289,8 +347,25 @@ class Loot {
             PlayerData.shards += 1;
             spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
         } else if (this.type === 'gear') {
-            PlayerData.shards += 5; 
-            spawnFloatingText(this.x, this.y, `+5 Shards (Gear)`, '#bb86fc');
+            // --- MODIFIED: Generate and add a real gear item ---
+            const gearSlots = ['Weapon', 'Armor', 'Head', 'Legs', 'Boots', 'Robe', 'Necklace', 'Ring', 'Earrings', 'Fists'];
+            const randomSlot = gearSlots[randomInt(0, gearSlots.length - 1)];
+
+            // Example stats generation (can be expanded for more variety)
+            const stats = {};
+            const levelFactor = GameState.level;
+            if (randomSlot === 'Weapon' || randomSlot === 'Fists' || randomSlot === 'Ring') stats.atk = randomInt(1, 3) * levelFactor;
+            if (randomSlot === 'Armor' || randomSlot === 'Head' || randomSlot === 'Legs' || randomSlot === 'Boots' || randomSlot === 'Robe') stats.def = randomInt(1, 2) * levelFactor;
+            if (randomSlot === 'Armor' || randomSlot === 'Head' || randomSlot === 'Legs' || randomSlot === 'Robe' || randomSlot === 'Necklace') stats.hp = randomInt(5, 10) * levelFactor;
+            if (randomSlot === 'Robe' || randomSlot === 'Necklace' || randomSlot === 'Earrings') stats.regen = randomFloat(0.05, 0.2) * levelFactor;
+            if (randomSlot === 'Fists' || randomSlot === 'Ring') stats.critChance = randomInt(1, 2);
+            if (randomSlot === 'Weapon' || randomSlot === 'Earrings') stats.critMult = randomFloat(0.02, 0.08);
+            if (randomSlot === 'Boots') stats.atkSpeed = randomFloat(0.01, 0.03);
+
+            const newItem = new GearItem(null, `Level ${GameState.level} ${randomSlot}`, randomSlot, stats);
+            PlayerData.inventory.push(newItem);
+            spawnFloatingText(this.x, this.y, `+ ${newItem.name}`, '#bb86fc');
+            UI.updateInventory(); // Assumed UI method to refresh inventory display
         }
         UI.updateCurrencies();
         saveGame();
