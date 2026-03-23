@@ -182,7 +182,7 @@ window.addEventListener('resize', () => {
 });
 
 // Persistent Data
-let PlayerData = {
+const DEFAULT_PLAYER_DATA = {
     gold: 0,
     shards: 0,
     level: 1,
@@ -202,6 +202,8 @@ let PlayerData = {
         'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } // atkSpeed is a CD reduction factor
     }
 };
+
+let PlayerData = { ...DEFAULT_PLAYER_DATA }; // Initialize with a copy of defaults
 
 // Entities
 let mapGrid = [];
@@ -461,12 +463,23 @@ function loadGame() {
     let save = localStorage.getItem('dof_save');
     if (save) {
         try {
-            let data = JSON.parse(save);
-            PlayerData = { ...PlayerData, ...data };
-            if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
-            if (PlayerData.dungeonLevel) {
-                GameState.level = PlayerData.dungeonLevel;
-            }
+let data = JSON.parse(save);
+
+                // Merge top-level properties from save into PlayerData, ensuring defaults are present
+                PlayerData = { ...DEFAULT_PLAYER_DATA, ...data };
+
+                // Handle nested 'gear' object specifically for robust merging
+                const mergedGear = {};
+                for (const type of GEAR_TYPES) {
+                    const defaultGearItem = DEFAULT_PLAYER_DATA.gear[type];
+                    const savedGearItem = data.gear && data.gear[type] ? data.gear[type] : {};
+                    mergedGear[type] = { ...defaultGearItem, ...savedGearItem };
+                }
+                PlayerData.gear = mergedGear;
+
+                if (PlayerData.dungeonLevel) {
+                    GameState.level = PlayerData.dungeonLevel;
+                }
         } catch(e) { console.error("Save Corrupted", e); }
     }
 }
