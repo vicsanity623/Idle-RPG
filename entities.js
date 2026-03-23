@@ -3,6 +3,28 @@
  * Contains Player, Enemy, Loot, and Particle logic.
  */
 
+// --- GLOBAL GAME DATA ---
+// This object holds player-specific data that persists across levels and game sessions.
+// It is crucial for the new Inventory & Gear Management feature.
+const PlayerData = {
+    level: 1,
+    gold: 0,
+    shards: 0,
+    inventory: [], // Stores collected gear items
+    gear: {        // Stores currently equipped gear items by slot
+        Head: null,
+        Armor: null,
+        Legs: null,
+        Boots: null,
+        Weapon: null,
+        Fists: null, // Default unarmed slot, can be replaced by a weapon
+        Ring: null,
+        Necklace: null,
+        Earrings: null,
+        Robe: null   // Default clothing slot, can be replaced by armor
+    }
+};
+
 // --- HIVE MIND AI ---
 const HiveMind = {
     flankWeight: 0,
