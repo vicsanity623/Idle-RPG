@@ -38,22 +38,22 @@ const mockSaveGame = () => { /* console.log('Game saved'); */ };
 const mockLevelUpDungeon = () => { /* console.log('Dungeon leveled up'); */ };
 
 // Assign mocks to global scope for the test
-let PlayerData = mockPlayerData;
-let GameState = mockGameState;
-let Input = mockInput;
-let UI = mockUI;
-let floatingTexts = mockFloatingTexts;
-let spawnFloatingText = mockSpawnFloatingText;
-let spawnProjectile = mockSpawnProjectile;
-let spawnAura = mockSpawnAura;
-let isWall = mockIsWall;
-let die = mockDie;
-let gainXp = mockGainXp;
-let spawnLoot = mockSpawnLoot;
-let randomFloat = mockRandomFloat;
-let randomInt = mockRandomInt;
-let saveGame = mockSaveGame;
-let levelUpDungeon = mockLevelUpDungeon;
+PlayerData = mockPlayerData;
+GameState = mockGameState;
+Input = mockInput;
+UI = mockUI;
+floatingTexts = mockFloatingTexts;
+spawnFloatingText = mockSpawnFloatingText;
+spawnProjectile = mockSpawnProjectile;
+spawnAura = mockSpawnAura;
+isWall = mockIsWall;
+die = mockDie;
+gainXp = mockGainXp;
+spawnLoot = mockSpawnLoot;
+randomFloat = mockRandomFloat;
+randomInt = mockRandomInt;
+saveGame = mockSaveGame;
+levelUpDungeon = mockLevelUpDungeon;
 
 // Mock entities array and player for testing
 let entities = [];
