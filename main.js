@@ -311,8 +311,9 @@ jZone.addEventListener('touchend', endJoystick);
 jZone.addEventListener('touchcancel', endJoystick);
 
 
-// --- UI MANAGER ---
-const UI = {
+// Ensure UI is declared only once
+// Ensure UI is declared only once in the global scope
+UI = {
     updateStats: () => {
         document.getElementById('p-level').innerText = PlayerData.level;
         document.getElementById('hp-fill').style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
