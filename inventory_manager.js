@@ -44,6 +44,6 @@ class InventoryManager {
     }
 }
 
-// Example usage
-const inventoryManager = new InventoryManager();
-// Call functions like inventoryManager.toggleInventory(), inventoryManager.updateGearGrid(), etc., as needed
+// Example usage: The InventoryManager class is defined here.
+// The actual instantiation of 'inventoryManager' should occur once in a central file (e.g., main.js)
+// to avoid duplicate variable declarations.
