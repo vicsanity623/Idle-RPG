@@ -1,32 +1,37 @@
-# 🛡️ PYOB ARCHITECTURAL PROTOCOL: SYSTEM INTEGRITY
+# 🛡️ PYOB ARCHITECTURAL PROTOCOL: IDLE-RPG
 
-### 🚨 CRITICAL FIX: DE-DUPLICATION (PRIORITY 0)
-The project is currently crashing due to `SyntaxError` caused by duplicate declarations. Your primary mission is to restore stability.
+### 🎯 CRITICAL REPAIR MISSION (IMMEDIATE)
 
-- **TASK 0.1 (entities.js):** Search for all instances of `const HiveMind`. DELETE the duplicate definition at line 530 (or wherever it repeats). Ensure only ONE global `HiveMind` exists.
-- **TASK 0.2 (index.html/main.js):** Search for duplicate declarations of the `UI` object. If `UI` is defined in both files, migrate the logic to `main.js` and remove it from `index.html`.
-- **TASK 0.3 (Cleanup):** Scan the entire project for any logic where the bot has accidentally pasted "Bot Logs" or "Approval Tags" (e.g., "APPROVED Feature") into the actual source code. DELETE these leaks immediately.
+- **TASK 0 (FATAL ERROR FIX): Eliminate Duplicate Variable Declarations**
+    - **Issue:** The project is crashing with `SyntaxError: Can't create duplicate variable: 'UI'` and `inventoryManager`.
+    - **Action:** Scan `index.html` and all linked `.js` files. 
+    - **Requirement:** Ensure `const UI` and `const inventoryManager` are declared EXACTLY ONCE in the entire execution context.
+    - **Method:** If you find multiple blocks defining these variables, MERGE the logic into the first declaration and DELETE all subsequent duplicate blocks.
+    - **Verification:** The browser console must be free of "duplicate variable" errors before this task is considered complete.
 
-### 🏗️ THE "NEVER DUPLICATE" PROTOCOL (MANDATORY)
+### 🏗️ GLOBAL CODING STANDARDS (NON-NEGOTIABLE)
 
-- **ATOMIC REPLACEMENT:** When using XML `<EDIT>` blocks, you MUST identify the exact starting line and ending line of the existing code. You are authorized to replace the entire block. NEVER append a new version of a function below the old one.
-- **VARIABLE SCOPE:** Before declaring a `const` or `let`, check the `SYMBOLS.json` ledger. If the variable name already exists, you MUST refactor the existing code instead of redeclaring it.
-- **SINGLE SOURCE OF TRUTH (SSoT):** 
-    - Each Class (Player, Enemy, HiveMind) must live in exactly ONE file.
-    - If you move a class (e.g., Player to player.js), the very next action in that SAME iteration must be the total deletion of that class from the original file.
+- **ANTI-DUPLICATION PROTOCOL:**
+    - BEFORE adding any code block, you MUST search the file for existing variable names, function names, or HTML IDs.
+    - If a component (e.g., a "Skill Tree" div or a "UI" object) already exists, you MUST modify the existing code. NEVER append a second copy of the same logic.
+    - **ID Uniqueness:** Never inject an HTML element with an ID that already exists in the DOM.
 
-### 🛡️ HTML & UI HYGIENE
-- **NO SCAFFOLDING:** It is a CRITICAL FAILURE to commit bot-to-human communication (e.g., "I have updated this file") into `.html` or `.js` files. 
-- **ENCAPSULATION:** All Logic must be in `.js`. All Styles in `.css`. All structure in `.html`. Do not mix them unless strictly required for a new component.
-- **VISUAL SANITY:** If the `Final Verification` step detects raw code text (like `window.addEventListener`) appearing on the game screen during the 10-second test, the patch must be REJECTED.
+- **HTML & SCRIPT HYGIENE:**
+    - 🚫 **NO LEAKS:** Never inject bot logs, "APPROVED" tags, or LIBRARIAN notes into `.html` or `.js` files. 
+    - **SCAFFOLDING CHECK:** Any text appearing on the game screen that is not part of the game's intentional UI is a CRITICAL FAILURE.
+    - **ENCAPSULATION:** All Javascript must reside within `<script type="module">` tags. Do not use inline `onclick` handlers if an `addEventListener` logic has already been implemented.
 
 ### 🚫 PROHIBITED ACTIONS
-- DO NOT redeclare `const` or `let` variables that already exist in the global scope.
-- DO NOT add "Placeholder" comments that duplicate existing logic.
-- DO NOT open a PR if the `npm test` or `check.sh` detects a `SyntaxError`.
+- DO NOT duplicate the "APPROVED Feature" section.
+- DO NOT re-declare variables that are already in the global scope.
+- DO NOT remove existing CSS variables unless they are being replaced by a centralized theme file.
 
 ### 🏁 VERIFICATION GATE
-Before proposing a PR, you MUST run this internal checklist:
-1. "Did I leave the old version of the code in the file?" (If yes: Delete it).
-2. "Is there more than one `const UI` or `const HiveMind` in the project?" (If yes: Consolidate).
-3. "Is my code clean of any LIBRARIAN or bot-specific strings?" (If no: Purge them).
+Every PR MUST pass these three manual checks by the bot:
+1. **GREP CHECK:** Search for the string "const UI" and "const inventoryManager". If count > 1, the patch is REJECTED.
+2. **SYNTAX CHECK:** Scan for `SyntaxError` or `ReferenceError` in the test logs.
+3. **UI CHECK:** Verify that no raw code (e.g., `window.addEventListener`) is visible as plain text in the HTML body.
+
+### 🚀 FEATURE BACKLOG (PRIORITY)
+1. Implement `saveGame()` / `loadGame()` in `main.js`.
+2. Add Particle System to `entities.js`.
