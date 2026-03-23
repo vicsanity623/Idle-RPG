@@ -566,7 +566,7 @@ function draw() {
 
 // --- MAIN LOOP ---
 function loop(timestamp) {
-    const dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); 
+    const dt = Math.min(0.1, Math.max(0.016, (timestamp - GameState.lastTime) / 1000)); 
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
