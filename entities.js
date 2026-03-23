@@ -264,6 +264,32 @@ class Enemy {
     }
 }
 
+// Proposed new helper function (would ideally be moved to `game.js` or `utils.js`)
+function generateRandomGear(level) {
+    const gearTemplates = [
+        { slot: 'Head', name: 'Helmet', stats: { def: 2, hp: 5 } },
+        { slot: 'Armor', name: 'Chestplate', stats: { def: 4, hp: 10 } },
+        { slot: 'Legs', name: 'Greaves', stats: { def: 3, hp: 7 } },
+        { slot: 'Boots', name: 'Boots', stats: { def: 1, atkSpeed: 0.05 } },
+        { slot: 'Weapon', name: 'Sword', stats: { atk: 5, critMult: 0.1 } },
+        { slot: 'Ring', name: 'Ring', stats: { atk: 2, critChance: 2 } },
+        { slot: 'Necklace', name: 'Amulet', stats: { hp: 8, regen: 0.5 } },
+        { slot: 'Earrings', name: 'Earrings', stats: { regen: 0.2, critMult: 0.05 } },
+    ];
+    const chosenTemplate = gearTemplates[Math.floor(Math.random() * gearTemplates.length)];
+    const item = {
+        id: `gear_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, // Unique ID
+        name: `${chosenTemplate.name} of Level ${level}`,
+        slot: chosenTemplate.slot,
+        stats: {}
+    };
+    // Scale stats by level, adding some randomness
+    for (const stat in chosenTemplate.stats) {
+        item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2));
+    }
+    return item;
+}
+
 // --- LOOT CLASS ---
 class Loot {
     constructor(x, y, type) {
@@ -290,8 +316,17 @@ class Loot {
             PlayerData.shards += 1;
             spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
         } else if (this.type === 'gear') {
-            PlayerData.shards += 5; 
-            spawnFloatingText(this.x, this.y, `+5 Shards (Gear)`, '#bb86fc');
+            // NEW LOGIC: Generate a gear item and add it to the player's inventory
+            const newGear = generateRandomGear(GameState.level);
+            if (!PlayerData.inventory) { // Ensure inventory array exists
+                PlayerData.inventory = [];
+            }
+            PlayerData.inventory.push(newGear);
+            spawnFloatingText(this.x, this.y, `+ ${newGear.name}`, '#bb86fc');
+            // Trigger a UI update for the inventory display
+            if (typeof UI.updateInventoryDisplay === 'function') {
+                UI.updateInventoryDisplay();
+            }
         }
         UI.updateCurrencies();
         saveGame();
