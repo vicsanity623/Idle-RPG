@@ -14,6 +14,13 @@ const PLAYER_ATTACK_RANGE = 200,
               this.flankWeight = Math.min(1.0, this.packSize / 20); 
           }
       },
+      LEVEL_SCALING = {
+          hp: 0.05,    // 5% per level
+          atk: 0.04,   // 4% per level
+          def: 0.03,   // 3% per level
+          regen: 0.02, // 2% per level
+          crit: 0.01   // 1% per level
+      };
       generateRandomGear = (level) => {
           let gearTemplates = [
               { slot: 'Head', name: 'Helmet', stats: { def: 2, hp: 5 } },
@@ -91,39 +98,44 @@ class Player {
     }
 
     getMaxHp() { 
-        return Math.floor(100 + (PlayerData.level * 20) + 
-            this.getGearStat('Armor', 'hp') + this.getGearStat('Head', 'hp') + 
-            this.getGearStat('Legs', 'hp') + this.getGearStat('Robe', 'hp') + 
-            this.getGearStat('Necklace', 'hp')); 
+        let base = 100 + this.getGearStat('Armor', 'hp') + this.getGearStat('Head', 'hp') + 
+                   this.getGearStat('Legs', 'hp') + this.getGearStat('Robe', 'hp') + 
+                   this.getGearStat('Necklace', 'hp');
+        return Math.floor(base * (1 + (LEVEL_SCALING.hp * (PlayerData.level - 1)))); 
     }
 
     getAttackPower() { 
-        return Math.floor(10 + (PlayerData.level * 2) + 
-            this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
-            this.getGearStat('Ring', 'atk')); 
+        let base = 10 + this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
+                   this.getGearStat('Ring', 'atk');
+        return Math.floor(base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)))); 
     }
 
     getDefense() { 
-        return Math.floor(this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + 
-            this.getGearStat('Legs', 'def') + this.getGearStat('Boots', 'def')); 
+        let base = this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + 
+                   this.getGearStat('Legs', 'def') + this.getGearStat('Boots', 'def');
+        return Math.floor(base * (1 + (LEVEL_SCALING.def * (PlayerData.level - 1)))); 
     }
 
     getRegen() { 
-        return this.getGearStat('Robe', 'regen') + this.getGearStat('Necklace', 'regen') + 
-            this.getGearStat('Earrings', 'regen'); 
+        let base = this.getGearStat('Robe', 'regen') + this.getGearStat('Necklace', 'regen') + 
+                   this.getGearStat('Earrings', 'regen');
+        return base * (1 + (LEVEL_SCALING.regen * (PlayerData.level - 1))); 
     }
 
     getCritChance() { 
         let base = 5 + this.getGearStat('Fists', 'critChance') + this.getGearStat('Ring', 'critChance');
-        return Math.min(75, base); 
+        let total = base * (1 + (LEVEL_SCALING.crit * (PlayerData.level - 1)));
+        return Math.min(75, total); 
     }
 
     getCritMultiplier() { 
-        return 1.5 + this.getGearStat('Weapon', 'critMult') + this.getGearStat('Earrings', 'critMult'); 
+        let levelBonus = PlayerData.level * 0.01;
+        return 1.5 + levelBonus + this.getGearStat('Weapon', 'critMult') + this.getGearStat('Earrings', 'critMult'); 
     }
 
     getAttackSpeedFactor() {
-        return Math.max(0.3, 1.0 - this.getGearStat('Boots', 'atkSpeed'));
+        let levelBonus = PlayerData.level * 0.001; 
+        return Math.max(0.3, 1.0 - levelBonus - this.getGearStat('Boots', 'atkSpeed'));
     }
 
     update(dt) {
