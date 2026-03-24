@@ -218,6 +218,36 @@
                 <div class="gear-grid" id="bag-grid">
                     <!-- Populated by JS -->
                 </div>
+
+                <!-- Item Inspection & Comparison Panel -->
+                <div id="item-detail-panel" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--primary); border-radius: 8px;">
+                    <h3 id="detail-item-name" style="color: var(--primary); margin-bottom: 10px;">Item Name</h3>
+                    <div id="detail-item-rarity" style="font-weight: bold; margin-bottom: 10px;">Rarity: <span id="detail-rarity-text">Common</span></div>
+
+                    <div class="comparison-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div id="selected-item-display">
+                            <h4 style="color: #aaa;">Selected Item</h4>
+                            <div class="stat-list" id="selected-stats-list">
+                                <!-- Stats populated by JS -->
+                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Attack: <span style="color: var(--shard);">+5</span></p>
+                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Defense: <span style="color: var(--shard);">+3</span></p>
+                            </div>
+                        </div>
+                        <div id="equipped-item-display">
+                            <h4 style="color: #aaa;">Equipped Item</h4>
+                            <div class="stat-list" id="equipped-stats-list">
+                                <!-- Stats populated by JS, with comparison highlights -->
+                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Attack: <span style="color: #0f0;">+3 <small>(+2)</small></span></p>
+                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Defense: <span style="color: #f00;">+5 <small>(-2)</small></span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="item-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button id="equip-unequip-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--primary); color: #000; border: none;"></button>
+                        <button id="discard-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--hp-color); color: #fff; border: none;">Discard</button>
+                    </div>
+                </div>
             </div>
         </div>
 
