@@ -13,6 +13,18 @@
 const TILE_SIZE = 64,
       MAP_SIZE = 40, // 40x40 tiles
       GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'],
+      DEFAULT_GEAR_STATS = {
+          'Weapon':   { level: 1, atk: 10, critMult: 0.05, rarity: 'Common' },
+          'Armor':    { level: 1, hp: 50, def: 5, rarity: 'Common' },
+          'Legs':     { level: 1, def: 8, hp: 20, rarity: 'Common' },
+          'Fists':    { level: 1, critChance: 2, atk: 5, rarity: 'Common' },
+          'Head':     { level: 1, hp: 30, def: 5, rarity: 'Common' },
+          'Robe':     { level: 1, regen: 0.5, hp: 20, rarity: 'Common' },
+          'Ring':     { level: 1, atk: 8, critChance: 1.5, rarity: 'Common' },
+          'Earrings': { level: 1, critMult: 0.1, regen: 0.2, rarity: 'Common' },
+          'Necklace': { level: 1, regen: 1.0, hp: 10, rarity: 'Common' },
+          'Boots':    { level: 1, def: 5, atkSpeed: 0.02, rarity: 'Common' }
+      },
       canvas = document.getElementById('game-canvas'),
       ctx = canvas.getContext('2d'),
       randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
