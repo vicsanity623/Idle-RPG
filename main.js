@@ -406,7 +406,7 @@ function gainXp(amt) {
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
         PlayerData.level++;
-        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.1);
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
     }
