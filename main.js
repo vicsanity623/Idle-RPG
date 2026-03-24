@@ -142,7 +142,13 @@ const TILE_SIZE = 64,
                   GEAR_TYPES.forEach(type => {
                       let gear = PlayerData.gear[type];
                       if (!gear) return;
+                      
                       let stats = gear.stats || gear; 
+                      let itemLevel = gear.level || 1;
+                      let shardCost = itemLevel * 10;
+                      let goldCost = itemLevel * 500;
+                      let canAfford = PlayerData.shards >= shardCost && PlayerData.gold >= goldCost;
+
                       let bonusText = "";
                       if (stats.atk) bonusText += `Atk: +${Math.floor(stats.atk)} `;
                       if (stats.hp) bonusText += `HP: +${Math.floor(stats.hp)} `;
@@ -150,10 +156,19 @@ const TILE_SIZE = 64,
 
                       let div = document.createElement('div');
                       div.className = 'gear-item';
+                      // We make the whole card clickable for "Inspection"
+                      div.style.cursor = "pointer";
+                      div.onclick = (e) => {
+                          // Only inspect if they didn't click the upgrade button itself
+                          if (e.target.tagName !== 'BUTTON') UI.inspectItem(type, false);
+                      };
+
                       div.innerHTML = `
                           <h4 style="color:${gear.color || 'var(--primary)'}">${gear.name || type}</h4>
-                          <p style="font-size:0.7rem; color:#03dac6;">${bonusText}</p>
-                          <button class="upgrade-btn" onclick="UI.inspectItem('${type}', false)">Inspect</button>
+                          <p style="font-size:0.7rem; color:#03dac6; min-height:15px;">${bonusText}</p>
+                          <button class="upgrade-btn" ${canAfford ? '' : 'disabled'} onclick="UI.upgradeGear('${type}')">
+                              Upgrade (${shardCost}💎 / ${goldCost}🪙)
+                          </button>
                       `;
                       REFS.gearGrid.appendChild(div);
                   });
