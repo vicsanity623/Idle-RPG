@@ -132,7 +132,7 @@ const TILE_SIZE = 64,
                       let div = document.createElement('div');
                       div.className = 'gear-item';
                       div.innerHTML = `
-                          <h4 style="color:var(--primary)">${gear.name || type}</h4>
+                          <h4 style="color:${gear.color || 'var(--primary)'}">${gear.name || type}</h4>
                           <p>Lv. ${itemLevel}</p>
                           <p style="font-size:0.7rem; color:#03dac6; min-height:20px;">${bonusText}</p>
                           <button class="upgrade-btn" ${PlayerData.shards < cost ? 'disabled' : ''} onclick="UI.upgradeGear('${type}')">
@@ -162,7 +162,7 @@ const TILE_SIZE = 64,
                           let div = document.createElement('div');
                           div.className = 'gear-item';
                           div.innerHTML = `
-                              <h4 style="color:#00e5ff">${item.name || item.slot}</h4>
+                              <h4 style="color:${item.color || '#00e5ff'}">${item.name || item.slot}</h4>
                               <p style="font-size:0.7rem; color:#aaa; margin-top:5px; min-height:20px;">${bonusText}</p>
                               <button class="upgrade-btn" style="background:#00e5ff; color:#000; margin-top:auto;" onclick="UI.inspectItem(${index}, true)">
                                   Inspect
@@ -386,16 +386,16 @@ let PlayerData = {
     maxXp: 100,
     inventory: [], // Added fallback empty array initialization
     gear: {
-        'Weapon':   { level: 1, atk: 10, critMult: 0.05, rarity: 'Common' },
-        'Armor':    { level: 1, hp: 50, def: 5, rarity: 'Common' },
-        'Legs':     { level: 1, def: 8, hp: 20, rarity: 'Common' },
-        'Fists':    { level: 1, critChance: 2, atk: 5, rarity: 'Common' },
-        'Head':     { level: 1, hp: 30, def: 5, rarity: 'Common' },
-        'Robe':     { level: 1, regen: 0.5, hp: 20, rarity: 'Common' },
-        'Ring':     { level: 1, atk: 8, critChance: 1.5, rarity: 'Common' },
-        'Earrings': { level: 1, critMult: 0.1, regen: 0.2, rarity: 'Common' },
-        'Necklace': { level: 1, regen: 1.0, hp: 10, rarity: 'Common' },
-        'Boots':    { level: 1, def: 5, atkSpeed: 0.02, rarity: 'Common' } 
+        'Weapon':   { level: 1, atk: 2, critMult: 0.05, rarity: 'Common' },
+        'Armor':    { level: 1, hp: 1, def: 1, rarity: 'Common' },
+        'Legs':     { level: 1, def: 2, hp: 2, rarity: 'Common' },
+        'Fists':    { level: 1, critChance: 0.5, atk: 5, rarity: 'Common' },
+        'Head':     { level: 1, hp: 3, def: 2, rarity: 'Common' },
+        'Robe':     { level: 1, regen: 0.01, hp: 2, rarity: 'Common' },
+        'Ring':     { level: 1, atk: 1, critChance: 1.5, rarity: 'Common' },
+        'Earrings': { level: 1, critMult: 0.02, regen: 0.02, rarity: 'Common' },
+        'Necklace': { level: 1, regen: 0.5, hp: 2, rarity: 'Common' },
+        'Boots':    { level: 1, def: 1, atkSpeed: 0.01, rarity: 'Common' } 
     }
 };
 
