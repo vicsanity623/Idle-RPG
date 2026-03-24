@@ -9,6 +9,7 @@
     <link rel="apple-touch-icon" href="./icon-192.png">
     <style>
         :root {
+            /* Core Theme Colors */
             --primary: #bb86fc;
             --bg-dark: #121212;
             --hp-color: #ff5252;
@@ -18,12 +19,15 @@
             --panel-bg: rgba(18, 18, 18, 0.9);
             --glow-color: rgba(187, 134, 252, 0.3);
             --border-glow: 0px 0px 10px var(--glow-color);
-            --rarity-common: #A0A0A0; /* Grey */
-            --rarity-rare: #00BFFF; /* Light Blue */
-            --rarity-epic: #8A2BE2; /* Blue Violet */
-            --rarity-legendary: #FFD700; /* Gold */
+
+            /* Rarity Palette (Managed by JS, styles here for reference) */
+            --rarity-common: #A0A0A0;
+            --rarity-rare: #00BFFF;
+            --rarity-epic: #8A2BE2;
+            --rarity-legendary: #FFD700;
         }
 
+        /* --- PWA RESET & ROBUSTNESS --- */
         * { 
             box-sizing: border-box; 
             margin: 0; 
@@ -44,25 +48,22 @@
             -webkit-text-size-adjust: none;
         }
         
-        /* Canvases */
         #game-canvas { position: absolute; top: 0; left: 0; z-index: 1; }
         
-        /* Screens */
+        /* --- SCREENS --- */
         .screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; background: var(--bg-dark); transition: opacity 0.5s; }
         .hidden { opacity: 0; pointer-events: none; }
         .screen.hidden { z-index: -1; } 
         
-        /* Boot & Main Menu */
         #loading-bar { width: 200px; height: 10px; border: 1px solid var(--primary); margin-top: 20px; border-radius: 5px; overflow: hidden; }
         #loading-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
         .title { font-size: 3rem; text-shadow: 0 0 10px var(--primary); text-align: center; margin-bottom: 20px; }
         .btn { padding: 15px 40px; font-size: 1.5rem; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.3s; box-shadow: var(--border-glow); }
         .btn:active { background: var(--primary); color: #000; }
         
-        /* UI Layer */
+        /* --- UI LAYER --- */
         #ui-layer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; }
         
-        /* Top Left: Player Stats */
         #player-ui { position: absolute; top: 20px; left: 20px; display: flex; align-items: center; gap: 15px; pointer-events: auto; }
         .avatar-box { width: 60px; height: 60px; border: 2px solid var(--primary); border-radius: 50%; background: #333; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 10px var(--primary); cursor: pointer;}
         .bars { width: 150px; display: flex; flex-direction: column; gap: 8px; }
@@ -72,157 +73,62 @@
         #xp-fill { background: var(--xp-color); width: 0%; box-shadow: 0 0 8px var(--xp-color); }
         .bar-text { position: absolute; width: 100%; text-align: center; font-size: 0.7rem; top: 1px; font-weight: bold; text-shadow: 1px 1px 2px #000;}
 
-        /* Top Right: Minimap & Level */
         #minimap-container { position: absolute; top: 20px; right: 20px; text-align: right; pointer-events: auto;}
         #level-text { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 5px; text-shadow: 0 0 5px var(--primary);}
         #minimap { width: 120px; height: 120px; background: rgba(0,0,0,0.5); border: 2px solid var(--primary); border-radius: 8px; }
         
-        /* Currencies */
         #currencies { position: absolute; top: 170px; right: 20px; display: flex; flex-direction: column; gap: 5px; text-align: right; font-weight: bold; font-size: 1.1rem; text-shadow: 1px 1px 2px #000;}
         .gold-text { color: var(--gold); }
         .shard-text { color: var(--shard); }
 
-        /* Bottom: Hotbar */
         #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto;}
         .slot { width: 50px; height: 50px; border: 2px solid #555; background: rgba(0,0,0,0.6); border-radius: 8px; display: flex; justify-content: center; align-items: center; position: relative; }
-        .slot img { width: 80%; opacity: 0.8; }
         .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0,0,0,0.7); transition: height 0.1s linear;}
         .slot-key { position: absolute; top: -10px; right: -5px; background: var(--primary); color: #000; font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; font-weight: bold;}
 
-        /* Inventory Modal & Advanced Scrolling */
+        /* --- MODALS --- */
         #inventory-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
         .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
         .modal-body { flex: 1; overflow-y: auto; padding-right: 8px; }
         .modal-body h3 { margin: 15px 0 10px 0; font-size: 1.1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Stats Sheet Styling */
         .stats-panel { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(187, 134, 252, 0.3); border-radius: 8px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
         .stat-line { font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
-        .stat-line span:first-child { color: #aaa; }
         .stat-val { color: var(--shard); font-weight: bold; }
 
-        /* Gear Grid */
         .gear-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; padding-bottom: 20px; }
         .gear-item { background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 8px; padding: 10px; text-align: center; transition: 0.2s; }
         .gear-item:hover { border-color: var(--primary); background: rgba(187, 134, 252, 0.05); }
         .gear-item h4 { font-size: 0.9rem; color: var(--primary); margin-bottom: 5px; text-transform: capitalize;}
-        .gear-item p { font-size: 0.8rem; margin: 2px 0; }
-
+        
         .upgrade-btn { margin-top: 8px; background: var(--shard); border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; color: #000; transition: 0.2s; }
         .upgrade-btn:active { transform: scale(0.95); }
-        .upgrade-btn:disabled { background: #444; color: #777; cursor: not-allowed; }
         .close-btn { background: var(--hp-color); border: none; padding: 5px 15px; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
 
-        /* Custom Scrollbar */
-        .modal-body::-webkit-scrollbar { width: 6px; }
-        .modal-body::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
-        .modal-body::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+        /* --- SOTA LEVEL UP POPUP --- */
+        #stat-delta-popup {
+            position: absolute; top: 15%; left: 50%; transform: translate(-50%, -20%);
+            width: 320px; background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(15, 15, 25, 0.98) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.3); border-top: 4px solid var(--primary);
+            border-radius: 12px; padding: 25px 15px 20px 15px; color: white; opacity: 0;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(187, 134, 252, 0.2);
+            z-index: 2000; pointer-events: none; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #delta-title { font-size: 1.4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; text-shadow: 0 0 10px var(--primary); text-align: center; }
+        .delta-row { display: grid; grid-template-columns: 24px 80px 1fr 60px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 6px 10px; border-radius: 6px; margin-top: 4px; }
+        .delta-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; font-weight: 700; }
+        .delta-change { font-size: 0.9rem; font-weight: 800; text-align: right; }
+        .level-badge { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #000; padding: 4px 15px; border-radius: 20px; font-weight: 900; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5); white-space: nowrap; }
 
-        /* Daily Login Popup */
+        /* --- OTHER UI ELEMENTS --- */
+        #notification { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2rem; color: var(--gold); text-shadow: 0 0 5px #000; opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 1000; }
         #daily-login { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel-bg); border: 2px solid var(--gold); padding: 30px; border-radius: 12px; text-align: center; display: none; z-index: 120; pointer-events: auto; backdrop-filter: blur(10px); }
-        
-        /* Joystick Zone */
         #joystick-zone { position: absolute; bottom: 0; left: 0; width: 50vw; height: 50vh; pointer-events: auto; }
         .joystick-base { position: absolute; width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; display: none; transform: translate(-50%, -50%); pointer-events: none;}
         .joystick-stick { position: absolute; width: 40px; height: 40px; background: rgba(187, 134, 252, 0.5); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;}
-        
-        /* Notifications */
-        #notification { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2rem; color: var(--gold); text-shadow: 0 0 5px #000; opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 1000; }
-        /* SOTA LEVEL UP POPUP - NINE CHRONICLES STYLE */
-        #stat-delta-popup {
-            position: absolute;
-            top: 15%;
-            left: 50%;
-            transform: translate(-50%, -20%);
-            width: 320px; /* Fixed width prevents wrapping */
-            background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(15, 15, 25, 0.98) 100%);
-            border: 1px solid rgba(255, 215, 0, 0.3); /* Subtle gold border */
-            border-top: 4px solid var(--primary); /* Glowing top accent */
-            border-radius: 12px;
-            padding: 25px 15px 20px 15px;
-            color: white;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(187, 134, 252, 0.2);
-            z-index: 2000;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        #delta-title {
-            font-size: 1.4rem;
-            font-weight: 900;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 15px;
-            text-shadow: 0 0 10px var(--primary);
-            text-align: center;
-        }
-
-        #delta-content {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .delta-row {
-            display: grid;
-            grid-template-columns: 24px 80px 1fr 60px; /* Precise columns: Icon | Label | Values | Change */
-            align-items: center;
-            background: rgba(255, 255, 255, 0.03);
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-family: 'Segoe UI', sans-serif;
-            border-left: 2px solid transparent;
-            transition: border-left 0.3s;
-        }
-
-        .delta-row:hover { border-left: 2px solid var(--shard); }
-
-        .delta-icon { font-size: 1.1rem; }
-        .delta-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; font-weight: 700; }
-        .delta-values { font-size: 0.95rem; color: #eee; font-weight: 600; text-align: center; }
-        .delta-change { 
-            font-size: 0.9rem; 
-            font-weight: 800; 
-            text-align: right; 
-            color: #4caf50; /* Clean Modern Green */
-            text-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
-        }
-
-        /* The Gold "Level Shield" at the top */
-        .level-badge {
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--primary);
-            color: #000;
-            padding: 4px 15px;
-            border-radius: 20px;
-            font-weight: 900;
-            font-size: 0.8rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            white-space: nowrap;
-        }
-
-        .version-tag {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            font-size: 0.9rem;
-            color: var(--primary);
-            opacity: 0.6;
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            transform: rotate(-5deg); 
-            border: 1px solid var(--primary);
-            padding: 4px 10px;
-            border-radius: 4px;
-            pointer-events: none;
-            text-shadow: 0 0 5px var(--primary);
-        }
+        .version-tag { position: absolute; bottom: 30px; right: 30px; font-size: 0.9rem; color: var(--primary); opacity: 0.6; font-weight: bold; transform: rotate(-5deg); border: 1px solid var(--primary); padding: 4px 10px; border-radius: 4px; pointer-events: none; }
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -238,7 +144,7 @@
     <div id="main-menu" class="screen hidden">
         <h1 class="title">Dungeons of Fate</h1>
         <button id="play-btn" class="btn">Play Game</button>
-        <div class="version-tag">v0.0.4 - BETA</div>
+        <div class="version-tag">v0.0.5 - EVOLUTION</div>
     </div>
 
     <!-- Game Canvas -->
@@ -272,7 +178,7 @@
             <div class="shard-text">💎 <span id="c-shard">0</span></div>
         </div>
 
-        <!-- Notification -->
+        <!-- Notifications & Popups -->
         <div id="notification"></div>
         
         <div id="stat-delta-popup">
@@ -282,10 +188,10 @@
 
         <!-- Hotbar -->
         <div id="hotbar">
-            <div class="slot"><div class="slot-key">Pot</div><span style="font-size: 24px;">🧪</span><div class="cooldown-overlay" id="cd-0"></div></div>
-            <div class="slot"><div class="slot-key">Atk</div><span style="font-size: 24px;">⚔️</span><div class="cooldown-overlay" id="cd-1"></div></div>
-            <div class="slot"><div class="slot-key">Aura</div><span style="font-size: 24px;">🔥</span><div class="cooldown-overlay" id="cd-2"></div></div>
-            <div class="slot"><div class="slot-key">Dash</div><span style="font-size: 24px;">⚡</span><div class="cooldown-overlay" id="cd-3"></div></div>
+            <div class="slot"><div class="slot-key">Pot</div><span>🧪</span><div class="cooldown-overlay" id="cd-0"></div></div>
+            <div class="slot"><div class="slot-key">Atk</div><span>⚔️</span><div class="cooldown-overlay" id="cd-1"></div></div>
+            <div class="slot"><div class="slot-key">Aura</div><span>🔥</span><div class="cooldown-overlay" id="cd-2"></div></div>
+            <div class="slot"><div class="slot-key">Dash</div><span>⚡</span><div class="cooldown-overlay" id="cd-3"></div></div>
         </div>
 
         <!-- Invisible Joystick -->
@@ -300,21 +206,13 @@
                 <button class="close-btn">X</button>
             </div>
             <div class="modal-body">
-                <!-- Stats Section -->
-                <div class="stats-panel" id="stats-sheet">
-                    <!-- Populated by JS -->
-                </div>
+                <div class="stats-panel" id="stats-sheet"></div>
         
                 <h3>Equipment</h3>
-                <div class="gear-grid" id="gear-grid">
-                    <!-- Populated by JS -->
-                </div>
+                <div class="gear-grid" id="gear-grid"></div>
                 
-                <!-- NEW INVENTORY BAG SECTION -->
                 <h3>Inventory Bag</h3>
-                <div class="gear-grid" id="bag-grid">
-                    <!-- Populated by JS -->
-                </div>
+                <div class="gear-grid" id="bag-grid"></div>
 
                 <!-- Item Inspection & Comparison Panel -->
                 <div id="item-detail-panel" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--primary); border-radius: 8px;">
@@ -324,15 +222,11 @@
                     <div class="comparison-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div id="selected-item-display">
                             <h4 style="color: #aaa;">Selected Item</h4>
-                            <div class="stat-list" id="selected-stats-list">
-                                <!-- Stats populated by JS -->
-                            </div>
+                            <div class="stat-list" id="selected-stats-list"></div>
                         </div>
                         <div id="equipped-item-display">
                             <h4 style="color: #aaa;">Equipped Item</h4>
-                            <div class="stat-list" id="equipped-stats-list">
-                                <!-- Stats populated by JS, with comparison highlights -->
-                            </div>
+                            <div class="stat-list" id="equipped-stats-list"></div>
                         </div>
                     </div>
 
@@ -354,16 +248,18 @@
     </div>
 
     <script>
+        /* --- PWA BOOTSTRAP --- */
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker Registered!', reg.scope))
-                    .catch(err => console.error('Service Worker Registration Failed!', err));
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.error('SW Failed'));
             });
         }
         
-        document.addEventListener('dblclick', function(event) { event.preventDefault(); }, { passive: false });
-        document.addEventListener('gesturestart', function(event) { event.preventDefault(); });
+        /* --- iOS ROBUSTNESS GESTURE INTERCEPTORS --- */
+        document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
     </script>
     <script src="entities.js"></script>
     <script src="main.js"></script>
