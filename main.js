@@ -3,13 +3,241 @@
  * Core engine and system managers.
  */
 
-// --- CONFIG & GLOBALS ---
-const TILE_SIZE = 64;
-const MAP_SIZE = 40; // 40x40 tiles
-const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
+// --- GLOBAL CONSTANTS & CONFIG & UI SYSTEM ---
+const TILE_SIZE = 64,
+      MAP_SIZE = 40, // 40x40 tiles
+      GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'],
+      canvas = document.getElementById('game-canvas'),
+      ctx = canvas.getContext('2d'),
+      randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+      randomFloat = (min, max) => Math.random() * (max - min) + min,
+      GameState = {
+          state: 'BOOT', // BOOT, MENU, PLAYING, DEAD
+          level: 1,
+          camera: { x: 0, y: 0 },
+          lastTime: 0,
+          frame: 0,
+          pendingLevelUp: false 
+      },
+      Input = {
+          joystick: { active: false, angle: 0, x:0, y:0 }
+      },
+      jZone = document.getElementById('joystick-zone'),
+      jBase = document.getElementById('j-base'),
+      jStick = document.getElementById('j-stick'),
+      endJoystick = () => {
+          Input.joystick.active = false;
+          jBase.style.display = 'none';
+      },
+      UI = {
+          updateStats: () => {
+              document.getElementById('p-level').innerText = PlayerData.level;
+              document.getElementById('hp-fill').style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
+              document.getElementById('hp-text').innerText = `${Math.floor(player.hp)} / ${Math.floor(player.getMaxHp())}`;
+              document.getElementById('xp-fill').style.width = `${(PlayerData.xp / PlayerData.maxXp) * 100}%`;
+              document.getElementById('xp-text').innerText = `${Math.floor(PlayerData.xp)} / ${PlayerData.maxXp}`;
+          },
+          updateCurrencies: () => {
+              document.getElementById('c-gold').innerText = PlayerData.gold;
+              document.getElementById('c-shard').innerText = PlayerData.shards;
+          },
+          updateHotbar: (skills) => {
+              skills.forEach((s, i) => {
+                  let overlay = document.getElementById(`cd-${i}`);
+                  let pct = (s.current / s.cdMax) * 100;
+                  overlay.style.height = `${pct}%`;
+              });
+          },
+          updateMinimap: () => {
+              let mmCanvas = document.getElementById('minimap');
+              let mmCtx = mmCanvas.getContext('2d');
+              mmCtx.clearRect(0,0,100,100);
+              let cellW = 100 / MAP_SIZE;
+              
+              for(let r=0; r<MAP_SIZE; r++){
+                  for(let c=0; c<MAP_SIZE; c++){
+                      if(exploredGrid[r][c]) {
+                          mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#333' : '#777';
+                          mmCtx.fillRect(c*cellW, r*cellW, cellW, cellW);
+                      }
+                  }
+              }
+              // Draw Player
+              mmCtx.fillStyle = '#bb86fc';
+              mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
+              // Draw Portal if explored
+              if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
+                  mmCtx.fillStyle = '#00e5ff';
+                  mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
+              }
+          },
+          toggleInventory: () => {
+              let modal = document.getElementById('inventory-modal');
+              if (modal.style.display === 'flex') {
+                  modal.style.display = 'none';
+              } else {
+                  modal.style.display = 'flex';
+                  UI.renderInventory();
+              }
+          },
+          renderInventory: () => {
+              // 1. Stats Sheet
+              let sheet = document.getElementById('stats-sheet');
+              if (sheet && player) {
+                  sheet.innerHTML = `
+                      <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
+                      <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
+                      <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
+                      <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
+                      <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
+                      <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
+                  `;
+              }
 
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
+              // 2. Equipped Gear Grid
+              let grid = document.getElementById('gear-grid');
+              if (grid) {
+                  grid.innerHTML = '';
+                  GEAR_TYPES.forEach(type => {
+                      let gear = PlayerData.gear[type];
+                      if (!gear) return;
+                      let itemLevel = gear.level || 1;
+                      let cost = itemLevel * 10;
+                      let stats = gear.stats || gear; 
+                      
+                      let bonusText = "";
+                      if (stats.atk) bonusText += `Atk: +${Math.floor(stats.atk)} `;
+                      if (stats.hp) bonusText += `HP: +${Math.floor(stats.hp)} `;
+                      if (stats.def) bonusText += `Def: +${Math.floor(stats.def)} `;
+                      if (stats.regen) bonusText += `Reg: +${stats.regen.toFixed(1)} `;
+                      if (stats.critChance) bonusText += `Crit%: +${stats.critChance.toFixed(1)} `;
+                      if (stats.critMult) bonusText += `CritX: +${stats.critMult.toFixed(2)} `;
+                      if (stats.atkSpeed) bonusText += `Spd: +${(stats.atkSpeed * 100).toFixed(0)}% `;
+
+                      let div = document.createElement('div');
+                      div.className = 'gear-item';
+                      div.innerHTML = `
+                          <h4 style="color:var(--primary)">${gear.name || type}</h4>
+                          <p>Lv. ${itemLevel}</p>
+                          <p style="font-size:0.7rem; color:#03dac6; min-height:20px;">${bonusText}</p>
+                          <button class="upgrade-btn" ${PlayerData.shards < cost ? 'disabled' : ''} onclick="UI.upgradeGear('${type}')">
+                              Upgrade (${cost} 💎)
+                          </button>
+                      `;
+                      grid.appendChild(div);
+                  });
+              }
+
+              // 3. Inventory Bag Grid
+              let bagGrid = document.getElementById('bag-grid');
+              if (bagGrid) {
+                  bagGrid.innerHTML = '';
+                  if (PlayerData.inventory && PlayerData.inventory.length > 0) {
+                      PlayerData.inventory.forEach((item, index) => {
+                          let stats = item.stats || item;
+                          let bonusText = "";
+                          if (stats.atk) bonusText += `Atk: +${Math.floor(stats.atk)} `;
+                          if (stats.hp) bonusText += `HP: +${Math.floor(stats.hp)} `;
+                          if (stats.def) bonusText += `Def: +${Math.floor(stats.def)} `;
+                          if (stats.regen) bonusText += `Reg: +${stats.regen.toFixed(1)} `;
+                          if (stats.critChance) bonusText += `Crit%: +${stats.critChance.toFixed(1)} `;
+                          if (stats.critMult) bonusText += `CritX: +${stats.critMult.toFixed(2)} `;
+                          if (stats.atkSpeed) bonusText += `Spd: +${(stats.atkSpeed * 100).toFixed(0)}% `;
+
+                          let div = document.createElement('div');
+                          div.className = 'gear-item';
+                          div.innerHTML = `
+                              <h4 style="color:#00e5ff">${item.name || item.slot}</h4>
+                              <p style="font-size:0.7rem; color:#aaa; margin-top:5px; min-height:20px;">${bonusText}</p>
+                              <button class="upgrade-btn" style="background:#00e5ff; color:#000; margin-top:auto;" onclick="UI.equipItem(${index})">
+                                  Equip
+                              </button>
+                          `;
+                          bagGrid.appendChild(div);
+                      });
+                  } else {
+                      bagGrid.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; color: #777; font-size: 0.9rem;">Your bag is empty. Slay enemies to find gear!</p>`;
+                  }
+              }
+              UI.updateCurrencies();
+          },
+
+          equipItem: (index) => {
+              if (!PlayerData.inventory || !PlayerData.inventory[index]) return;
+              
+              let itemToEquip = PlayerData.inventory[index];
+              let slot = itemToEquip.slot;
+              
+              PlayerData.inventory.splice(index, 1);
+              let currentlyEquipped = PlayerData.gear[slot];
+              
+              if (currentlyEquipped && currentlyEquipped.id) {
+                  PlayerData.inventory.push(currentlyEquipped);
+              }
+              
+              PlayerData.gear[slot] = itemToEquip;
+              
+              UI.renderInventory();
+              UI.updateStats();
+              if (typeof player !== 'undefined' && player) {
+                  player.hp = Math.min(player.hp, player.getMaxHp());
+              }
+              saveGame();
+              UI.notify(`Equipped ${itemToEquip.name || slot}`);
+          },
+
+          upgradeGear: (type) => {
+              let gear = PlayerData.gear[type];
+              if (!gear) return;
+              
+              let stats = gear.stats || gear; 
+              gear.level = gear.level || 1;
+              let cost = gear.level * 10;
+              
+              if (PlayerData.shards >= cost) {
+                  PlayerData.shards -= cost;
+                  gear.level++;
+
+                  if (stats.atk !== undefined) stats.atk += randomInt(3, 7);
+                  if (stats.hp !== undefined) stats.hp += randomInt(15, 30);
+                  if (stats.def !== undefined) stats.def += randomInt(2, 5);
+                  if (stats.regen !== undefined) stats.regen += 0.2;
+                  if (stats.critChance !== undefined) stats.critChance += 0.4;
+                  if (stats.critMult !== undefined) stats.critMult += 0.03;
+                  if (stats.atkSpeed !== undefined) stats.atkSpeed = Math.min(0.6, stats.atkSpeed + 0.01); 
+
+                  UI.renderInventory();
+                  UI.updateStats();
+                  saveGame();
+                  UI.notify(`${type} specialized!`);
+              }
+          },
+          notify: (msg) => {
+              let el = document.getElementById('notification');
+              el.innerText = msg;
+              el.style.opacity = 1;
+              if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
+              UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
+          },
+          checkDailyLogin: () => {
+              let lastLogin = localStorage.getItem('dof_lastLogin');
+              let today = new Date().toDateString();
+              if (lastLogin !== today) {
+                  document.getElementById('daily-login').style.display = 'block';
+              }
+          },
+          claimDaily: () => {
+              PlayerData.gold += 500;
+              PlayerData.shards += 50;
+              localStorage.setItem('dof_lastLogin', new Date().toDateString());
+              document.getElementById('daily-login').style.display = 'none';
+              UI.updateCurrencies();
+              saveGame();
+              UI.notify("Daily Rewards Claimed!");
+          }
+      };
+
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -17,20 +245,6 @@ window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 });
-
-// Utility: RNG
-const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-const randomFloat = (min, max) => Math.random() * (max - min) + min;
-
-// --- GAME STATE ---
-const GameState = {
-    state: 'BOOT', // BOOT, MENU, PLAYING, DEAD
-    level: 1,
-    camera: { x: 0, y: 0 },
-    lastTime: 0,
-    frame: 0,
-    pendingLevelUp: false // FIX: Track if we need to change levels safely
-};
 
 // Persistent Data
 let PlayerData = {
@@ -40,6 +254,7 @@ let PlayerData = {
     dungeonLevel: 1,
     xp: 0,
     maxXp: 100,
+    inventory: [], // Added fallback empty array initialization
     gear: {
         'Weapon':   { level: 1, atk: 10, critMult: 0.05 },
         'Armor':    { level: 1, hp: 50, def: 5 },
@@ -50,7 +265,7 @@ let PlayerData = {
         'Ring':     { level: 1, atk: 8, critChance: 1.5 },
         'Earrings': { level: 1, critMult: 0.1, regen: 0.2 },
         'Necklace': { level: 1, regen: 1.0, hp: 10 },
-        'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } // atkSpeed is a CD reduction factor
+        'Boots':    { level: 1, def: 5, atkSpeed: 0.02 } 
     }
 };
 
@@ -71,7 +286,7 @@ function generateMap() {
     let x = Math.floor(MAP_SIZE / 2);
     let y = Math.floor(MAP_SIZE / 2);
     let floorCount = 0;
-    const maxFloors = (MAP_SIZE * MAP_SIZE) * 0.4;
+    let maxFloors = (MAP_SIZE * MAP_SIZE) * 0.4;
     
     // Start area
     for(let i=-2; i<=2; i++) {
@@ -82,7 +297,7 @@ function generateMap() {
 
     // Drunkard's walk
     while (floorCount < maxFloors) {
-        const dir = randomInt(0, 3);
+        let dir = randomInt(0, 3);
         if (dir === 0 && y > 2) y--;
         else if (dir === 1 && y < MAP_SIZE - 3) y++;
         else if (dir === 2 && x > 2) x--;
@@ -103,8 +318,8 @@ function generateMap() {
 
 // Map Collision Helper
 function isWall(x, y) {
-    const col = Math.floor(x / TILE_SIZE);
-    const row = Math.floor(y / TILE_SIZE);
+    let col = Math.floor(x / TILE_SIZE);
+    let row = Math.floor(y / TILE_SIZE);
     if (row < 0 || row >= MAP_SIZE || col < 0 || col >= MAP_SIZE) return true;
     return mapGrid[row][col] === 1;
 }
@@ -120,15 +335,6 @@ function spawnLoot(x, y, type) {
 }
 
 class Projectile {
-    /**
-     * @param {number} x - Starting X coordinate.
-     * @param {number} y - Starting Y coordinate.
-     * @param {number} targetX - Target X coordinate.
-     * @param {number} targetY - Target Y coordinate.
-     * @param {number} speed - Speed of the projectile in pixels/second.
-     * @param {number} damage - Damage dealt by the projectile.
-     * @param {string} color - Color of the projectile.
-     */
     constructor(x, y, targetX, targetY, speed, damage, color = '#bb86fc') {
         this.x = x;
         this.y = y;
@@ -138,9 +344,9 @@ class Projectile {
         this.radius = 5;
         this.lifetime = 1.5; // seconds
         this.currentLifetime = 0;
-        this.isAlive = true; // For cleanup in main loop
+        this.isAlive = true; 
 
-        const angle = Math.atan2(targetY - y, targetX - x);
+        let angle = Math.atan2(targetY - y, targetX - x);
         this.vx = Math.cos(angle) * speed;
         this.vy = Math.sin(angle) * speed;
     }
@@ -152,33 +358,31 @@ class Projectile {
         this.y += this.vy * dt;
         this.currentLifetime += dt;
 
-        // Check for collision with enemies (simplified for now)
         for (let i = 0; i < entities.length; i++) {
-            const entity = entities[i];
-            // Assuming Enemy class exists and has x, y, radius, takeDamage
-            if (entity instanceof Enemy && entity.isAlive) {
-                const dist = Math.hypot(this.x - entity.x, this.y - entity.y);
+            let entity = entities[i];
+            if (entity instanceof Enemy && entity.hp > 0) {
+                let dist = Math.hypot(this.x - entity.x, this.y - entity.y);
                 if (dist < this.radius + entity.radius) {
-                    entity.takeDamage(this.damage);
-                    this.isAlive = false; // Mark projectile for removal
-                    spawnAura(this.x, this.y); // Burst effect
-                    break; // Projectile hits one target
+                    entity.takeDamage(this.damage, false); // Projectile hits don't inherently crit here unless passed down
+                    this.isAlive = false; 
+                    spawnAura(this.x, this.y); 
+                    break; 
                 }
             }
         }
 
         if (this.currentLifetime >= this.lifetime) {
-            this.isAlive = false; // Mark for removal
+            this.isAlive = false; 
         }
     }
 
     draw(ctx) {
         if (!this.isAlive) return;
         ctx.save();
-        ctx.shadowBlur = 15; // SOTA rendering technique
+        ctx.shadowBlur = 15; 
         ctx.shadowColor = this.color;
         ctx.fillStyle = this.color;
-        ctx.globalCompositeOperation = 'lighter'; // SOTA rendering technique for glowing effect
+        ctx.globalCompositeOperation = 'lighter'; 
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -186,17 +390,10 @@ class Projectile {
     }
 }
 
-/**
- * Spawns a projectile from a starting point to a target point.
- * @param {number} x1 - Starting X coordinate.
- * @param {number} y1 - Starting Y coordinate.
- * @param {number} x2 - Target X coordinate.
- * @param {number} y2 - Target Y coordinate.
- */
 function spawnProjectile(x1, y1, x2, y2) {
-    if (!player) return; // Add null check for player object
-    const projectileSpeed = 500; // pixels per second
-    const projectileDamage = player.getAttackPower(); 
+    if (!player) return; 
+    let projectileSpeed = 500; 
+    let projectileDamage = player.getAttackPower(); 
     entities.push(new Projectile(x1, y1, x2, y2, projectileSpeed, projectileDamage));
 }
 
@@ -209,7 +406,7 @@ function gainXp(amt) {
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
         PlayerData.level++;
-        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.1);
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
     }
@@ -237,7 +434,7 @@ function levelUpDungeon() {
 }
 
 function spawnEnemies() {
-    const numEnemies = 5 + Math.floor(GameState.level * 1.5);
+    let numEnemies = 5 + Math.floor(GameState.level * 1.5);
     for(let i=0; i<numEnemies; i++) {
         let ex, ey;
         do {
@@ -254,8 +451,8 @@ function initLevel() {
     particles = [];
     floatingTexts = [];
     
-    const startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
-    const startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
+    let startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
+    let startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     
     if(!player) player = new Player(startX, startY);
     else { player.x = startX; player.y = startY; }
@@ -268,17 +465,10 @@ function initLevel() {
 }
 
 // --- INPUT (Virtual Joystick) ---
-const Input = {
-    joystick: { active: false, angle: 0, x:0, y:0 }
-};
-
-const jZone = document.getElementById('joystick-zone');
-const jBase = document.getElementById('j-base');
-const jStick = document.getElementById('j-stick');
 
 jZone.addEventListener('touchstart', (e) => {
     if(GameState.state !== 'PLAYING') return;
-    const touch = e.changedTouches[0];
+    let touch = e.changedTouches[0];
     Input.joystick.active = true;
     Input.joystick.x = touch.clientX;
     Input.joystick.y = touch.clientY;
@@ -291,169 +481,21 @@ jZone.addEventListener('touchstart', (e) => {
 
 jZone.addEventListener('touchmove', (e) => {
     if(!Input.joystick.active) return;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - Input.joystick.x;
-    const dy = touch.clientY - Input.joystick.y;
+    let touch = e.changedTouches[0];
+    let dx = touch.clientX - Input.joystick.x;
+    let dy = touch.clientY - Input.joystick.y;
     Input.joystick.angle = Math.atan2(dy, dx);
     
-    const dist = Math.min(50, Math.hypot(dx, dy));
-    const sx = Math.cos(Input.joystick.angle) * dist;
-    const sy = Math.sin(Input.joystick.angle) * dist;
+    let dist = Math.min(50, Math.hypot(dx, dy));
+    let sx = Math.cos(Input.joystick.angle) * dist;
+    let sy = Math.sin(Input.joystick.angle) * dist;
     
     jStick.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
 });
 
-const endJoystick = () => {
-    Input.joystick.active = false;
-    jBase.style.display = 'none';
-};
 jZone.addEventListener('touchend', endJoystick);
 jZone.addEventListener('touchcancel', endJoystick);
 
-
-// --- UI MANAGER ---
-const UI = {
-    updateStats: () => {
-        document.getElementById('p-level').innerText = PlayerData.level;
-        document.getElementById('hp-fill').style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
-        document.getElementById('hp-text').innerText = `${Math.floor(player.hp)} / ${Math.floor(player.getMaxHp())}`;
-        document.getElementById('xp-fill').style.width = `${(PlayerData.xp / PlayerData.maxXp) * 100}%`;
-        document.getElementById('xp-text').innerText = `${Math.floor(PlayerData.xp)} / ${PlayerData.maxXp}`;
-    },
-    updateCurrencies: () => {
-        document.getElementById('c-gold').innerText = PlayerData.gold;
-        document.getElementById('c-shard').innerText = PlayerData.shards;
-    },
-    updateHotbar: (skills) => {
-        skills.forEach((s, i) => {
-            const overlay = document.getElementById(`cd-${i}`);
-            const pct = (s.current / s.cdMax) * 100;
-            overlay.style.height = `${pct}%`;
-        });
-    },
-    updateMinimap: () => {
-        const mmCanvas = document.getElementById('minimap');
-        const mmCtx = mmCanvas.getContext('2d');
-        mmCtx.clearRect(0,0,100,100);
-        const cellW = 100 / MAP_SIZE;
-        
-        for(let r=0; r<MAP_SIZE; r++){
-            for(let c=0; c<MAP_SIZE; c++){
-                if(exploredGrid[r][c]) {
-                    mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#333' : '#777';
-                    mmCtx.fillRect(c*cellW, r*cellW, cellW, cellW);
-                }
-            }
-        }
-        // Draw Player
-        mmCtx.fillStyle = '#bb86fc';
-        mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
-        // Draw Portal if explored
-        if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
-            mmCtx.fillStyle = '#00e5ff';
-            mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
-        }
-    },
-    toggleInventory: () => {
-        const modal = document.getElementById('inventory-modal');
-        if (modal.style.display === 'flex') {
-            modal.style.display = 'none';
-        } else {
-            modal.style.display = 'flex';
-            UI.renderInventory();
-        }
-    },
-    renderInventory: () => {
-        // 1. Stats Sheet
-        const sheet = document.getElementById('stats-sheet');
-        if (sheet && player) {
-            sheet.innerHTML = `
-                <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
-                <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
-                <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
-                <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
-                <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
-                <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
-            `;
-        }
-
-        // 2. Specialized Gear Rendering
-        const grid = document.getElementById('gear-grid');
-        grid.innerHTML = '';
-        GEAR_TYPES.forEach(type => {
-            const gear = PlayerData.gear[type];
-            const cost = gear.level * 10;
-            
-            // Generate a string describing the bonuses
-            let bonusText = "";
-            if (gear.atk) bonusText += `Atk: +${Math.floor(gear.atk)} `;
-            if (gear.hp) bonusText += `HP: +${Math.floor(gear.hp)} `;
-            if (gear.def) bonusText += `Def: +${Math.floor(gear.def)} `;
-            if (gear.regen) bonusText += `Reg: +${gear.regen.toFixed(1)} `;
-            if (gear.critChance) bonusText += `Crit%: +${gear.critChance.toFixed(1)} `;
-            if (gear.critMult) bonusText += `CritX: +${gear.critMult.toFixed(2)} `;
-            if (gear.atkSpeed) bonusText += `Spd: +${(gear.atkSpeed * 100).toFixed(0)}% `;
-
-            const div = document.createElement('div');
-            div.className = 'gear-item';
-            div.innerHTML = `
-                <h4 style="color:var(--primary)">${type}</h4>
-                <p>Lv. ${gear.level}</p>
-                <p style="font-size:0.7rem; color:#03dac6; min-height:20px;">${bonusText}</p>
-                <button class="upgrade-btn" ${PlayerData.shards < cost ? 'disabled' : ''} onclick="UI.upgradeGear('${type}')">
-                    Upgrade (${cost} 💎)
-                </button>
-            `;
-            grid.appendChild(div);
-        });
-        UI.updateCurrencies();
-    },
-
-    upgradeGear: (type) => {
-        const gear = PlayerData.gear[type];
-        const cost = gear.level * 10;
-        if (PlayerData.shards >= cost) {
-            PlayerData.shards -= cost;
-            gear.level++;
-
-            if (gear.atk !== undefined) gear.atk += randomInt(3, 7);
-            if (gear.hp !== undefined) gear.hp += randomInt(15, 30);
-            if (gear.def !== undefined) gear.def += randomInt(2, 5);
-            if (gear.regen !== undefined) gear.regen += 0.2;
-            if (gear.critChance !== undefined) gear.critChance += 0.4;
-            if (gear.critMult !== undefined) gear.critMult += 0.03;
-            if (gear.atkSpeed !== undefined) gear.atkSpeed = Math.min(0.6, gear.atkSpeed + 0.01); // Cap speed boost
-
-            UI.renderInventory();
-            UI.updateStats();
-            saveGame();
-            UI.notify(`${type} specialized!`);
-        }
-    },
-    notify: (msg) => {
-        const el = document.getElementById('notification');
-        el.innerText = msg;
-        el.style.opacity = 1;
-        if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
-        UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
-    },
-    checkDailyLogin: () => {
-        const lastLogin = localStorage.getItem('dof_lastLogin');
-        const today = new Date().toDateString();
-        if (lastLogin !== today) {
-            document.getElementById('daily-login').style.display = 'block';
-        }
-    },
-    claimDaily: () => {
-        PlayerData.gold += 500;
-        PlayerData.shards += 50;
-        localStorage.setItem('dof_lastLogin', new Date().toDateString());
-        document.getElementById('daily-login').style.display = 'none';
-        UI.updateCurrencies();
-        saveGame();
-        UI.notify("Daily Rewards Claimed!");
-    }
-};
 
 // --- SAVE / LOAD ---
 function saveGame() {
@@ -462,12 +504,13 @@ function saveGame() {
 }
 
 function loadGame() {
-    const save = localStorage.getItem('dof_save');
+    let save = localStorage.getItem('dof_save');
     if (save) {
         try {
-            const data = JSON.parse(save);
+            let data = JSON.parse(save);
             PlayerData = { ...PlayerData, ...data };
             if (data.gear) PlayerData.gear = { ...PlayerData.gear, ...data.gear };
+            if (data.inventory) PlayerData.inventory = data.inventory; 
             if (PlayerData.dungeonLevel) {
                 GameState.level = PlayerData.dungeonLevel;
             }
@@ -477,16 +520,16 @@ function loadGame() {
 
 // --- RENDERING ---
 function drawMap(camX, camY) {
-    const startCol = Math.max(0, Math.floor(camX / TILE_SIZE));
-    const endCol = Math.min(MAP_SIZE - 1, startCol + Math.ceil(canvas.width / TILE_SIZE) + 1);
-    const startRow = Math.max(0, Math.floor(camY / TILE_SIZE));
-    const endRow = Math.min(MAP_SIZE - 1, startRow + Math.ceil(canvas.height / TILE_SIZE) + 1);
+    let startCol = Math.max(0, Math.floor(camX / TILE_SIZE));
+    let endCol = Math.min(MAP_SIZE - 1, startCol + Math.ceil(canvas.width / TILE_SIZE) + 1);
+    let startRow = Math.max(0, Math.floor(camY / TILE_SIZE));
+    let endRow = Math.min(MAP_SIZE - 1, startRow + Math.ceil(canvas.height / TILE_SIZE) + 1);
 
     for (let r = startRow; r <= endRow; r++) {
         for (let c = startCol; c <= endCol; c++) {
-            const isExplored = exploredGrid[r][c];
-            const screenX = c * TILE_SIZE - camX;
-            const screenY = r * TILE_SIZE - camY;
+            let isExplored = exploredGrid[r][c];
+            let screenX = c * TILE_SIZE - camX;
+            let screenY = r * TILE_SIZE - camY;
 
             if (!isExplored) {
                 ctx.fillStyle = '#000';
@@ -530,10 +573,10 @@ function draw() {
 
     // Render Portal
     if (portal) {
-        const pRow = Math.floor(portal.y/TILE_SIZE);
-        const pCol = Math.floor(portal.x/TILE_SIZE);
+        let pRow = Math.floor(portal.y/TILE_SIZE);
+        let pCol = Math.floor(portal.x/TILE_SIZE);
         if (exploredGrid[pRow] && exploredGrid[pRow][pCol]) {
-            const glow = Math.abs(Math.sin(Date.now()/500)) * 20;
+            let glow = Math.abs(Math.sin(Date.now()/500)) * 20;
             ctx.shadowBlur = glow;
             ctx.shadowColor = '#00e5ff';
             ctx.fillStyle = '#00e5ff';
@@ -566,7 +609,7 @@ function draw() {
 
 // --- MAIN LOOP ---
 function loop(timestamp) {
-    const dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); 
+    let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); 
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
@@ -594,7 +637,7 @@ function loop(timestamp) {
 
         // Auto-spawn logic
         if (GameState.frame % 120 === 0) {
-            const enemyCount = entities.filter(e => e instanceof Enemy).length;
+            let enemyCount = entities.filter(e => e instanceof Enemy).length;
             if (enemyCount < 10 + GameState.level) {
                 spawnEnemies();
             }
@@ -612,9 +655,9 @@ function loop(timestamp) {
 window.onload = () => {
     loadGame();
     
-    const fill = document.getElementById('loading-fill');
+    let fill = document.getElementById('loading-fill');
     let progress = 0;
-    const bootInterval = setInterval(() => {
+    let bootInterval = setInterval(() => {
         progress += Math.random() * 15;
         if (progress >= 100) {
             progress = 100;
