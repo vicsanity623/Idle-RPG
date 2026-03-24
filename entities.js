@@ -60,7 +60,13 @@ const PLAYER_ATTACK_RANGE = 200,
           };
 
           for (let stat in chosenTemplate.stats) {
-              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2) * statMult);
+              let rawValue = chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2) * statMult;
+              
+              if (stat === 'hp' || stat === 'atk' || stat === 'def') {
+                  item.stats[stat] = Math.floor(rawValue); // Round down for big stats
+              } else {
+                  item.stats[stat] = Number(rawValue.toFixed(3)); 
+              }
           }
           return item;
       };
