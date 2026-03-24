@@ -227,7 +227,9 @@ const TILE_SIZE = 64,
               if (oldStats.atk !== newStats.atk) deltaLines.push({ label: 'Attack', oldVal: oldStats.atk, newVal: newStats.atk, diff: newStats.atk - oldStats.atk });
               if (oldStats.def !== newStats.def) deltaLines.push({ label: 'Defense', oldVal: oldStats.def, newVal: newStats.def, diff: newStats.def - oldStats.def });
               if (oldStats.regen !== newStats.regen) deltaLines.push({ label: 'Regen', oldVal: oldStats.regen, newVal: newStats.regen, diff: newStats.regen - oldStats.regen });
-              if (oldStats.crit !== newStats.crit) deltaLines.push({ label: 'Crit %', oldVal: oldStats.crit, newVal: newStats.crit, diff: newStats.crit - oldStats.crit });
+              if (oldStats.critChance !== newStats.critChance) deltaLines.push({ label: 'Crit %', oldVal: oldStats.critChance, newVal: newStats.critChance, diff: newStats.critChance - oldStats.critChance });
+              if (oldStats.critMult !== newStats.critMult) deltaLines.push({ label: 'Crit X', oldVal: oldStats.critMult, newVal: newStats.critMult, diff: newStats.critMult - oldStats.critMult });
+              if (oldStats.atkSpeed !== newStats.atkSpeed) deltaLines.push({ label: 'Atk Spd', oldVal: oldStats.atkSpeed, newVal: newStats.atkSpeed, diff: newStats.atkSpeed - oldStats.atkSpeed });
 
               // 5. Show the Popup (only if something actually changed!)
               if (deltaLines.length > 0) {
@@ -392,31 +394,58 @@ const TILE_SIZE = 64,
               
               if (!popup || !titleEl || !contentEl) return;
 
-              titleEl.innerText = title;
+              // Stat Icon Mapping
+              const iconMap = {
+                  'Max HP': '❤️',
+                  'Attack': '⚔️',
+                  'Defense': '🛡️',
+                  'Regen': '🍏',
+                  'Crit %': '🎯',
+                  'Crit X': '💥',
+                  'Atk Spd': '⚡'
+              };
+
+              titleEl.innerHTML = `<div class="level-badge">PROMOTED</div> ${title}`;
               
               let html = '';
               lines.forEach(line => {
-                  let diffHtml = '';
-                  if (line.diff > 0) diffHtml = `<span class="delta-positive">(+${line.diff % 1 !== 0 ? line.diff.toFixed(2) : line.diff})</span>`;
-                  else if (line.diff < 0) diffHtml = `<span class="delta-negative">(${line.diff % 1 !== 0 ? line.diff.toFixed(2) : line.diff})</span>`;
+                  let icon = iconMap[line.label] || '✨';
+                  let diffValue = line.diff % 1 !== 0 ? line.diff.toFixed(1) : line.diff;
+                  let oldVal = line.oldVal % 1 !== 0 ? line.oldVal.toFixed(1) : line.oldVal;
+                  let newVal = line.newVal % 1 !== 0 ? line.newVal.toFixed(1) : line.newVal;
                   
-                  html += `<div class="delta-line">
-                              <span>${line.label}: ${line.oldVal % 1 !== 0 ? line.oldVal.toFixed(1) : line.oldVal} ➔ ${line.newVal % 1 !== 0 ? line.newVal.toFixed(1) : line.newVal}</span>
-                              ${diffHtml}
-                           </div>`;
+                  // We flip Atk Spd color because lower is better for cooldowns
+                  let isPositive = line.diff > 0;
+                  if (line.label === 'Atk Spd') isPositive = line.diff < 0; 
+
+                  let changeColor = isPositive ? '#4caf50' : '#ff5252';
+                  let symbol = line.diff > 0 ? '+' : '';
+
+                  html += `
+                      <div class="delta-row">
+                          <span class="delta-icon">${icon}</span>
+                          <span class="delta-label">${line.label}</span>
+                          <span class="delta-values">${oldVal} ➔ ${newVal}</span>
+                          <span class="delta-change" style="color:${changeColor}">${symbol}${diffValue}</span>
+                      </div>`;
               });
               
               contentEl.innerHTML = html;
               
-              // Animate in
-              popup.style.opacity = 1;
-              popup.style.transform = "translate(-50%, 0)";
+              // Animate: Reset and Pop
+              popup.style.display = 'block';
+              setTimeout(() => {
+                  popup.style.opacity = 1;
+                  popup.style.transform = "translate(-50%, 0) scale(1.05)";
+                  setTimeout(() => {
+                      popup.style.transform = "translate(-50%, 0) scale(1)";
+                  }, 150);
+              }, 10);
               
-              // Hide after 5 seconds
               if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
               UI._deltaTimeout = setTimeout(() => {
                   popup.style.opacity = 0;
-                  popup.style.transform = "translate(-50%, -20%)";
+                  popup.style.transform = "translate(-50%, -20%) scale(0.9)";
               }, 5000);
           },
           
