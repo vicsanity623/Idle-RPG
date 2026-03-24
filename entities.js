@@ -33,7 +33,7 @@ const PLAYER_ATTACK_RANGE = 200,
               stats: {}
           };
           for (let stat in chosenTemplate.stats) {
-              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2));
+              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.8));
           }
           return item;
       };
@@ -220,7 +220,7 @@ class Enemy {
         this.y = y;
         this.radius = 15;
         this.speed = randomFloat(80, 130) * Math.pow(1.02, GameState.level); 
-        let hpMultiplier = Math.pow(1.1, GameState.level);
+        let hpMultiplier = Math.pow(1.3, GameState.level);
         this.hp = 30 * hpMultiplier;
         this.maxHp = this.hp;
         this.damage = 5 * hpMultiplier;
@@ -267,7 +267,7 @@ class Enemy {
         gainXp(10 * GameState.level);
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
         if (Math.random() < 0.2) spawnLoot(this.x, this.y, 'shard');
-        if (Math.random() < 0.05) spawnLoot(this.x, this.y, 'gear');
+        if (Math.random() < 0.13) spawnLoot(this.x, this.y, 'gear');
     }
 
     draw(ctx) {
