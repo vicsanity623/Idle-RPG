@@ -618,27 +618,58 @@ function gainXp(amt) {
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
         
-        // 1. Snapshot old stats
-        let oldMaxHp = player.getMaxHp();
-        let oldAtk = player.getAttackPower();
+        // 1. Snapshot ALL old stats (including AtkSpeed)
+        let oldStats = {
+            hp: player.getMaxHp(),
+            atk: player.getAttackPower(),
+            def: player.getDefense(),
+            regen: player.getRegen(),
+            critChance: player.getCritChance(),
+            critMult: player.getCritMultiplier(),
+            atkSpeed: player.getAttackSpeedFactor() // ADDED
+        };
         let oldLevel = PlayerData.level;
 
         // 2. Apply Level Up
         PlayerData.level++;
         PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
         
-        // 3. Snapshot new stats & Heals
-        let newMaxHp = player.getMaxHp();
-        let newAtk = player.getAttackPower();
-        player.hp = newMaxHp; // Full heal on level up
+        // 3. Snapshot NEW stats (including AtkSpeed)
+        let newStats = {
+            hp: player.getMaxHp(),
+            atk: player.getAttackPower(),
+            def: player.getDefense(),
+            regen: player.getRegen(),
+            critChance: player.getCritChance(),
+            critMult: player.getCritMultiplier(),
+            atkSpeed: player.getAttackSpeedFactor() // ADDED
+        };
+        
+        // 4. Full heal on level up
+        player.hp = newStats.hp; 
         
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
 
-        // 4. Trigger the new Delta Popup
-        UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, [
-            { label: 'Max HP', oldVal: oldMaxHp, newVal: newMaxHp, diff: newMaxHp - oldMaxHp },
-            { label: 'Attack', oldVal: oldAtk, newVal: newAtk, diff: newAtk - oldAtk }
-        ]);
+        // 5. Build the dynamic array of ONLY the stats that changed
+        let deltaLines = [];
+        
+        if (Math.floor(oldStats.hp) !== Math.floor(newStats.hp)) 
+            deltaLines.push({ label: 'Max HP', oldVal: oldStats.hp, newVal: newStats.hp, diff: newStats.hp - oldStats.hp });
+        if (Math.floor(oldStats.atk) !== Math.floor(newStats.atk)) 
+            deltaLines.push({ label: 'Attack', oldVal: oldStats.atk, newVal: newStats.atk, diff: newStats.atk - oldStats.atk });
+        if (Math.floor(oldStats.def) !== Math.floor(newStats.def)) 
+            deltaLines.push({ label: 'Defense', oldVal: oldStats.def, newVal: newStats.def, diff: newStats.def - oldStats.def });
+        if (oldStats.regen.toFixed(1) !== newStats.regen.toFixed(1)) 
+            deltaLines.push({ label: 'Regen', oldVal: oldStats.regen, newVal: newStats.regen, diff: newStats.regen - oldStats.regen });
+        if (oldStats.critChance.toFixed(1) !== newStats.critChance.toFixed(1)) 
+            deltaLines.push({ label: 'Crit %', oldVal: oldStats.critChance, newVal: newStats.critChance, diff: newStats.critChance - oldStats.critChance });
+        if (oldStats.critMult.toFixed(2) !== newStats.critMult.toFixed(2)) 
+            deltaLines.push({ label: 'Crit X', oldVal: oldStats.critMult, newVal: newStats.critMult, diff: newStats.critMult - oldStats.critMult });
+        if (oldStats.atkSpeed.toFixed(3) !== newStats.atkSpeed.toFixed(3)) 
+            deltaLines.push({ label: 'Atk Spd', oldVal: oldStats.atkSpeed, newVal: newStats.atkSpeed, diff: newStats.atkSpeed - oldStats.atkSpeed });
+
+        // 6. Trigger the Delta Popup
+        UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltaLines);
     }
     UI.updateStats();
     saveGame();
