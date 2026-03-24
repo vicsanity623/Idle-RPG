@@ -51,7 +51,7 @@ const PLAYER_ATTACK_RANGE = 200,
               stats: {}
           };
           for (let stat in chosenTemplate.stats) {
-              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.8));
+              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * chosenRarity.multiplier * randomFloat(0.8, 1.8));
           }
           return item;
       };
