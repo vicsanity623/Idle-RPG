@@ -183,6 +183,16 @@ const TILE_SIZE = 64,
               let itemToEquip = PlayerData.inventory[index];
               let slot = itemToEquip.slot;
               
+              // 1. Snapshot OLD global player stats
+              let oldStats = {
+                  hp: player.getMaxHp(),
+                  atk: player.getAttackPower(),
+                  def: player.getDefense(),
+                  regen: player.getRegen(),
+                  crit: player.getCritChance()
+              };
+
+              // 2. Perform the Swap
               PlayerData.inventory.splice(index, 1);
               let currentlyEquipped = PlayerData.gear[slot];
               
@@ -192,13 +202,39 @@ const TILE_SIZE = 64,
               
               PlayerData.gear[slot] = itemToEquip;
               
+              // 3. Update the underlying UI and Data
               UI.renderInventory();
+              let detailPanel = document.getElementById('item-detail-panel');
+              if (detailPanel) detailPanel.style.display = 'none';
+              
               UI.updateStats();
               if (typeof player !== 'undefined' && player) {
                   player.hp = Math.min(player.hp, player.getMaxHp());
               }
               saveGame();
-              UI.notify(`Equipped ${itemToEquip.name || slot}`);
+
+              // 4. Snapshot NEW stats and build the Delta array
+              let newStats = {
+                  hp: player.getMaxHp(),
+                  atk: player.getAttackPower(),
+                  def: player.getDefense(),
+                  regen: player.getRegen(),
+                  crit: player.getCritChance()
+              };
+
+              let deltaLines = [];
+              if (oldStats.hp !== newStats.hp) deltaLines.push({ label: 'Max HP', oldVal: oldStats.hp, newVal: newStats.hp, diff: newStats.hp - oldStats.hp });
+              if (oldStats.atk !== newStats.atk) deltaLines.push({ label: 'Attack', oldVal: oldStats.atk, newVal: newStats.atk, diff: newStats.atk - oldStats.atk });
+              if (oldStats.def !== newStats.def) deltaLines.push({ label: 'Defense', oldVal: oldStats.def, newVal: newStats.def, diff: newStats.def - oldStats.def });
+              if (oldStats.regen !== newStats.regen) deltaLines.push({ label: 'Regen', oldVal: oldStats.regen, newVal: newStats.regen, diff: newStats.regen - oldStats.regen });
+              if (oldStats.crit !== newStats.crit) deltaLines.push({ label: 'Crit %', oldVal: oldStats.crit, newVal: newStats.crit, diff: newStats.crit - oldStats.crit });
+
+              // 5. Show the Popup (only if something actually changed!)
+              if (deltaLines.length > 0) {
+                  UI.showDelta(`Equipped: ${itemToEquip.name || slot}`, deltaLines);
+              } else {
+                  UI.notify(`Equipped ${itemToEquip.name || slot}`); // Fallback
+              }
           },
             
           inspectItem: (slotOrIndex, isBagItem) => {
@@ -348,6 +384,42 @@ const TILE_SIZE = 64,
               UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
           },
           
+          // NEW FUNCTION: Handles detailed Stat Comparisons
+          showDelta: (title, lines) => {
+              let popup = document.getElementById('stat-delta-popup');
+              let titleEl = document.getElementById('delta-title');
+              let contentEl = document.getElementById('delta-content');
+              
+              if (!popup || !titleEl || !contentEl) return;
+
+              titleEl.innerText = title;
+              
+              let html = '';
+              lines.forEach(line => {
+                  let diffHtml = '';
+                  if (line.diff > 0) diffHtml = `<span class="delta-positive">(+${line.diff % 1 !== 0 ? line.diff.toFixed(2) : line.diff})</span>`;
+                  else if (line.diff < 0) diffHtml = `<span class="delta-negative">(${line.diff % 1 !== 0 ? line.diff.toFixed(2) : line.diff})</span>`;
+                  
+                  html += `<div class="delta-line">
+                              <span>${line.label}: ${line.oldVal % 1 !== 0 ? line.oldVal.toFixed(1) : line.oldVal} ➔ ${line.newVal % 1 !== 0 ? line.newVal.toFixed(1) : line.newVal}</span>
+                              ${diffHtml}
+                           </div>`;
+              });
+              
+              contentEl.innerHTML = html;
+              
+              // Animate in
+              popup.style.opacity = 1;
+              popup.style.transform = "translate(-50%, 0)";
+              
+              // Hide after 5 seconds
+              if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
+              UI._deltaTimeout = setTimeout(() => {
+                  popup.style.opacity = 0;
+                  popup.style.transform = "translate(-50%, -20%)";
+              }, 5000);
+          },
+          
           checkDailyLogin: () => {
               let lastLogin = localStorage.getItem('dof_lastLogin');
               let today = new Date().toDateString();
@@ -465,51 +537,60 @@ function spawnLoot(x, y, type) {
 }
 
 class Projectile {
-    constructor(x, y, targetX, targetY, speed, damage, color = '#bb86fc') {
+    constructor(x, y, target, speed, damage, isCrit) {
         this.x = x;
         this.y = y;
+        this.target = target; // Store the actual enemy object to track it
         this.speed = speed;
         this.damage = damage;
-        this.color = color;
-        this.radius = 5;
-        this.lifetime = 1.5; // seconds
+        this.isCrit = isCrit;
+        
+        // Visual flair: Crits are bigger and yellow!
+        this.color = isCrit ? '#ffeb3b' : '#bb86fc'; 
+        this.radius = isCrit ? 8 : 5; 
+        
+        this.lifetime = 3.0; // Max seconds before it fizzles
         this.currentLifetime = 0;
         this.isAlive = true; 
-
-        let angle = Math.atan2(targetY - y, targetX - x);
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
     }
 
     update(dt) {
         if (!this.isAlive) return;
 
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
         this.currentLifetime += dt;
-
-        for (let i = 0; i < entities.length; i++) {
-            let entity = entities[i];
-            if (entity instanceof Enemy && entity.hp > 0) {
-                let dist = Math.hypot(this.x - entity.x, this.y - entity.y);
-                if (dist < this.radius + entity.radius) {
-                    entity.takeDamage(this.damage, false); // Projectile hits don't inherently crit here unless passed down
-                    this.isAlive = false; 
-                    spawnAura(this.x, this.y); 
-                    break; 
-                }
-            }
-        }
-
         if (this.currentLifetime >= this.lifetime) {
             this.isAlive = false; 
+            return;
+        }
+
+        // 1. Homing Logic: Always steer towards the target's current position
+        if (this.target && this.target.hp > 0) {
+            let dx = this.target.x - this.x;
+            let dy = this.target.y - this.y;
+            let angle = Math.atan2(dy, dx);
+            
+            // Move along the angle
+            this.x += Math.cos(angle) * this.speed * dt;
+            this.y += Math.sin(angle) * this.speed * dt;
+
+            // 2. Collision Detection
+            let dist = Math.hypot(dx, dy);
+            if (dist < this.radius + this.target.radius) {
+                this.target.takeDamage(this.damage, this.isCrit); // Deal damage ON IMPACT
+                this.isAlive = false; 
+                spawnAura(this.x, this.y); // Particle burst on impact
+            }
+        } else {
+            // Target died before projectile arrived. Fizzle out gracefully.
+            this.isAlive = false;
+            spawnAura(this.x, this.y); 
         }
     }
 
     draw(ctx) {
         if (!this.isAlive) return;
         ctx.save();
-        ctx.shadowBlur = 15; 
+        ctx.shadowBlur = this.isCrit ? 20 : 15; // Extra glow for crits
         ctx.shadowColor = this.color;
         ctx.fillStyle = this.color;
         ctx.globalCompositeOperation = 'lighter'; 
@@ -520,11 +601,12 @@ class Projectile {
     }
 }
 
-function spawnProjectile(x1, y1, x2, y2) {
+function spawnProjectile(x1, y1, target, damage, isCrit) {
     if (!player) return; 
-    let projectileSpeed = 500; 
-    let projectileDamage = player.getAttackPower(); 
-    entities.push(new Projectile(x1, y1, x2, y2, projectileSpeed, projectileDamage));
+    let speedBoost = player.getAttackSpeedFactor() < 0.8 ? 200 : 0; 
+    let projectileSpeed = 600 + speedBoost; 
+    
+    entities.push(new Projectile(x1, y1, target, projectileSpeed, damage, isCrit));
 }
 
 function spawnAura(x, y) {
@@ -535,10 +617,28 @@ function gainXp(amt) {
     PlayerData.xp += amt;
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
+        
+        // 1. Snapshot old stats
+        let oldMaxHp = player.getMaxHp();
+        let oldAtk = player.getAttackPower();
+        let oldLevel = PlayerData.level;
+
+        // 2. Apply Level Up
         PlayerData.level++;
-        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.1);
-        player.hp = player.getMaxHp();
+        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        
+        // 3. Snapshot new stats & Heals
+        let newMaxHp = player.getMaxHp();
+        let newAtk = player.getAttackPower();
+        player.hp = newMaxHp; // Full heal on level up
+        
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
+
+        // 4. Trigger the new Delta Popup
+        UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, [
+            { label: 'Max HP', oldVal: oldMaxHp, newVal: newMaxHp, diff: newMaxHp - oldMaxHp },
+            { label: 'Attack', oldVal: oldAtk, newVal: newAtk, diff: newAtk - oldAtk }
+        ]);
     }
     UI.updateStats();
     saveGame();

@@ -172,8 +172,9 @@ class Player {
                 let damage = this.getAttackPower();
                 let isCrit = Math.random() * 100 < this.getCritChance();
                 if (isCrit) damage *= this.getCritMultiplier();
-                target.takeDamage(damage, isCrit);
-                spawnProjectile(this.x, this.y, target.x, target.y);
+                
+                spawnProjectile(this.x, this.y, target, damage, isCrit);
+                
                 this.skills[1].current = this.skills[1].cdMax * this.getAttackSpeedFactor(); 
             }
         }
