@@ -27,9 +27,9 @@
         #game-canvas { position: absolute; top: 0; left: 0; z-index: 1; }
         
         /* Screens */
-.screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; background: var(--bg-dark); transition: opacity 0.5s; }
-.hidden { opacity: 0; pointer-events: none; }
-.screen.hidden { z-index: -1; } /* Fix z-index layering bug: move hidden screens behind game canvas */
+        .screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; background: var(--bg-dark); transition: opacity 0.5s; }
+        .hidden { opacity: 0; pointer-events: none; }
+        .screen.hidden { z-index: -1; } /* Fix z-index layering bug: move hidden screens behind game canvas */
         
         /* Boot & Main Menu */
         #loading-bar { width: 200px; height: 10px; border: 1px solid var(--primary); margin-top: 20px; border-radius: 5px; overflow: hidden; }
@@ -204,6 +204,12 @@
         
                 <h3>Equipment</h3>
                 <div class="gear-grid" id="gear-grid">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <!-- NEW INVENTORY BAG SECTION -->
+                <h3>Inventory Bag</h3>
+                <div class="gear-grid" id="bag-grid">
                     <!-- Populated by JS -->
                 </div>
             </div>
