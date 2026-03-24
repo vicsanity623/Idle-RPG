@@ -39,7 +39,9 @@ const TILE_SIZE = 64,
           equippedStats:    document.getElementById('equipped-stats-list'),
           equipBtn:         document.getElementById('equip-unequip-btn'),
           discardBtn:       document.getElementById('discard-btn'),
-          // Cooldown array factory
+          portalUI:         document.getElementById('portal-ui'),
+          portalCost:       document.getElementById('portal-cost-text'),
+          unlockBtn:        document.getElementById('unlock-portal-btn'),
           cooldowns:        [0, 1, 2, 3].map(i => document.getElementById(`cd-${i}`))
       },
 
@@ -230,7 +232,13 @@ const TILE_SIZE = 64,
               if (!PlayerData.inventory[index]) return;
               let itemToEquip = PlayerData.inventory[index],
                   slot = itemToEquip.slot,
-                  oldStats = { hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), regen: player.getRegen(), crit: player.getCritChance() };
+                  // SNAPSHOT ALL OLD STATS
+                  oldStats = { 
+                      hp: player.getMaxHp(), atk: player.getAttackPower(), 
+                      def: player.getDefense(), regen: player.getRegen(), 
+                      critChance: player.getCritChance(), critMult: player.getCritMultiplier(),
+                      atkSpeed: player.getAttackSpeedFactor()
+                  };
 
               PlayerData.inventory.splice(index, 1);
               let currentlyEquipped = PlayerData.gear[slot];
@@ -242,12 +250,62 @@ const TILE_SIZE = 64,
               player.hp = Math.min(player.hp, player.getMaxHp());
               saveGame();
 
-              let newStats = { hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), regen: player.getRegen(), crit: player.getCritChance() },
-                  deltaLines = [];
-              if (oldStats.hp !== newStats.hp) deltaLines.push({ label: 'Max HP', oldVal: oldStats.hp, newVal: newStats.hp, diff: newStats.hp - oldStats.hp });
-              if (oldStats.atk !== newStats.atk) deltaLines.push({ label: 'Attack', oldVal: oldStats.atk, newVal: newStats.atk, diff: newStats.atk - oldStats.atk });
+              // SNAPSHOT ALL NEW STATS
+              let newStats = { 
+                  hp: player.getMaxHp(), atk: player.getAttackPower(), 
+                  def: player.getDefense(), regen: player.getRegen(), 
+                  critChance: player.getCritChance(), critMult: player.getCritMultiplier(),
+                  atkSpeed: player.getAttackSpeedFactor()
+              };
+              
+              // COMPARE ALL STATS FOR POPUP
+              let deltaLines = [];
+              let statCheck = [
+                  { k: 'hp', l: 'Max HP' }, { k: 'atk', l: 'Attack' }, 
+                  { k: 'def', l: 'Defense' }, { k: 'regen', l: 'Regen' },
+                  { k: 'critChance', l: 'Crit %' }, { k: 'critMult', l: 'Crit X' },
+                  { k: 'atkSpeed', l: 'Atk Spd' }
+              ];
+
+              statCheck.forEach(s => {
+                  let d = newStats[s.k] - oldStats[s.k];
+                  if (Math.abs(d) > 0.001) {
+                      deltaLines.push({ label: s.l, oldVal: oldStats[s.k], newVal: newStats[s.k], diff: d });
+                  }
+              });
               
               if (deltaLines.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltaLines);
+          },
+
+          upgradeGear: (type) => {
+              let gear = PlayerData.gear[type];
+              if (!gear) return;
+              
+              let stats = gear.stats || gear; 
+              let itemLevel = gear.level || 1;
+              let shardCost = itemLevel * 10;
+              let goldCost = itemLevel * 500; // NEW: Gold cost scales with level
+              
+              if (PlayerData.shards >= shardCost && PlayerData.gold >= goldCost) {
+                  PlayerData.shards -= shardCost;
+                  PlayerData.gold -= goldCost; // NEW: Spend Gold
+                  gear.level = itemLevel + 1;
+
+                  if (stats.atk !== undefined) stats.atk += randomInt(3, 7);
+                  if (stats.hp !== undefined) stats.hp += randomInt(15, 30);
+                  if (stats.def !== undefined) stats.def += randomInt(2, 5);
+                  if (stats.regen !== undefined) stats.regen += 0.2;
+                  if (stats.critChance !== undefined) stats.critChance += 0.4;
+                  if (stats.critMult !== undefined) stats.critMult += 0.03;
+                  if (stats.atkSpeed !== undefined) stats.atkSpeed = Math.min(0.6, stats.atkSpeed + 0.01); 
+
+                  UI.renderInventory();
+                  UI.updateStats();
+                  saveGame();
+                  UI.notify(`${type} specialized!`);
+              } else {
+                  UI.notify("Not enough Gold or Shards!");
+              }
           },
 
           showDelta: (title, lines) => {
@@ -474,17 +532,77 @@ function draw() {
 }
 
 function loop(timestamp) {
-    let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); GameState.lastTime = timestamp;
+    let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000);
+    GameState.lastTime = timestamp;
+
     if (GameState.state === 'PLAYING') {
-        if (GameState.pendingLevelUp) { GameState.level++; UI.notify(`Entering Depth ${GameState.level}`); initLevel(); GameState.pendingLevelUp = false; saveGame(); }
+        // Handle safe level transitions
+        if (GameState.pendingLevelUp) {
+            GameState.level++;
+            UI.notify(`Entering Depth ${GameState.level}`);
+            initLevel();
+            GameState.pendingLevelUp = false;
+            saveGame();
+        }
+
+        // Update AI Systems
         HiveMind.update();
-        for (let i = entities.length - 1; i >= 0; i--) entities[i].update(dt);
-        for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt);
-        for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
-        if (GameState.frame % 120 === 0) { if (entities.filter(e => e instanceof Enemy).length < 10 + GameState.level) spawnEnemies(); }
-        if (GameState.frame % 30 === 0) UI.updateMinimap();
+
+        // Update Entities
+        for (let i = entities.length - 1; i >= 0; i--) {
+            entities[i].update(dt);
+        }
+
+        // Update Visuals
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update(dt);
+        }
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            floatingTexts[i].update(dt);
+        }
+
+        // Periodic Systems (Spawning & UI)
+        if (GameState.frame % 120 === 0) {
+            let enemyCount = entities.filter(e => e instanceof Enemy).length;
+            if (enemyCount < 10 + GameState.level) {
+                spawnEnemies();
+            }
+        }
+
+        if (GameState.frame % 30 === 0) {
+            UI.updateMinimap();
+        }
+
+        // Portal Lock & Interaction Logic
+        if (portal) {
+            let distToPortal = Math.hypot(player.x - portal.x, player.y - portal.y);
+            let unlockCost = GameState.level * 1000;
+
+            if (distToPortal < 50) {
+                REFS.portalUI.style.display = 'block';
+                REFS.portalCost.innerText = `Unlock Cost: ${unlockCost} Gold`;
+                
+                REFS.unlockBtn.onclick = () => {
+                    if (PlayerData.gold >= unlockCost) {
+                        PlayerData.gold -= unlockCost;
+                        UI.notify("Seal Broken! Descending...");
+                        levelUpDungeon(); 
+                        REFS.portalUI.style.display = 'none';
+                    } else {
+                        UI.notify("Need more gold to break the seal!");
+                    }
+                };
+            } else {
+                REFS.portalUI.style.display = 'none';
+            }
+        }
     }
-    draw(); GameState.frame++; requestAnimationFrame(loop);
+
+    // Finalize Frame
+    draw();
+    GameState.frame++;
+    requestAnimationFrame(loop);
 }
 
 window.onload = () => {
