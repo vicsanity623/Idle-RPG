@@ -256,8 +256,8 @@ let PlayerData = {
     maxXp: 100,
     inventory: [], // Added fallback empty array initialization
     gear: {
-        'Weapon':   { level: 1, atk: 10, critMult: 0.05 },
-        'Armor':    { level: 1, hp: 50, def: 5 },
+        'Weapon':   { level: 1, atk: 10, critMult: 0.05, rarity: 'Common' },
+        'Armor':    { level: 1, hp: 50, def: 5, rarity: 'Common' },
         'Legs':     { level: 1, def: 8, hp: 20 },
         'Fists':    { level: 1, critChance: 2, atk: 5 },
         'Head':     { level: 1, hp: 30, def: 5 },
