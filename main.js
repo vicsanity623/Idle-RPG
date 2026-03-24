@@ -465,51 +465,60 @@ function spawnLoot(x, y, type) {
 }
 
 class Projectile {
-    constructor(x, y, targetX, targetY, speed, damage, color = '#bb86fc') {
+    constructor(x, y, target, speed, damage, isCrit) {
         this.x = x;
         this.y = y;
+        this.target = target; // Store the actual enemy object to track it
         this.speed = speed;
         this.damage = damage;
-        this.color = color;
-        this.radius = 5;
-        this.lifetime = 1.5; // seconds
+        this.isCrit = isCrit;
+        
+        // Visual flair: Crits are bigger and yellow!
+        this.color = isCrit ? '#ffeb3b' : '#bb86fc'; 
+        this.radius = isCrit ? 8 : 5; 
+        
+        this.lifetime = 3.0; // Max seconds before it fizzles
         this.currentLifetime = 0;
         this.isAlive = true; 
-
-        let angle = Math.atan2(targetY - y, targetX - x);
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
     }
 
     update(dt) {
         if (!this.isAlive) return;
 
-        this.x += this.vx * dt;
-        this.y += this.vy * dt;
         this.currentLifetime += dt;
-
-        for (let i = 0; i < entities.length; i++) {
-            let entity = entities[i];
-            if (entity instanceof Enemy && entity.hp > 0) {
-                let dist = Math.hypot(this.x - entity.x, this.y - entity.y);
-                if (dist < this.radius + entity.radius) {
-                    entity.takeDamage(this.damage, false); // Projectile hits don't inherently crit here unless passed down
-                    this.isAlive = false; 
-                    spawnAura(this.x, this.y); 
-                    break; 
-                }
-            }
-        }
-
         if (this.currentLifetime >= this.lifetime) {
             this.isAlive = false; 
+            return;
+        }
+
+        // 1. Homing Logic: Always steer towards the target's current position
+        if (this.target && this.target.hp > 0) {
+            let dx = this.target.x - this.x;
+            let dy = this.target.y - this.y;
+            let angle = Math.atan2(dy, dx);
+            
+            // Move along the angle
+            this.x += Math.cos(angle) * this.speed * dt;
+            this.y += Math.sin(angle) * this.speed * dt;
+
+            // 2. Collision Detection
+            let dist = Math.hypot(dx, dy);
+            if (dist < this.radius + this.target.radius) {
+                this.target.takeDamage(this.damage, this.isCrit); // Deal damage ON IMPACT
+                this.isAlive = false; 
+                spawnAura(this.x, this.y); // Particle burst on impact
+            }
+        } else {
+            // Target died before projectile arrived. Fizzle out gracefully.
+            this.isAlive = false;
+            spawnAura(this.x, this.y); 
         }
     }
 
     draw(ctx) {
         if (!this.isAlive) return;
         ctx.save();
-        ctx.shadowBlur = 15; 
+        ctx.shadowBlur = this.isCrit ? 20 : 15; // Extra glow for crits
         ctx.shadowColor = this.color;
         ctx.fillStyle = this.color;
         ctx.globalCompositeOperation = 'lighter'; 
@@ -520,11 +529,12 @@ class Projectile {
     }
 }
 
-function spawnProjectile(x1, y1, x2, y2) {
+function spawnProjectile(x1, y1, target, damage, isCrit) {
     if (!player) return; 
-    let projectileSpeed = 500; 
-    let projectileDamage = player.getAttackPower(); 
-    entities.push(new Projectile(x1, y1, x2, y2, projectileSpeed, projectileDamage));
+    let speedBoost = player.getAttackSpeedFactor() < 0.8 ? 200 : 0; 
+    let projectileSpeed = 600 + speedBoost; 
+    
+    entities.push(new Projectile(x1, y1, target, projectileSpeed, damage, isCrit));
 }
 
 function spawnAura(x, y) {
