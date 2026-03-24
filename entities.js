@@ -380,10 +380,11 @@ class Particle {
         ctx.globalAlpha = 1.0;
     }
 }
-
 // --- UI EVENT LISTENERS BINDING ---
 // Restores missing inline onclick HTML functionality
 window.addEventListener('DOMContentLoaded', () => {
+    
+    // 1. Open Inventory (Avatar Button)
     let avatarBtn = document.getElementById('avatar-btn');
     if (avatarBtn) {
         avatarBtn.addEventListener('click', () => {
@@ -391,6 +392,19 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // 2. Close Inventory (The 'X' Button)
+    // Safely targets the close button in the modal header
+    let closeInventoryBtn = document.querySelector('#inventory-modal .close-btn') || 
+                            document.getElementById('close-inventory') ||
+                            document.querySelector('#inventory-modal .inv-header button'); 
+                            
+    if (closeInventoryBtn) {
+        closeInventoryBtn.addEventListener('click', () => {
+            if (typeof UI !== 'undefined' && UI.toggleInventory) UI.toggleInventory();
+        });
+    }
+    
+    // 3. Daily Login Claim
     let dailyLogin = document.getElementById('daily-login');
     if (dailyLogin) {
         let claimBtn = dailyLogin.querySelector('button') || dailyLogin;
