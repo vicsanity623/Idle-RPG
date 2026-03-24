@@ -183,6 +183,16 @@ const TILE_SIZE = 64,
               let itemToEquip = PlayerData.inventory[index];
               let slot = itemToEquip.slot;
               
+              // 1. Snapshot OLD global player stats
+              let oldStats = {
+                  hp: player.getMaxHp(),
+                  atk: player.getAttackPower(),
+                  def: player.getDefense(),
+                  regen: player.getRegen(),
+                  crit: player.getCritChance()
+              };
+
+              // 2. Perform the Swap
               PlayerData.inventory.splice(index, 1);
               let currentlyEquipped = PlayerData.gear[slot];
               
@@ -192,13 +202,39 @@ const TILE_SIZE = 64,
               
               PlayerData.gear[slot] = itemToEquip;
               
+              // 3. Update the underlying UI and Data
               UI.renderInventory();
+              let detailPanel = document.getElementById('item-detail-panel');
+              if (detailPanel) detailPanel.style.display = 'none';
+              
               UI.updateStats();
               if (typeof player !== 'undefined' && player) {
                   player.hp = Math.min(player.hp, player.getMaxHp());
               }
               saveGame();
-              UI.notify(`Equipped ${itemToEquip.name || slot}`);
+
+              // 4. Snapshot NEW stats and build the Delta array
+              let newStats = {
+                  hp: player.getMaxHp(),
+                  atk: player.getAttackPower(),
+                  def: player.getDefense(),
+                  regen: player.getRegen(),
+                  crit: player.getCritChance()
+              };
+
+              let deltaLines = [];
+              if (oldStats.hp !== newStats.hp) deltaLines.push({ label: 'Max HP', oldVal: oldStats.hp, newVal: newStats.hp, diff: newStats.hp - oldStats.hp });
+              if (oldStats.atk !== newStats.atk) deltaLines.push({ label: 'Attack', oldVal: oldStats.atk, newVal: newStats.atk, diff: newStats.atk - oldStats.atk });
+              if (oldStats.def !== newStats.def) deltaLines.push({ label: 'Defense', oldVal: oldStats.def, newVal: newStats.def, diff: newStats.def - oldStats.def });
+              if (oldStats.regen !== newStats.regen) deltaLines.push({ label: 'Regen', oldVal: oldStats.regen, newVal: newStats.regen, diff: newStats.regen - oldStats.regen });
+              if (oldStats.crit !== newStats.crit) deltaLines.push({ label: 'Crit %', oldVal: oldStats.crit, newVal: newStats.crit, diff: newStats.crit - oldStats.crit });
+
+              // 5. Show the Popup (only if something actually changed!)
+              if (deltaLines.length > 0) {
+                  UI.showDelta(`Equipped: ${itemToEquip.name || slot}`, deltaLines);
+              } else {
+                  UI.notify(`Equipped ${itemToEquip.name || slot}`); // Fallback
+              }
           },
             
           inspectItem: (slotOrIndex, isBagItem) => {
@@ -346,6 +382,42 @@ const TILE_SIZE = 64,
               el.style.opacity = 1;
               if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
               UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
+          },
+          
+          // NEW FUNCTION: Handles detailed Stat Comparisons
+          showDelta: (title, lines) => {
+              let popup = document.getElementById('stat-delta-popup');
+              let titleEl = document.getElementById('delta-title');
+              let contentEl = document.getElementById('delta-content');
+              
+              if (!popup || !titleEl || !contentEl) return;
+
+              titleEl.innerText = title;
+              
+              let html = '';
+              lines.forEach(line => {
+                  let diffHtml = '';
+                  if (line.diff > 0) diffHtml = `<span class="delta-positive">(+${line.diff % 1 !== 0 ? line.diff.toFixed(2) : line.diff})</span>`;
+                  else if (line.diff < 0) diffHtml = `<span class="delta-negative">(${line.diff % 1 !== 0 ? line.diff.toFixed(2) : line.diff})</span>`;
+                  
+                  html += `<div class="delta-line">
+                              <span>${line.label}: ${line.oldVal % 1 !== 0 ? line.oldVal.toFixed(1) : line.oldVal} ➔ ${line.newVal % 1 !== 0 ? line.newVal.toFixed(1) : line.newVal}</span>
+                              ${diffHtml}
+                           </div>`;
+              });
+              
+              contentEl.innerHTML = html;
+              
+              // Animate in
+              popup.style.opacity = 1;
+              popup.style.transform = "translate(-50%, 0)";
+              
+              // Hide after 5 seconds
+              if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
+              UI._deltaTimeout = setTimeout(() => {
+                  popup.style.opacity = 0;
+                  popup.style.transform = "translate(-50%, -20%)";
+              }, 5000);
           },
           
           checkDailyLogin: () => {
@@ -545,10 +617,28 @@ function gainXp(amt) {
     PlayerData.xp += amt;
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
+        
+        // 1. Snapshot old stats
+        let oldMaxHp = player.getMaxHp();
+        let oldAtk = player.getAttackPower();
+        let oldLevel = PlayerData.level;
+
+        // 2. Apply Level Up
         PlayerData.level++;
-        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.1);
-        player.hp = player.getMaxHp();
+        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        
+        // 3. Snapshot new stats & Heals
+        let newMaxHp = player.getMaxHp();
+        let newAtk = player.getAttackPower();
+        player.hp = newMaxHp; // Full heal on level up
+        
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
+
+        // 4. Trigger the new Delta Popup
+        UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, [
+            { label: 'Max HP', oldVal: oldMaxHp, newVal: newMaxHp, diff: newMaxHp - oldMaxHp },
+            { label: 'Attack', oldVal: oldAtk, newVal: newAtk, diff: newAtk - oldAtk }
+        ]);
     }
     UI.updateStats();
     saveGame();
