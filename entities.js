@@ -26,32 +26,38 @@ const PLAYER_ATTACK_RANGE = 200,
               { slot: 'Earrings', name: 'Earrings', stats: { regen: 0.2, critMult: 0.05 } }
           ];
           let chosenTemplate = gearTemplates[Math.floor(Math.random() * gearTemplates.length)];
-          const rarities = [
-              { name: 'Common', chance: 60, multiplier: 1.0, color: '#ffffff' },
-              { name: 'Rare', chance: 25, multiplier: 1.3, color: '#00e5ff' },
-              { name: 'Epic', chance: 12, multiplier: 1.6, color: '#bb86fc' },
-              { name: 'Legendary', chance: 3, multiplier: 2.0, color: '#ffd700' }
-          ];
-          let roll = Math.random() * 100;
-          let currentChance = 0;
-          let chosenRarity = rarities[0]; // Default to Common
-          for (const r of rarities) {
-              currentChance += r.chance;
-              if (roll < currentChance) {
-                  chosenRarity = r;
-                  break;
-              }
+          
+          // --- NEW RARITY RNG LOGIC ---
+          let roll = Math.random();
+          let rarityName = 'Common';
+          let rarityColor = 'var(--rarity-common)'; // Pulls Grey from index.html
+          let statMult = 1.0;
+
+          if (roll < 0.03) { // 3% chance
+              rarityName = 'Legendary'; 
+              rarityColor = 'var(--rarity-legendary)'; // Pulls Gold
+              statMult = 2.0; 
+          } else if (roll < 0.15) { // 12% chance
+              rarityName = 'Epic'; 
+              rarityColor = 'var(--rarity-epic)'; // Pulls Purple
+              statMult = 1.6; 
+          } else if (roll < 0.40) { // 25% chance
+              rarityName = 'Rare'; 
+              rarityColor = 'var(--rarity-rare)'; // Pulls Blue
+              statMult = 1.3; 
           }
+
           let item = {
               id: `gear_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-              name: `${chosenRarity.name} ${chosenTemplate.name} of Level ${level}`,
+              name: `${rarityName} ${chosenTemplate.name}`,
               slot: chosenTemplate.slot,
-              rarity: chosenRarity.name,
-              color: chosenRarity.color,
+              rarity: rarityName,
+              color: rarityColor,
               stats: {}
           };
+
           for (let stat in chosenTemplate.stats) {
-              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.8));
+              item.stats[stat] = Math.floor(chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2) * statMult);
           }
           return item;
       };
