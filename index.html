@@ -16,18 +16,33 @@
             --gold: #ffd700;
             --shard: #00e5ff;
             --panel-bg: rgba(18, 18, 18, 0.9);
-            /* PATCH: Refactored to avoid Pyob parser decimal literal errors */
             --glow-color: rgba(187, 134, 252, 0.3);
             --border-glow: 0px 0px 10px var(--glow-color);
-
-            /* Rarity Colors (for future JS application) */
             --rarity-common: #A0A0A0; /* Grey */
             --rarity-rare: #00BFFF; /* Light Blue */
             --rarity-epic: #8A2BE2; /* Blue Violet */
             --rarity-legendary: #FFD700; /* Gold */
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #000; overflow: hidden; touch-action: none; color: white; }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            -webkit-touch-callout: none; 
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none; 
+        }
+
+        body { 
+            background-color: #000; 
+            overflow: hidden; 
+            color: white; 
+            touch-action: none; 
+            -webkit-text-size-adjust: none;
+        }
         
         /* Canvases */
         #game-canvas { position: absolute; top: 0; left: 0; z-index: 1; }
@@ -35,7 +50,7 @@
         /* Screens */
         .screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; background: var(--bg-dark); transition: opacity 0.5s; }
         .hidden { opacity: 0; pointer-events: none; }
-        .screen.hidden { z-index: -1; } /* Fix z-index layering bug: move hidden screens behind game canvas */
+        .screen.hidden { z-index: -1; } 
         
         /* Boot & Main Menu */
         #loading-bar { width: 200px; height: 10px; border: 1px solid var(--primary); margin-top: 20px; border-radius: 5px; overflow: hidden; }
@@ -229,16 +244,12 @@
                             <h4 style="color: #aaa;">Selected Item</h4>
                             <div class="stat-list" id="selected-stats-list">
                                 <!-- Stats populated by JS -->
-                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Attack: <span style="color: var(--shard);">+5</span></p>
-                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Defense: <span style="color: var(--shard);">+3</span></p>
                             </div>
                         </div>
                         <div id="equipped-item-display">
                             <h4 style="color: #aaa;">Equipped Item</h4>
                             <div class="stat-list" id="equipped-stats-list">
                                 <!-- Stats populated by JS, with comparison highlights -->
-                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Attack: <span style="color: #0f0;">+3 <small>(+2)</small></span></p>
-                                <p style="font-size: 0.85rem; margin-bottom: 5px;">Defense: <span style="color: #f00;">+5 <small>(-2)</small></span></p>
                             </div>
                         </div>
                     </div>
@@ -268,6 +279,9 @@
                     .catch(err => console.error('Service Worker Registration Failed!', err));
             });
         }
+        
+        document.addEventListener('dblclick', function(event) { event.preventDefault(); }, { passive: false });
+        document.addEventListener('gesturestart', function(event) { event.preventDefault(); });
     </script>
     <script src="entities.js"></script>
     <script src="main.js"></script>
