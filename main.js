@@ -4,6 +4,12 @@
  */
 
 // --- GLOBAL CONSTANTS & CONFIG & UI SYSTEM ---
+/**
+ * main.js
+ * Core engine and system managers.
+ */
+
+// --- GLOBAL CONSTANTS & CONFIG & UI SYSTEM ---
 const TILE_SIZE = 64,
       MAP_SIZE = 40, // 40x40 tiles
       GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'],
@@ -37,10 +43,12 @@ const TILE_SIZE = 64,
               document.getElementById('xp-fill').style.width = `${(PlayerData.xp / PlayerData.maxXp) * 100}%`;
               document.getElementById('xp-text').innerText = `${Math.floor(PlayerData.xp)} / ${PlayerData.maxXp}`;
           },
+          
           updateCurrencies: () => {
               document.getElementById('c-gold').innerText = PlayerData.gold;
               document.getElementById('c-shard').innerText = PlayerData.shards;
           },
+          
           updateHotbar: (skills) => {
               skills.forEach((s, i) => {
                   let overlay = document.getElementById(`cd-${i}`);
@@ -48,6 +56,7 @@ const TILE_SIZE = 64,
                   overlay.style.height = `${pct}%`;
               });
           },
+          
           updateMinimap: () => {
               let mmCanvas = document.getElementById('minimap');
               let mmCtx = mmCanvas.getContext('2d');
@@ -71,6 +80,7 @@ const TILE_SIZE = 64,
                   mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
               }
           },
+          
           toggleInventory: () => {
               let modal = document.getElementById('inventory-modal');
               if (modal.style.display === 'flex') {
@@ -80,7 +90,12 @@ const TILE_SIZE = 64,
                   UI.renderInventory();
               }
           },
+          
           renderInventory: () => {
+              // Hide detail panel if it's open when re-rendering
+              let detailPanel = document.getElementById('item-detail-panel');
+              if (detailPanel) detailPanel.style.display = 'none';
+
               // 1. Stats Sheet
               let sheet = document.getElementById('stats-sheet');
               if (sheet && player) {
@@ -149,8 +164,8 @@ const TILE_SIZE = 64,
                           div.innerHTML = `
                               <h4 style="color:#00e5ff">${item.name || item.slot}</h4>
                               <p style="font-size:0.7rem; color:#aaa; margin-top:5px; min-height:20px;">${bonusText}</p>
-                              <button class="upgrade-btn" style="background:#00e5ff; color:#000; margin-top:auto;" onclick="UI.equipItem(${index})">
-                                  Equip
+                              <button class="upgrade-btn" style="background:#00e5ff; color:#000; margin-top:auto;" onclick="UI.inspectItem(${index}, true)">
+                                  Inspect
                               </button>
                           `;
                           bagGrid.appendChild(div);
@@ -185,6 +200,118 @@ const TILE_SIZE = 64,
               saveGame();
               UI.notify(`Equipped ${itemToEquip.name || slot}`);
           },
+            
+          inspectItem: (slotOrIndex, isBagItem) => {
+              let item, equippedItem;
+              
+              if (isBagItem) {
+                  item = PlayerData.inventory[slotOrIndex];
+                  equippedItem = PlayerData.gear[item.slot];
+              } else {
+                  item = PlayerData.gear[slotOrIndex]; 
+                  equippedItem = item; 
+              }
+
+              if (!item) return;
+
+              // 1. Show the panel
+              let panel = document.getElementById('item-detail-panel');
+              if (panel) panel.style.display = 'block';
+
+              // 2. Set Name and Rarity
+              let nameEl = document.getElementById('detail-item-name');
+              if (nameEl) {
+                  nameEl.innerText = item.name || slotOrIndex;
+                  nameEl.style.color = item.color || 'var(--primary)';
+              }
+
+              let rarityText = document.getElementById('detail-rarity-text');
+              if (rarityText) {
+                  rarityText.innerText = item.rarity || 'Common';
+                  rarityText.style.color = item.color || '#fff';
+              }
+
+              // 3. Generate Stat Comparison
+              let statKeys = ['atk', 'hp', 'def', 'regen', 'critChance', 'critMult', 'atkSpeed'];
+              let selectedHtml = '';
+              let equippedHtml = '';
+
+              let itemStats = item.stats || item;
+              let eqStats = equippedItem ? (equippedItem.stats || equippedItem) : {};
+
+              statKeys.forEach(stat => {
+                  let val1 = itemStats[stat] || 0;
+                  let val2 = eqStats[stat] || 0;
+
+                  if (val1 === 0 && val2 === 0) return; // Skip empty stats
+
+                  let diff = val1 - val2;
+                  let diffHtml = '';
+                  
+                  if (diff > 0) {
+                      diffHtml = `<small style="color:#0f0">(+${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
+                  } else if (diff < 0) {
+                      diffHtml = `<small style="color:#f00">(${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
+                  }
+
+                  let formatVal = (v) => v % 1 !== 0 ? v.toFixed(2) : v;
+
+                  selectedHtml += `<p style="font-size: 0.85rem; margin-bottom: 5px;">${stat.toUpperCase()}: <span style="color:var(--shard)">${formatVal(val1)}</span></p>`;
+                  equippedHtml += `<p style="font-size: 0.85rem; margin-bottom: 5px;">${stat.toUpperCase()}: <span style="color:#aaa">${formatVal(val2)}</span> ${diffHtml}</p>`;
+              });
+
+              let sList = document.getElementById('selected-stats-list');
+              let eList = document.getElementById('equipped-stats-list');
+              if (sList) sList.innerHTML = selectedHtml || '<p>No Stats</p>';
+              if (eList) eList.innerHTML = equippedHtml || '<p>None</p>';
+
+              // 4. Wire up Action Buttons
+              let equipBtn = document.getElementById('equip-unequip-btn');
+              let discardBtn = document.getElementById('discard-btn');
+
+              if (equipBtn && discardBtn) {
+                  if (isBagItem) {
+                      equipBtn.innerText = "Equip";
+                      equipBtn.onclick = () => { UI.equipItem(slotOrIndex); panel.style.display = 'none'; };
+                      discardBtn.style.display = 'block';
+                      discardBtn.onclick = () => { UI.discardItem(slotOrIndex); panel.style.display = 'none'; };
+                  } else {
+                      equipBtn.innerText = "Unequip";
+                      if (item.id) {
+                          equipBtn.style.display = 'block';
+                          equipBtn.onclick = () => { UI.unequipItem(slotOrIndex); panel.style.display = 'none'; };
+                      } else {
+                          equipBtn.style.display = 'none'; 
+                      }
+                      discardBtn.style.display = 'none'; 
+                  }
+              }
+          },
+
+          discardItem: (index) => {
+              let item = PlayerData.inventory.splice(index, 1)[0];
+              let shardReward = 5;
+              if (item.rarity === 'Legendary') shardReward = 50;
+              else if (item.rarity === 'Epic') shardReward = 20;
+              else if (item.rarity === 'Rare') shardReward = 10;
+              
+              PlayerData.shards += shardReward;
+              UI.notify(`Discarded ${item.name} for ${shardReward} Shards!`);
+              UI.renderInventory();
+              saveGame();
+          },
+
+          unequipItem: (slot) => {
+              let item = PlayerData.gear[slot];
+              if (item && item.id) {
+                  PlayerData.inventory.push(item);
+                  PlayerData.gear[slot] = { level: 1 }; // Reset to bare minimum
+                  UI.notify(`Unequipped ${item.name}`);
+                  UI.renderInventory();
+                  UI.updateStats();
+                  saveGame();
+              }
+          },
 
           upgradeGear: (type) => {
               let gear = PlayerData.gear[type];
@@ -212,6 +339,7 @@ const TILE_SIZE = 64,
                   UI.notify(`${type} specialized!`);
               }
           },
+          
           notify: (msg) => {
               let el = document.getElementById('notification');
               el.innerText = msg;
@@ -219,6 +347,7 @@ const TILE_SIZE = 64,
               if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
               UI._notifTimeout = setTimeout(() => el.style.opacity = 0, 2000);
           },
+          
           checkDailyLogin: () => {
               let lastLogin = localStorage.getItem('dof_lastLogin');
               let today = new Date().toDateString();
@@ -226,6 +355,7 @@ const TILE_SIZE = 64,
                   document.getElementById('daily-login').style.display = 'block';
               }
           },
+          
           claimDaily: () => {
               PlayerData.gold += 500;
               PlayerData.shards += 50;
