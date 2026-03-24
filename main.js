@@ -394,7 +394,7 @@ const TILE_SIZE = 64,
               
               if (!popup || !titleEl || !contentEl) return;
 
-              // Stat Icon Mapping
+              // Stat Icon Mapping (consistent across levels and gear)
               const iconMap = {
                   'Max HP': '❤️',
                   'Attack': '⚔️',
@@ -405,20 +405,25 @@ const TILE_SIZE = 64,
                   'Atk Spd': '⚡'
               };
 
-              titleEl.innerHTML = `<div class="level-badge">PROMOTED</div> ${title}`;
+              // CONTEXT AWARE BADGE: 
+              // If the title contains "Level", show PROMOTED. Otherwise show EQUIPMENT.
+              let badgeText = title.toLowerCase().includes("level") ? "PROMOTED" : "EQUIPMENT";
+              let badgeColor = title.toLowerCase().includes("level") ? "var(--primary)" : "var(--shard)";
+
+              titleEl.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
               
               let html = '';
               lines.forEach(line => {
                   let icon = iconMap[line.label] || '✨';
-                  let diffValue = line.diff % 1 !== 0 ? line.diff.toFixed(1) : line.diff;
+                  let diffValue = line.diff % 1 !== 0 ? line.diff.toFixed(2) : line.diff;
                   let oldVal = line.oldVal % 1 !== 0 ? line.oldVal.toFixed(1) : line.oldVal;
                   let newVal = line.newVal % 1 !== 0 ? line.newVal.toFixed(1) : line.newVal;
                   
-                  // We flip Atk Spd color because lower is better for cooldowns
-                  let isPositive = line.diff > 0;
-                  if (line.label === 'Atk Spd') isPositive = line.diff < 0; 
+                  // Logic check: For Atk Spd, a NEGATIVE diff is actually an improvement (faster)
+                  let isPositiveImprovement = line.diff > 0;
+                  if (line.label === 'Atk Spd') isPositiveImprovement = line.diff < 0; 
 
-                  let changeColor = isPositive ? '#4caf50' : '#ff5252';
+                  let changeColor = isPositiveImprovement ? '#4caf50' : '#ff5252';
                   let symbol = line.diff > 0 ? '+' : '';
 
                   html += `
