@@ -138,7 +138,6 @@ class Player {
         if (!isWall(this.x, nextY)) this.y = nextY;
 
         this.handleSkills(dt); this.updateFog();
-        if (portal && Math.hypot(this.x - portal.x, this.y - portal.y) < this.radius + portal.radius) levelUpDungeon();
         UI.updateStats();
     }
 
