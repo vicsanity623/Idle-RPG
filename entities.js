@@ -83,47 +83,47 @@ class Player {
         this.lastMoveAngle = 0; 
     }
 
+    getGearStat(slot, statName) {
+        let item = PlayerData.gear[slot];
+        if (!item) return 0;
+        let stats = item.stats || item; // If it has a .stats object, use it. Otherwise, use root.
+        return stats[statName] || 0;
+    }
+
     getMaxHp() { 
-        let g = PlayerData.gear;
         return Math.floor(100 + (PlayerData.level * 20) + 
-            (g.Armor?.hp || 0) + (g.Head?.hp || 0) + 
-            (g.Legs?.hp || 0) + (g.Robe?.hp || 0) + 
-            (g.Necklace?.hp || 0)); 
+            this.getGearStat('Armor', 'hp') + this.getGearStat('Head', 'hp') + 
+            this.getGearStat('Legs', 'hp') + this.getGearStat('Robe', 'hp') + 
+            this.getGearStat('Necklace', 'hp')); 
     }
 
     getAttackPower() { 
-        let g = PlayerData.gear;
         return Math.floor(10 + (PlayerData.level * 2) + 
-            (g.Weapon?.atk || 0) + (g.Fists?.atk || 0) + 
-            (g.Ring?.atk || 0)); 
+            this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
+            this.getGearStat('Ring', 'atk')); 
     }
 
     getDefense() { 
-        let g = PlayerData.gear;
-        return Math.floor((g.Armor?.def || 0) + (g.Head?.def || 0) + 
-            (g.Legs?.def || 0) + (g.Boots?.def || 0)); 
+        return Math.floor(this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + 
+            this.getGearStat('Legs', 'def') + this.getGearStat('Boots', 'def')); 
     }
 
     getRegen() { 
-        let g = PlayerData.gear;
-        return (g.Robe?.regen || 0) + (g.Necklace?.regen || 0) + 
-            (g.Earrings?.regen || 0); 
+        return this.getGearStat('Robe', 'regen') + this.getGearStat('Necklace', 'regen') + 
+            this.getGearStat('Earrings', 'regen'); 
     }
 
     getCritChance() { 
-        let g = PlayerData.gear;
-        let base = 5 + (g.Fists?.critChance || 0) + (g.Ring?.critChance || 0);
+        let base = 5 + this.getGearStat('Fists', 'critChance') + this.getGearStat('Ring', 'critChance');
         return Math.min(75, base); 
     }
 
     getCritMultiplier() { 
-        let g = PlayerData.gear;
-        return 1.5 + (g.Weapon?.critMult || 0) + (g.Earrings?.critMult || 0); 
+        return 1.5 + this.getGearStat('Weapon', 'critMult') + this.getGearStat('Earrings', 'critMult'); 
     }
 
     getAttackSpeedFactor() {
-        let g = PlayerData.gear;
-        return Math.max(0.3, 1.0 - (g.Boots?.atkSpeed || 0));
+        return Math.max(0.3, 1.0 - this.getGearStat('Boots', 'atkSpeed'));
     }
 
     update(dt) {
