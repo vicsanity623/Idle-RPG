@@ -60,7 +60,7 @@ class Player {
         let base = 100 + this.getGearStat('Armor', 'hp') + this.getGearStat('Head', 'hp') + 
                    this.getGearStat('Legs', 'hp') + this.getGearStat('Robe', 'hp') + 
                    this.getGearStat('Necklace', 'hp');
-        return Math.floor(base * (1 + (LEVEL_SCALING.hp * (PlayerData.level - 1)))); 
+        return base * (1 + (LEVEL_SCALING.hp * (PlayerData.level - 1))); 
     }
 
     getAttackPower() { 
@@ -68,7 +68,7 @@ class Player {
                    this.getGearStat('Ring', 'atk');
         let scaledAtk = base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)));
         let mightBonus = 1 + (this.getAffixValue('might') / 100);
-        return Math.floor(scaledAtk * mightBonus); 
+        return scaledAtk * mightBonus; 
     }
 
     getPickupRadius() {
@@ -90,7 +90,7 @@ class Player {
     getDefense() { 
         let base = this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + 
                    this.getGearStat('Legs', 'def') + this.getGearStat('Boots', 'def');
-        return Math.floor(base * (1 + (LEVEL_SCALING.def * (PlayerData.level - 1)))); 
+        return base * (1 + (LEVEL_SCALING.def * (PlayerData.level - 1))); 
     }
 
     getRegen() { 
