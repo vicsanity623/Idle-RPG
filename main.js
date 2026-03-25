@@ -63,19 +63,20 @@ window.Input = {
     dashPressed: false
 };
 
+// --- In main.js ---
 window.PlayerData = {
-    gold: 400, shards: 20, level: 5, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
+    gold: 0, shards: 0, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
-        'Weapon':   { level: 1, atk: 1, critMult: 0.1, rarity: 'Common' },
-        'Armor':    { level: 1, hp: 1, def: 1, rarity: 'Common' },
-        'Legs':     { level: 1, def: 1, hp: 1, rarity: 'Common' },
-        'Fists':    { level: 1, critChance: 0.1, atk: 1, rarity: 'Common' },
-        'Head':     { level: 1, hp: 1, def: 1, rarity: 'Common' },
-        'Robe':     { level: 1, regen: 0.1, hp: 1, rarity: 'Common' },
-        'Ring':     { level: 1, atk: 1, critChance: 0.1, rarity: 'Common' },
-        'Earrings': { level: 1, critMult: 0.1, regen: 0.1, rarity: 'Common' },
-        'Necklace': { level: 1, regen: 0.1, hp: 1, rarity: 'Common' },
-        'Boots':    { level: 1, def: 1, atkSpeed: 0.01, rarity: 'Common' } 
+        'Weapon':   { level: 1, atk: 25, critMult: 0.20, rarity: 'Common' },
+        'Armor':    { level: 1, hp: 60, def: 15, rarity: 'Common' },
+        'Legs':     { level: 1, def: 12, hp: 40, rarity: 'Common' },
+        'Fists':    { level: 1, critChance: 5.0, atk: 15, rarity: 'Common' },
+        'Head':     { level: 1, hp: 30, def: 10, rarity: 'Common' },
+        'Robe':     { level: 1, regen: 1.5, hp: 20, rarity: 'Common' },
+        'Ring':     { level: 1, atk: 12, critChance: 4.5, rarity: 'Common' },
+        'Earrings': { level: 1, critMult: 0.15, regen: 0.8, rarity: 'Common' },
+        'Necklace': { level: 1, regen: 2.0, hp: 25, rarity: 'Common' },
+        'Boots':    { level: 1, def: 10, atkSpeed: 0.15, rarity: 'Common' } 
     }
 };
 

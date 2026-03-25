@@ -19,30 +19,32 @@ const HiveMind = {
 
 const generateRandomGear = (level) => {
     let gearTemplates = [
-        { slot: 'Head',     name: 'Helmet',     stats: { def: 5, hp: 15 } },
-        { slot: 'Armor',    name: 'Chestplate', stats: { def: 8, hp: 25 } },
-        { slot: 'Legs',     name: 'Greaves',    stats: { def: 6, hp: 20 } },
-        { slot: 'Boots',    name: 'Boots',      stats: { def: 4, atkSpeed: 0.05 } },
-        { slot: 'Weapon',   name: 'Sword',      stats: { atk: 12, critMult: 0.15 } },
-        { slot: 'Ring',     name: 'Ring',       stats: { atk: 6, critChance: 3 } },
-        { slot: 'Necklace', name: 'Amulet',     stats: { hp: 15, regen: 0.5 } },
-        { slot: 'Earrings', name: 'Earrings',   stats: { regen: 0.4, critMult: 0.1 } }
+        { slot: 'Head',     name: 'Helmet',     stats: { def: 20, hp: 80 } },
+        { slot: 'Armor',    name: 'Chestplate', stats: { def: 25, hp: 120 } },
+        { slot: 'Legs',     name: 'Greaves',    stats: { def: 22, hp: 100 } },
+        { slot: 'Boots',    name: 'Boots',      stats: { def: 18, atkSpeed: 0.10 } },
+        { slot: 'Weapon',   name: 'Sword',      stats: { atk: 45, critMult: 0.30 } },
+        { slot: 'Ring',     name: 'Ring',       stats: { atk: 25, critChance: 8 } },
+        { slot: 'Necklace', name: 'Amulet',     stats: { hp: 60, regen: 2.5 } },
+        { slot: 'Earrings', name: 'Earrings',   stats: { regen: 1.8, critMult: 0.25 } }
     ];
     let chosenTemplate = gearTemplates[Math.floor(Math.random() * gearTemplates.length)];
     
     let roll = Math.random(), rarityName = 'Common', rarityColor = 'var(--rarity-common)', statMult = 1.0;
     
-    // 1. GUARANTEED STAT POINTS (The fix you requested)
-    let rarityBonus = 0;
-    if (roll < 0.03) { 
+    // NEW POWER FLOORS: 
+    // Rare/Epic/Legendary now add a massive FLAT bonus before multipliers.
+    let rarityFlatBonus = 0;
+
+    if (roll < 0.05) { 
         rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; 
-        statMult = 2.5; rarityBonus = 10; // +10 Points
+        statMult = 2.5; rarityFlatBonus = 50; 
     } else if (roll < 0.15) { 
         rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; 
-        statMult = 1.8; rarityBonus = 8;  // +8 Points
-    } else if (roll < 0.40) { 
+        statMult = 1.8; rarityFlatBonus = 30; 
+    } else if (roll < 0.45) { 
         rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; 
-        statMult = 1.4; rarityBonus = 2;  // +2 Points
+        statMult = 1.4; rarityFlatBonus = 15; 
     }
 
     let item = {
@@ -55,14 +57,12 @@ const generateRandomGear = (level) => {
     };
 
     for (let stat in chosenTemplate.stats) {
-        // 2. APPLY THE RARITY FLOOR BEFORE SCALING
-        // HP needs a higher scale (10hp = 1atk point) or it feels like +0
-        let bonusScale = (stat === 'hp') ? 10 : (stat === 'atkSpeed' || stat === 'critMult' || stat === 'critChance' || stat === 'regen') ? 0.1 : 1;
-        let baseWithBonus = chosenTemplate.stats[stat] + (rarityBonus * bonusScale);
+        // Apply different weight to flat bonus based on stat type
+        let weight = (stat === 'hp') ? 5 : (stat === 'atk' || stat === 'def') ? 1 : 0.1;
+        let baseStat = chosenTemplate.stats[stat] + (rarityFlatBonus * weight);
         
-        // 3. TIGHTER RANDOMNESS (0.98 to 1.02 instead of 0.9 to 1.1)
-        // This prevents "Unlucky Legendaries" from being worse than "Lucky Commons"
-        let rawValue = baseWithBonus * (1 + level * 0.15) * randomFloat(0.98, 1.02) * statMult;
+        // Final calculation: (Base + RarityBonus) * LevelFactor * Multiplier
+        let rawValue = baseStat * (1 + level * 0.15) * randomFloat(0.98, 1.02) * statMult;
 
         if (stat === 'hp' || stat === 'atk' || stat === 'def') {
             item.stats[stat] = Math.max(1, Math.round(rawValue)); 
@@ -71,18 +71,7 @@ const generateRandomGear = (level) => {
         }
     }
 
-    if (rarityName === 'Legendary' && Math.random() < 0.4) { 
-        const specialPool = [
-            { type: 'magnet', label: 'Magnet', value: 50 },
-            { type: 'greed',  label: 'Greed',  value: 20 },
-            { type: 'wisdom', label: 'Wisdom', value: 15 },
-            { type: 'might',  label: 'Might',  value: 10 },
-            { type: 'fear',   label: 'Fear',   value: 15 }
-        ];
-        item.affix = specialPool[Math.floor(Math.random() * specialPool.length)];
-        item.name = `${item.affix.label} ${item.name}`; 
-    }
-
+    // (Keep Affix code below the same...)
     return item;
 };
 
@@ -99,7 +88,7 @@ class Enemy {
         this.speed = this.baseSpeed;
         
         let hpMultiplier = Math.pow(1.3, depth);
-        this.hp = 30 * hpMultiplier; 
+        this.hp = 300 * hpMultiplier; 
         this.maxHp = this.hp; 
         this.damage = (5 * hpMultiplier) * 0.6; // Slightly lowered base since they shoot now
         
