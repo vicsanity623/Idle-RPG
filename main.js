@@ -222,7 +222,10 @@ const TILE_SIZE = 64,
                   let diff = val1 - val2, diffHtml = '';
                   if (diff > 0) diffHtml = `<small style="color:#0f0">(+${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
                   else if (diff < 0) diffHtml = `<small style="color:#f00">(${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
-                  let formatVal = (v) => v % 1 !== 0 ? v.toFixed(2) : v;
+                  let formatVal = (v) => {
+                      if (v === 0) return "0";
+                      return (v < 1 && v > 0) ? v.toFixed(2) : Math.floor(v);
+                  };
 
                   selectedHtml += `<p>${stat.toUpperCase()}: <span style="color:var(--shard)">${formatVal(val1)}</span></p>`;
                   equippedHtml += `<p>${stat.toUpperCase()}: <span style="color:#aaa">${formatVal(val2)}</span> ${diffHtml}</p>`;
