@@ -461,10 +461,14 @@ function die() {
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
 
 function spawnEnemies() {
-    let num = 5 + Math.floor(GameState.level * 1.5);
+    // Starts at 3 enemies for Depth 1, adding 1 per depth level.
+    let num = 2 + GameState.level; 
     for(let i=0; i<num; i++) {
         let ex, ey;
-        do { ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
+        do { 
+            ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
+            ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
+        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
         entities.push(new Enemy(ex, ey));
     }
 }
