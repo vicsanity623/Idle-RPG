@@ -5,7 +5,7 @@
 
 // --- 1. CORE CONFIGURATION ---
 const TILE_SIZE = 64;
-const MAP_SIZE = 50;
+const MAP_SIZE = 42;
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
 // --- 2. THE REGISTRY (Centralized DOM references) ---
@@ -474,8 +474,7 @@ function die() {
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
 
 function spawnEnemies() {
-    // Starts at 3 enemies for Depth 1, adding 1 per depth level.
-    let num = 2 + GameState.level; 
+    let num = 5 + GameState.level; 
     for(let i=0; i<num; i++) {
         let ex, ey;
         do { 
@@ -564,10 +563,9 @@ function loop(timestamp) {
             for(let i=0; i<entities.length; i++) {
                 if(entities[i] instanceof Enemy) ec++;
             }
-            // Only spawn more if we are below the depth limit (3 at Depth 1)
-            let maxEnemies = 2 + GameState.level;
+            
+            let maxEnemies = 5 + GameState.level;
             if (ec < maxEnemies) {
-                // Just spawn 1-2 more to maintain pressure without a massive wave
                 let toSpawn = Math.min(2, maxEnemies - ec);
                 for(let s=0; s < toSpawn; s++) {
                     let ex, ey;
