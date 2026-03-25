@@ -329,24 +329,23 @@ const UI = {
             'Crit %': '•', 'Crit X': '•', 'Atk Spd': '•',
             'Magnet': '•', 'Gold Farmer': '•', 'XP Fiend': '•', 'Fear Aura': '•'
         };
-        let isLevel = title.toLowerCase().includes("level"), 
-            badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", 
-            badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
-        
+        let isLevel = title.toLowerCase().includes("level"), badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
         let html = '';
-    
+        
         lines.forEach(line => {
-            // Now that we use Frequency (1/Factor), Higher is ALWAYS better for all stats
-            let improved = line.diff > 0;
+            // 1. Identify if lower is better (only for Attack Speed/Cooldown)
+            const isLowerBetter = line.label === 'Atk Spd';
+            const improved = isLowerBetter ? line.diff < 0 : line.diff > 0;
             
-            // Show 2 decimals for smaller values so 0.01 changes are visible
-            let valPrec = (line.newVal < 10) ? 2 : 1;
-            let diffPrec = (Math.abs(line.diff) < 0.1) ? 2 : 1;
-    
+            // 2. Dynamic precision: show 2 decimals for small values so progress is visible
+            const valPrec = (line.oldVal < 5) ? 2 : 1; 
+            const diffPrec = Math.abs(line.diff) < 0.1 ? 2 : 1;
+            
+            let diffStr = line.diff.toFixed(diffPrec);
             let cColor = improved ? '#4caf50' : '#ff5252';
             let symb = line.diff > 0 ? '+' : '';
-    
+        
             html += `
                 <div class="delta-row">
                     <span class="delta-icon">${iconMap[line.label] || '✨'}</span>
@@ -356,15 +355,16 @@ const UI = {
                         <span style="color:#aaa; margin: 0 4px;">➔</span> 
                         <span style="color:#4caf50">${line.newVal.toFixed(valPrec)}</span>
                     </span>
-                    <span class="delta-change" style="color:${cColor}">${symb}${line.diff.toFixed(diffPrec)}</span>
+                    <span class="delta-change" style="color:${cColor}">${symb}${diffStr}</span>
                 </div>`;
         });
-    
+
         REFS.deltaContent.innerHTML = html;
         REFS.deltaPopup.style.display = 'block';
         setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
+        
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
-        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 3000); // 3s is better for reading
+        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 2000);
     },
 
     notify: (msg) => {
