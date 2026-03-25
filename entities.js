@@ -11,10 +11,14 @@ const PLAYER_ATTACK_RANGE = 200,
           flankWeight: 0,
           packSize: 0,
           update: function() {
-              this.packSize = entities.filter(e => e instanceof Enemy).length;
+              let count = 0;
+              for (let i = 0; i < entities.length; i++) {
+                  if (entities[i] instanceof Enemy) count++;
+              }
+              this.packSize = count;
               this.flankWeight = Math.min(1.0, this.packSize / 20); 
           }
-      },
+      };
       
       LEVEL_SCALING = {
           hp: 0.05,    // 5% per level
@@ -144,7 +148,6 @@ class Player {
         if (!isWall(this.x, nextY)) this.y = nextY;
 
         this.handleSkills(dt); this.updateFog();
-        UI.updateStats();
     }
 
     updateFog() {
@@ -265,33 +268,20 @@ class Loot {
 // --- VISUAL CLASSES ---
 class FloatingText {
     constructor(x, y, text, color) {
-        // 1. Initial Offset: Start slightly away from the player center
-        // This prevents the text from appearing directly on top of the avatar
         this.x = x + (Math.random() - 0.5) * 30;
         this.y = y - 40; 
-        
         this.text = text;
         this.color = color;
-        this.life = 1.3; // Increased lifetime slightly for better readability
-        
-        // 2. Burst Velocity: Gives text a random direction to "pop" into
-        // vx = horizontal spread, vy = vertical float
+        this.life = 1.3;
         this.vx = (Math.random() - 0.5) * 80; 
         this.vy = -50 - Math.random() * 40;
     }
 
     update(dt) {
         this.life -= dt;
-        
-        // 3. Apply physics-like movement
         this.x += this.vx * dt;
         this.y += this.vy * dt;
-
-        // 4. Air Friction: Slow down the horizontal "burst" over time 
-        // so the text eventually just floats straight up
-        this.vx *= 0.95; 
-        
-        // 5. Cleanup
+        this.vx *= 0.95;
         if (this.life <= 0) {
             let idx = floatingTexts.indexOf(this);
             if (idx > -1) floatingTexts.splice(idx, 1);
@@ -300,15 +290,11 @@ class FloatingText {
 
     draw(ctx) {
         ctx.save();
-        // 6. Smooth Fade Out: Opacity tied to remaining life
         ctx.globalAlpha = Math.max(0, this.life);
         ctx.fillStyle = this.color;
-        ctx.font = 'bold 18px sans-serif'; // Slightly larger for clarity
-        
-        // 7. Text Shadow: Ensures readability on any floor tile color
+        ctx.font = 'bold 18px sans-serif';
         ctx.shadowBlur = 4;
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        
         ctx.fillText(this.text, this.x, this.y);
         ctx.restore();
     }

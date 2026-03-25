@@ -55,7 +55,8 @@ const TILE_SIZE = 64,
           camera: { x: 0, y: 0 },
           lastTime: 0,
           frame: 0,
-          pendingLevelUp: false 
+          pendingLevelUp: false,
+          utick: 0
       },
       
       Input = {
@@ -124,7 +125,6 @@ const TILE_SIZE = 64,
           renderInventory: () => {
               if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
-              // 1. Stats Sheet
               if (REFS.statsSheet && player) {
                   REFS.statsSheet.innerHTML = `
                       <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
@@ -136,7 +136,6 @@ const TILE_SIZE = 64,
                   `;
               }
 
-              // 2. Equipped Gear Grid
               if (REFS.gearGrid) {
                   REFS.gearGrid.innerHTML = '';
                   GEAR_TYPES.forEach(type => {
@@ -156,10 +155,8 @@ const TILE_SIZE = 64,
 
                       let div = document.createElement('div');
                       div.className = 'gear-item';
-                      // We make the whole card clickable for "Inspection"
                       div.style.cursor = "pointer";
                       div.onclick = (e) => {
-                          // Only inspect if they didn't click the upgrade button itself
                           if (e.target.tagName !== 'BUTTON') UI.inspectItem(type, false);
                       };
 
@@ -174,7 +171,6 @@ const TILE_SIZE = 64,
                   });
               }
 
-              // 3. Inventory Bag Grid
               if (REFS.bagGrid) {
                   REFS.bagGrid.innerHTML = '';
                   if (PlayerData.inventory.length > 0) {
@@ -250,7 +246,6 @@ const TILE_SIZE = 64,
               if (!PlayerData.inventory[index]) return;
               let itemToEquip = PlayerData.inventory[index],
                   slot = itemToEquip.slot,
-                  // SNAPSHOT ALL OLD STATS
                   oldStats = { 
                       hp: player.getMaxHp(), atk: player.getAttackPower(), 
                       def: player.getDefense(), regen: player.getRegen(), 
@@ -268,7 +263,6 @@ const TILE_SIZE = 64,
               player.hp = Math.min(player.hp, player.getMaxHp());
               saveGame();
 
-              // SNAPSHOT ALL NEW STATS
               let newStats = { 
                   hp: player.getMaxHp(), atk: player.getAttackPower(), 
                   def: player.getDefense(), regen: player.getRegen(), 
@@ -276,7 +270,6 @@ const TILE_SIZE = 64,
                   atkSpeed: player.getAttackSpeedFactor()
               };
               
-              // COMPARE ALL STATS FOR POPUP
               let deltaLines = [];
               let statCheck = [
                   { k: 'hp', l: 'Max HP' }, { k: 'atk', l: 'Attack' }, 
@@ -298,25 +291,20 @@ const TILE_SIZE = 64,
           discardItem: (index) => {
               if (!PlayerData.inventory || !PlayerData.inventory[index]) return;
 
-              // 1. Get the item data before removing it
               let item = PlayerData.inventory[index];
               
-              // 2. Determine Shard reward
               let shardReward = 5;
               if (item.rarity === 'Legendary') shardReward = 50;
               else if (item.rarity === 'Epic') shardReward = 20;
               else if (item.rarity === 'Rare') shardReward = 10;
 
-              // 3. Remove from inventory and add shards
               PlayerData.inventory.splice(index, 1);
               PlayerData.shards += shardReward;
 
-              // 4. Refresh UI using REFS
               UI.renderInventory();
               UI.updateCurrencies();
               UI.notify(`Discarded ${item.name} (+${shardReward} 💎)`);
 
-              // 5. Hide the inspection panel
               if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
               saveGame();
@@ -457,7 +445,7 @@ class Projectile {
     }
     draw(ctx) {
         if (!this.isAlive) return;
-        ctx.save(); ctx.shadowBlur = 15; ctx.shadowColor = this.color; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        ctx.save(); ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
 }
 
@@ -581,7 +569,6 @@ function loop(timestamp) {
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
-        // Handle safe level transitions
         if (GameState.pendingLevelUp) {
             GameState.level++;
             UI.notify(`Entering Depth ${GameState.level}`);
@@ -590,15 +577,12 @@ function loop(timestamp) {
             saveGame();
         }
 
-        // Update AI Systems
         HiveMind.update();
 
-        // Update Entities
         for (let i = entities.length - 1; i >= 0; i--) {
             entities[i].update(dt);
         }
 
-        // Update Visuals
         for (let i = particles.length - 1; i >= 0; i--) {
             particles[i].update(dt);
         }
@@ -607,9 +591,16 @@ function loop(timestamp) {
             floatingTexts[i].update(dt);
         }
 
-        // Periodic Systems (Spawning & UI)
+        if (GameState.frame % 10 === 0) {
+            UI.updateStats();
+        }
+
         if (GameState.frame % 120 === 0) {
-            let enemyCount = entities.filter(e => e instanceof Enemy).length;
+            let enemyCount = 0;
+            for (let i = 0; i < entities.length; i++) {
+                if (entities[i] instanceof Enemy) enemyCount++;
+            }
+            
             if (enemyCount < 10 + GameState.level) {
                 spawnEnemies();
             }
@@ -619,7 +610,6 @@ function loop(timestamp) {
             UI.updateMinimap();
         }
 
-        // Portal Lock & Interaction Logic
         if (portal) {
             let distToPortal = Math.hypot(player.x - portal.x, player.y - portal.y);
             let unlockCost = GameState.level * 1000;
@@ -627,7 +617,6 @@ function loop(timestamp) {
             if (distToPortal < 50) {
                 REFS.portalUI.style.display = 'block';
                 REFS.portalCost.innerText = `Unlock Cost: ${unlockCost} Gold`;
-                
                 REFS.unlockBtn.onclick = () => {
                     if (PlayerData.gold >= unlockCost) {
                         PlayerData.gold -= unlockCost;
@@ -644,7 +633,6 @@ function loop(timestamp) {
         }
     }
 
-    // Finalize Frame
     draw();
     GameState.frame++;
     requestAnimationFrame(loop);
