@@ -11,10 +11,15 @@ const PLAYER_ATTACK_RANGE = 200,
           flankWeight: 0,
           packSize: 0,
           update: function() {
-              this.packSize = entities.filter(e => e instanceof Enemy).length;
+              // Optimized: Just count, don't .filter() (saves battery!)
+              let count = 0;
+              for (let i = 0; i < entities.length; i++) {
+                  if (entities[i] instanceof Enemy) count++;
+              }
+              this.packSize = count;
               this.flankWeight = Math.min(1.0, this.packSize / 20); 
           }
-      },
+      };
       
       LEVEL_SCALING = {
           hp: 0.05,    // 5% per level
