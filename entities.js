@@ -73,33 +73,131 @@ const generateRandomGear = (level) => {
 class Enemy {
     constructor(x, y) {
         this.x = x; this.y = y; this.radius = 15;
-        // Optimization: Increased base speed (120-170) to challenge player speed (250)
-        this.speed = randomFloat(120, 170) * Math.pow(1.05, GameState.level); 
-        let hpMultiplier = Math.pow(1.3, GameState.level);
-        this.hp = 30 * hpMultiplier; this.maxHp = this.hp; this.damage = 5 * hpMultiplier; this.id = Math.random(); this.attackCooldown = 0;
+        this.id = Math.random();
+        
+        // --- DIFFICULTY SCALING ---
+        const depth = GameState.level;
+        const depthSpeedBonus = Math.min(1.15, 1 + (depth * 0.02)); // Max 15% increase
+        this.baseSpeed = randomFloat(130, 180) * depthSpeedBonus;
+        this.speed = this.baseSpeed;
+        
+        let hpMultiplier = Math.pow(1.3, depth);
+        this.hp = 30 * hpMultiplier; 
+        this.maxHp = this.hp; 
+        this.damage = (5 * hpMultiplier) * 0.6; // Slightly lowered base since they shoot now
+        
+        // --- SHOOTING SYSTEM ---
+        const types = ['semi', 'burst', 'rapid'];
+        this.fireType = types[Math.floor(Math.random() * types.length)];
+        this.fireCooldown = randomFloat(1.0, 3.0);
+        this.burstCount = 0;
+        this.isFiring = false;
+
+        // --- RAGE SYSTEM ---
+        this.rageTimer = 0;
+        this.isRaged = false;
+        this.attackCooldown = 0;
+    }
+
+    triggerRage() {
+        if (this.isRaged) return;
+        this.isRaged = true;
+        this.rageTimer = 5.0; // 5 Seconds of rage
+        this.speed = this.baseSpeed * 1.5;
+        spawnFloatingText(this.x, this.y - 30, "ENRAGED!", '#ff0000');
     }
 
     update(dt) {
         if (!player) return;
+
+        // Rage Management
+        if (this.rageTimer > 0) {
+            this.rageTimer -= dt;
+            if (this.rageTimer <= 0) {
+                this.isRaged = false;
+                this.speed = this.baseSpeed;
+            }
+        }
+
         let dx = player.x - this.x, dy = player.y - this.y, dist = Math.hypot(dx, dy);
-        if (dist < player.radius + this.radius + 5) {
-            this.attackCooldown -= dt; if (this.attackCooldown <= 0) { player.takeDamage(this.damage); this.attackCooldown = 1.0; }
-        } else if (dist < 600) {
+
+        // Flanking and Movement Logic
+        if (dist < 800) {
             let angleToPlayer = Math.atan2(dy, dx);
-            // Optimization: Adjusted flanking angle to 45 degrees (PI/4) 
-            // This ensures they always close the distance instead of walking in circles.
-            let flankOffset = ((this.id > 0.5 ? 1 : -1) * (Math.PI / 4) * HiveMind.flankWeight);
+            // Higher depth = smarter, tighter flanking
+            let aggroFactor = Math.min(1.5, 1 + (GameState.level * 0.1));
+            let flankOffset = ((this.id > 0.5 ? 1 : -1) * (Math.PI / 3) * HiveMind.flankWeight * aggroFactor);
             let targetAngle = angleToPlayer + flankOffset;
             
-            let nextX = this.x + Math.cos(targetAngle) * this.speed * dt, nextY = this.y + Math.sin(targetAngle) * this.speed * dt;
-            if (!isWall(nextX, this.y)) this.x = nextX; if (!isWall(this.x, nextY)) this.y = nextY;
+            let moveStep = this.speed * dt;
+            let nextX = this.x + Math.cos(targetAngle) * moveStep;
+            let nextY = this.y + Math.sin(targetAngle) * moveStep;
+            
+            if (!isWall(nextX, this.y)) this.x = nextX; 
+            if (!isWall(this.x, nextY)) this.y = nextY;
+            
+            // Shooting logic
+            this.handleShooting(dt, dist);
         }
+
+        // Melee logic if extremely close
+        if (dist < player.radius + this.radius + 10) {
+            this.attackCooldown -= dt;
+            if (this.attackCooldown <= 0) {
+                player.takeDamage(this.damage * (this.isRaged ? 1.5 : 1));
+                this.attackCooldown = 0.8;
+            }
+        }
+    }
+
+    handleShooting(dt, dist) {
+        if (this.fireCooldown > 0) {
+            this.fireCooldown -= dt * (this.isRaged ? 2 : 1);
+            return;
+        }
+
+        const shootSpeed = this.isRaged ? 0.05 : 0.15;
+
+        if (this.fireType === 'rapid') {
+            // Rapid: 16 rounds
+            this.fireProjectile();
+            this.burstCount++;
+            this.fireCooldown = shootSpeed; 
+            if (this.burstCount >= 16) {
+                this.burstCount = 0;
+                this.fireCooldown = 3.0; // Long reload
+            }
+        } else if (this.fireType === 'burst') {
+            // Burst: 3 rounds
+            this.fireProjectile();
+            this.burstCount++;
+            this.fireCooldown = 0.1;
+            if (this.burstCount >= 3) {
+                this.burstCount = 0;
+                this.fireCooldown = 1.5;
+            }
+        } else {
+            // Semi
+            this.fireProjectile();
+            this.fireCooldown = 1.2;
+        }
+    }
+
+    fireProjectile() {
+        // Use the same helper from main.js, but flagged as isEnemy=true
+        spawnProjectile(this.x, this.y, player, this.damage, false, true);
     }
 
     takeDamage(amt, isCrit) {
         let fearMultiplier = 1 + (player.getFearValue() / 100);
         let finalDamage = amt * fearMultiplier;
         this.hp -= finalDamage; 
+        
+        // Rage trigger on damage (25% chance) or if HP low
+        if (!this.isRaged && (Math.random() < 0.25 || this.hp < this.maxHp * 0.3)) {
+            this.triggerRage();
+        }
+
         spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${Math.floor(finalDamage)}` : Math.floor(finalDamage), isCrit ? '#ff0' : '#fff');
         if (this.hp <= 0) this.die();
     }
@@ -114,9 +212,22 @@ class Enemy {
     }
 
     draw(ctx) {
-        ctx.fillStyle = '#ff5252'; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.save();
+        if (this.isRaged) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = 'red';
+            ctx.fillStyle = '#ff0000'; // Pure red when raged
+        } else {
+            ctx.fillStyle = '#ff5252';
+        }
+
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        
+        // HP Bar
         ctx.fillStyle = '#000'; ctx.fillRect(this.x - 15, this.y - 25, 30, 4);
-        ctx.fillStyle = '#ff0000'; ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.hp/this.maxHp), 4);
+        ctx.fillStyle = this.isRaged ? '#ff0000' : '#ff5252'; 
+        ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.hp/this.maxHp), 4);
+        ctx.restore();
     }
 }
 
