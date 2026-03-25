@@ -55,7 +55,8 @@ const TILE_SIZE = 64,
           camera: { x: 0, y: 0 },
           lastTime: 0,
           frame: 0,
-          pendingLevelUp: false 
+          pendingLevelUp: false,
+          utick: 0
       },
       
       Input = {
@@ -457,7 +458,7 @@ class Projectile {
     }
     draw(ctx) {
         if (!this.isAlive) return;
-        ctx.save(); ctx.shadowBlur = 15; ctx.shadowColor = this.color; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        ctx.save(); ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
 }
 
@@ -581,7 +582,6 @@ function loop(timestamp) {
     GameState.lastTime = timestamp;
 
     if (GameState.state === 'PLAYING') {
-        // Handle safe level transitions
         if (GameState.pendingLevelUp) {
             GameState.level++;
             UI.notify(`Entering Depth ${GameState.level}`);
@@ -590,15 +590,12 @@ function loop(timestamp) {
             saveGame();
         }
 
-        // Update AI Systems
         HiveMind.update();
 
-        // Update Entities
         for (let i = entities.length - 1; i >= 0; i--) {
             entities[i].update(dt);
         }
 
-        // Update Visuals
         for (let i = particles.length - 1; i >= 0; i--) {
             particles[i].update(dt);
         }
@@ -607,9 +604,19 @@ function loop(timestamp) {
             floatingTexts[i].update(dt);
         }
 
-        // Periodic Systems (Spawning & UI)
+        // OPTIMIZATION 1: Only update the UI stats 6 times per second (every 10 frames)
+        // This stops "DOM Thrashing" and keeps the phone cool.
+        if (GameState.frame % 10 === 0) {
+            UI.updateStats();
+        }
+
+        // OPTIMIZATION 2: Efficient Enemy Counting (No .filter() array creation)
         if (GameState.frame % 120 === 0) {
-            let enemyCount = entities.filter(e => e instanceof Enemy).length;
+            let enemyCount = 0;
+            for (let i = 0; i < entities.length; i++) {
+                if (entities[i] instanceof Enemy) enemyCount++;
+            }
+            
             if (enemyCount < 10 + GameState.level) {
                 spawnEnemies();
             }
@@ -619,7 +626,6 @@ function loop(timestamp) {
             UI.updateMinimap();
         }
 
-        // Portal Lock & Interaction Logic
         if (portal) {
             let distToPortal = Math.hypot(player.x - portal.x, player.y - portal.y);
             let unlockCost = GameState.level * 1000;
@@ -627,7 +633,6 @@ function loop(timestamp) {
             if (distToPortal < 50) {
                 REFS.portalUI.style.display = 'block';
                 REFS.portalCost.innerText = `Unlock Cost: ${unlockCost} Gold`;
-                
                 REFS.unlockBtn.onclick = () => {
                     if (PlayerData.gold >= unlockCost) {
                         PlayerData.gold -= unlockCost;
@@ -644,7 +649,6 @@ function loop(timestamp) {
         }
     }
 
-    // Finalize Frame
     draw();
     GameState.frame++;
     requestAnimationFrame(loop);
