@@ -170,7 +170,7 @@ const UI = {
             GEAR_TYPES.forEach(type => {
                 let gear = PlayerData.gear[type];
                 if (!gear) return;
-                let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
+                let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 20;
                 let canAfford = PlayerData.shards >= sCost && PlayerData.gold >= gCost;
                 let statLines = [];
                 let statMap = { atk:'Atk', hp:'HP', def:'Def', regen:'Reg', critChance:'Crit%', critMult:'CritX', atkSpeed:'Spd' };
@@ -309,7 +309,7 @@ const UI = {
 
     upgradeGear: (type) => {
         let gear = PlayerData.gear[type]; if (!gear) return;
-        let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
+        let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 20;
         if (PlayerData.shards >= sCost && PlayerData.gold >= gCost) {
             PlayerData.shards -= sCost; PlayerData.gold -= gCost; gear.level = lvl + 1;
             if (stats.atk !== undefined) stats.atk += randomInt(3, 7);
@@ -340,7 +340,7 @@ const UI = {
         REFS.deltaPopup.style.display = 'block';
         setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
-        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 5000);
+        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 3000);
     },
 
     notify: (msg) => {
