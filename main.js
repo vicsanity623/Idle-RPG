@@ -5,7 +5,7 @@
 
 // --- 1. CORE CONFIGURATION ---
 const TILE_SIZE = 64;
-const MAP_SIZE = 80;
+const MAP_SIZE = 50;
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
 // --- 2. THE REGISTRY (Centralized DOM references) ---
