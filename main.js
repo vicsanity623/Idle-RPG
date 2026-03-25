@@ -125,21 +125,30 @@ const TILE_SIZE = 64,
           renderInventory: () => {
               if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
+              // 1. Stats Sheet (Character Stats + Core Crit Stats)
               if (REFS.statsSheet && player) {
                   let html = `
                       <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
                       <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
                       <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
                       <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
+                      <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
+                      <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
                   `;
+
+                  // Conditionally show legendary stats ONLY if they are active (> 0)
                   let mag = player.getAffixValue('magnet');
                   if (mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${mag}px</span></div>`;
+                  
                   let greed = player.getAffixValue('greed');
                   if (greed > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${greed}%</span></div>`;
+
                   let wisdom = player.getAffixValue('wisdom');
                   if (wisdom > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${wisdom}%</span></div>`;
+
                   let fear = player.getFearValue();
                   if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${fear}% Enemy Def</span></div>`;
+
                   REFS.statsSheet.innerHTML = html;
               }
 
