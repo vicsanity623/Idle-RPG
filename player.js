@@ -25,6 +25,20 @@ class Player {
         this.lastMoveAngle = 0; 
     }
 
+    // --- LEGENDARY AFFIX ENGINE ---
+    // Scans all equipped gear for special stats (Might, Greed, etc.)
+    getAffixValue(affixType) {
+        let total = 0;
+        for (let slot in PlayerData.gear) {
+            let item = PlayerData.gear[slot];
+            // Check if the item has the special bonus object and matches the requested type
+            if (item && item.affix && item.affix.type === affixType) {
+                total += item.affix.value;
+            }
+        }
+        return total;
+    }
+
     // Normalized Stat Reader (Reads Starter Gear vs Found Gear)
     getGearStat(slot, statName) {
         let item = PlayerData.gear[slot];
@@ -33,7 +47,8 @@ class Player {
         return stats[statName] || 0;
     }
 
-    // --- CHARACTER STAT FORMULAS (Percentage Based Scaling) ---
+    // --- CHARACTER STAT FORMULAS ---
+
     getMaxHp() { 
         let base = 100 + this.getGearStat('Armor', 'hp') + this.getGearStat('Head', 'hp') + 
                    this.getGearStat('Legs', 'hp') + this.getGearStat('Robe', 'hp') + 
@@ -44,8 +59,39 @@ class Player {
     getAttackPower() { 
         let base = 10 + this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
                    this.getGearStat('Ring', 'atk');
-        return Math.floor(base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)))); 
+        
+        // Apply Level Scaling
+        let scaledAtk = base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)));
+        
+        // APPLY "MIGHT" AFFIX (+% Total Attack)
+        let mightBonus = 1 + (this.getAffixValue('might') / 100);
+        
+        return Math.floor(scaledAtk * mightBonus); 
     }
+
+    // --- NEW SPECIAL STAT GETTERS ---
+
+    getPickupRadius() {
+        // Base radius 60 + Magnet Pixels
+        return 60 + this.getAffixValue('magnet');
+    }
+
+    getGoldMultiplier() {
+        // Base 1.0 + Gold Farmer %
+        return 1 + (this.getAffixValue('greed') / 100);
+    }
+
+    getXpMultiplier() {
+        // Base 1.0 + XP Fiend %
+        return 1 + (this.getAffixValue('wisdom') / 100);
+    }
+
+    getFearValue() {
+        // Returns % to weaken enemy defense
+        return this.getAffixValue('fear');
+    }
+
+    // --- CORE DEFENSE & UTILITY ---
 
     getDefense() { 
         let base = this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + 
@@ -76,11 +122,9 @@ class Player {
     }
 
     // --- PLAYER SYSTEMS ---
+
     update(dt) {
-        // Passive Regen
         if (this.hp < this.getMaxHp()) this.hp = Math.min(this.getMaxHp(), this.hp + this.getRegen() * dt);
-        
-        // Input Movement
         if (Input.joystick.active) {
             this.vx = Math.cos(Input.joystick.angle) * this.speed;
             this.vy = Math.sin(Input.joystick.angle) * this.speed;
@@ -97,17 +141,11 @@ class Player {
 
     updateFog() {
         let col = Math.floor(this.x / TILE_SIZE), row = Math.floor(this.y / TILE_SIZE);
-        for(let r = row-4; r <= row+4; r++) {
-            for(let c = col-4; c <= col+4; c++) {
-                if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
-            }
-        }
+        for(let r = row-4; r <= row+4; r++) for(let c = col-4; c <= col+4; c++) if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
     }
 
     handleSkills(dt) {
         this.skills.forEach(s => { if(s.current > 0) s.current -= dt; });
-
-        // Auto-Attack Skill
         if (this.skills[1].current <= 0) {
             let target = this.getNearestEnemy(PLAYER_ATTACK_RANGE);
             if (target) {
@@ -117,34 +155,17 @@ class Player {
                 this.skills[1].current = this.skills[1].cdMax * this.getAttackSpeedFactor(); 
             }
         }
-
-        // Area Aura Skill
         if (this.skills[2].current <= 0) {
-            entities.forEach(e => {
-                if (e instanceof Enemy && Math.hypot(this.x - e.x, this.y - e.y) < 120) {
-                    e.takeDamage(this.getAttackPower() * 0.4, false);
-                }
-            });
-            spawnAura(this.x, this.y);
-            this.skills[2].current = this.skills[2].cdMax;
+            entities.forEach(e => { if (e instanceof Enemy && Math.hypot(this.x - e.x, this.y - e.y) < 120) e.takeDamage(this.getAttackPower() * 0.4, false); });
+            spawnAura(this.x, this.y); this.skills[2].current = this.skills[2].cdMax;
         }
-
-        // Auto-Potion Logic
         if (this.hp < this.getMaxHp() * 0.4 && this.skills[0].current <= 0) {
             this.hp = Math.min(this.getMaxHp(), this.hp + this.getMaxHp() * 0.4);
-            spawnFloatingText(this.x, this.y, "HEALED", '#0f0');
-            this.skills[0].current = this.skills[0].cdMax;
+            spawnFloatingText(this.x, this.y, "HEALED", '#0f0'); this.skills[0].current = this.skills[0].cdMax;
         }
-
-        // Manual Dash (Uses joystick angle)
         if (Input.dashPressed && this.skills[3].current <= 0) {
-            let targetX = this.x + Math.cos(this.lastMoveAngle) * dashDistance;
-            let targetY = this.y + Math.sin(this.lastMoveAngle) * dashDistance;
-            if (!isWall(targetX, targetY)) {
-                this.x = targetX; this.y = targetY;
-                spawnFloatingText(this.x, this.y, "DASH!", '#00ffff');
-                this.skills[3].current = this.skills[3].cdMax; 
-            }
+            let targetX = this.x + Math.cos(this.lastMoveAngle) * dashDistance, targetY = this.y + Math.sin(this.lastMoveAngle) * dashDistance;
+            if (!isWall(targetX, targetY)) { this.x = targetX; this.y = targetY; spawnFloatingText(this.x, this.y, "DASH!", '#00ffff'); this.skills[3].current = this.skills[3].cdMax; }
             Input.dashPressed = false; 
         }
         UI.updateHotbar(this.skills);
@@ -152,19 +173,13 @@ class Player {
 
     getNearestEnemy(range) {
         let nearest = null, minDist = range;
-        entities.forEach(e => {
-            if (e instanceof Enemy) {
-                let d = Math.hypot(this.x - e.x, this.y - e.y);
-                if (d < minDist) { minDist = d; nearest = e; }
-            }
-        });
+        entities.forEach(e => { if (e instanceof Enemy) { let d = Math.hypot(this.x - e.x, this.y - e.y); if (d < minDist) { minDist = d; nearest = e; } } });
         return nearest;
     }
 
     takeDamage(amt) {
         let finalDamage = Math.max(1, amt - Math.min(amt * 0.8, this.getDefense()));
-        this.hp -= finalDamage;
-        spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
+        this.hp -= finalDamage; spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
         if (this.hp <= 0) die();
     }
 
