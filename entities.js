@@ -32,7 +32,6 @@ const generateRandomGear = (level) => {
     
     let roll = Math.random(), rarityName = 'Common', rarityColor = 'var(--rarity-common)', statMult = 1.0;
     
-    // Rarity Multipliers: Legendary is 2.2x stronger than Common
     if (roll < 0.03) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 2.2; }
     else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 1.7; }
     else if (roll < 0.40) { rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; statMult = 1.3; }
@@ -47,19 +46,14 @@ const generateRandomGear = (level) => {
     };
 
     for (let stat in chosenTemplate.stats) {
-        // Updated Math: 15% scaling per level + 10% random variance
         let rawValue = chosenTemplate.stats[stat] * (1 + level * 0.15) * randomFloat(0.9, 1.1) * statMult;
-        
         if (stat === 'hp' || stat === 'atk' || stat === 'def') {
-            // Main Stats: Ensure they are clean whole numbers and never 0
             item.stats[stat] = Math.max(1, Math.round(rawValue)); 
         } else {
-            // Utility Stats: Keep 3 decimal places for math accuracy
             item.stats[stat] = Number(rawValue.toFixed(3)); 
         }
     }
 
-    // Special Legendary Affix generation
     if (rarityName === 'Legendary' && Math.random() < 0.4) { 
         const specialPool = [
             { type: 'magnet', label: 'Magnet', value: 50 },
@@ -79,7 +73,8 @@ const generateRandomGear = (level) => {
 class Enemy {
     constructor(x, y) {
         this.x = x; this.y = y; this.radius = 15;
-        this.speed = randomFloat(80, 130) * Math.pow(1.02, GameState.level); 
+        // Optimization: Increased base speed (120-170) to challenge player speed (250)
+        this.speed = randomFloat(120, 170) * Math.pow(1.05, GameState.level); 
         let hpMultiplier = Math.pow(1.3, GameState.level);
         this.hp = 30 * hpMultiplier; this.maxHp = this.hp; this.damage = 5 * hpMultiplier; this.id = Math.random(); this.attackCooldown = 0;
     }
@@ -90,17 +85,20 @@ class Enemy {
         if (dist < player.radius + this.radius + 5) {
             this.attackCooldown -= dt; if (this.attackCooldown <= 0) { player.takeDamage(this.damage); this.attackCooldown = 1.0; }
         } else if (dist < 600) {
-            let targetAngle = Math.atan2(dy, dx) + ((this.id > 0.5 ? 1 : -1) * (Math.PI / 2) * HiveMind.flankWeight);
+            let angleToPlayer = Math.atan2(dy, dx);
+            // Optimization: Adjusted flanking angle to 45 degrees (PI/4) 
+            // This ensures they always close the distance instead of walking in circles.
+            let flankOffset = ((this.id > 0.5 ? 1 : -1) * (Math.PI / 4) * HiveMind.flankWeight);
+            let targetAngle = angleToPlayer + flankOffset;
+            
             let nextX = this.x + Math.cos(targetAngle) * this.speed * dt, nextY = this.y + Math.sin(targetAngle) * this.speed * dt;
             if (!isWall(nextX, this.y)) this.x = nextX; if (!isWall(this.x, nextY)) this.y = nextY;
         }
     }
 
     takeDamage(amt, isCrit) {
-        // APPLY "FEAR" AFFIX (Weakens enemy defense, making them take more damage)
         let fearMultiplier = 1 + (player.getFearValue() / 100);
         let finalDamage = amt * fearMultiplier;
-
         this.hp -= finalDamage; 
         spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${Math.floor(finalDamage)}` : Math.floor(finalDamage), isCrit ? '#ff0' : '#fff');
         if (this.hp <= 0) this.die();
@@ -108,11 +106,8 @@ class Enemy {
 
     die() {
         let idx = entities.indexOf(this); if(idx > -1) entities.splice(idx, 1);
-        
-        // APPLY "WISDOM" AFFIX (XP Multiplier)
         let xpReward = 10 * GameState.level;
         gainXp(Math.floor(xpReward * player.getXpMultiplier()));
-
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
         if (Math.random() < 0.2) spawnLoot(this.x, this.y, 'shard');
         if (Math.random() < 0.13) spawnLoot(this.x, this.y, 'gear');
@@ -128,22 +123,17 @@ class Enemy {
 // --- WORLD ENTITIES ---
 class Loot {
     constructor(x, y, type) { this.x = x; this.y = y; this.type = type; this.radius = 8; this.life = 15; this.floatY = 0; this.time = Math.random() * 10; }
-
     update(dt) {
         this.life -= dt; if (this.life <= 0) { entities.splice(entities.indexOf(this), 1); return; }
         this.time += dt * 5; this.floatY = Math.sin(this.time) * 5;
-        
-        // APPLY "MAGNET" AFFIX (Dynamic Pickup Radius)
         let dist = Math.hypot(player.x - this.x, player.y - this.y);
         if (player && dist < player.getPickupRadius()) { 
             this.pickup(); 
             entities.splice(entities.indexOf(this), 1); 
         }
     }
-
     pickup() {
         if (this.type === 'gold') {
-            // APPLY "GREED" AFFIX (Gold Farmer)
             let baseAmt = randomInt(5, 15) * GameState.level;
             let finalAmt = Math.floor(baseAmt * player.getGoldMultiplier());
             PlayerData.gold += finalAmt; 
@@ -157,7 +147,6 @@ class Loot {
         if (typeof UI !== 'undefined') { UI.updateCurrencies(); if (UI.renderInventory) UI.renderInventory(); }
         if (typeof saveGame !== 'undefined') saveGame();
     }
-
     draw(ctx) {
         ctx.fillStyle = this.type === 'gold' ? '#ffd700' : this.type === 'shard' ? '#00e5ff' : '#bb86fc'; ctx.beginPath();
         if(this.type === 'shard') { ctx.moveTo(this.x, this.y - 10 + this.floatY); ctx.lineTo(this.x + 8, this.y + this.floatY); ctx.lineTo(this.x, this.y + 10 + this.floatY); ctx.lineTo(this.x - 8, this.y + this.floatY); }
@@ -174,7 +163,10 @@ class FloatingText {
     }
     update(dt) {
         this.life -= dt; this.x += this.vx * dt; this.y += this.vy * dt; this.vx *= 0.95;
-        if(this.life <= 0) floatingTexts.splice(floatingTexts.indexOf(this), 1);
+        if(this.life <= 0) {
+            let idx = floatingTexts.indexOf(this);
+            if(idx > -1) floatingTexts.splice(idx, 1);
+        }
     }
     draw(ctx) {
         ctx.save(); ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color; ctx.font = 'bold 18px sans-serif'; ctx.shadowBlur = 4; ctx.shadowColor = 'rgba(0,0,0,0.8)';
@@ -187,7 +179,7 @@ class Particle {
         this.x = x; this.y = y; this.color = color; let angle = Math.random() * Math.PI * 2, speed = Math.random() * 100;
         this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed; this.life = 0.5; this.size = randomFloat(2, 5);
     }
-    update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; if(this.life <= 0) particles.splice(particles.indexOf(this), 1); }
+    update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; if(this.life <= 0) { let idx = particles.indexOf(this); if(idx > -1) particles.splice(idx, 1); } }
     draw(ctx) { ctx.save(); ctx.fillStyle = this.color; ctx.globalAlpha = Math.max(0, this.life * 2); ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
 }
 
