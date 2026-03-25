@@ -4,8 +4,8 @@
  */
 
 // --- HERO-SPECIFIC CONSTANTS ---
-const PLAYER_ATTACK_RANGE = 200,
-      dashDistance = 150,
+const PLAYER_ATTACK_RANGE = 350,
+      dashDistance = 350,
       LEVEL_SCALING = {
           hp:    0.05, // 5% per level
           atk:   0.04, // 4% per level
@@ -25,8 +25,8 @@ class Player {
         this.color = '#bb86fc';
         this.hp = this.getMaxHp();
         this.skills = [
-            { id: 'pot',  cdMax: 10, current: 0 }, 
-            { id: 'atk',  cdMax: 1,  current: 0 },
+            { id: 'heal',  cdMax: 10, current: 0 }, 
+            { id: 'atk',  cdMax: 0.7,  current: 0 },
             { id: 'aura', cdMax: 5,  current: 0 }, 
             { id: 'dash', cdMax: 3,  current: 0 }
         ];
