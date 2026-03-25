@@ -32,9 +32,18 @@ const generateRandomGear = (level) => {
     
     let roll = Math.random(), rarityName = 'Common', rarityColor = 'var(--rarity-common)', statMult = 1.0;
     
-    if (roll < 0.03) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 2.2; }
-    else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 1.7; }
-    else if (roll < 0.40) { rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; statMult = 1.3; }
+    // 1. GUARANTEED STAT POINTS (The fix you requested)
+    let rarityBonus = 0;
+    if (roll < 0.03) { 
+        rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; 
+        statMult = 2.5; rarityBonus = 10; // +10 Points
+    } else if (roll < 0.15) { 
+        rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; 
+        statMult = 1.8; rarityBonus = 8;  // +8 Points
+    } else if (roll < 0.40) { 
+        rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; 
+        statMult = 1.4; rarityBonus = 2;  // +2 Points
+    }
 
     let item = {
         id: `gear_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
@@ -46,7 +55,15 @@ const generateRandomGear = (level) => {
     };
 
     for (let stat in chosenTemplate.stats) {
-        let rawValue = chosenTemplate.stats[stat] * (1 + level * 0.15) * randomFloat(0.9, 1.1) * statMult;
+        // 2. APPLY THE RARITY FLOOR BEFORE SCALING
+        // HP needs a higher scale (10hp = 1atk point) or it feels like +0
+        let bonusScale = (stat === 'hp') ? 10 : (stat === 'atkSpeed' || stat === 'critMult' || stat === 'critChance' || stat === 'regen') ? 0.1 : 1;
+        let baseWithBonus = chosenTemplate.stats[stat] + (rarityBonus * bonusScale);
+        
+        // 3. TIGHTER RANDOMNESS (0.98 to 1.02 instead of 0.9 to 1.1)
+        // This prevents "Unlucky Legendaries" from being worse than "Lucky Commons"
+        let rawValue = baseWithBonus * (1 + level * 0.15) * randomFloat(0.98, 1.02) * statMult;
+
         if (stat === 'hp' || stat === 'atk' || stat === 'def') {
             item.stats[stat] = Math.max(1, Math.round(rawValue)); 
         } else {
