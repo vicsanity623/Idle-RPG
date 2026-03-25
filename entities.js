@@ -46,13 +46,26 @@ const generateRandomGear = (level) => {
 
     for (let stat in chosenTemplate.stats) {
         let rawValue = chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2) * statMult;
-        // Float logic fix for small jewelry decimals
         if (stat === 'hp' || stat === 'atk' || stat === 'def') {
             item.stats[stat] = Math.floor(rawValue);
         } else {
             item.stats[stat] = Number(rawValue.toFixed(3)); 
         }
     }
+
+    // --- NEW: SPECIAL LEGENDARY AFFIX GENERATION ---
+    if (rarityName === 'Legendary' && Math.random() < 0.4) { 
+        const specialPool = [
+            { type: 'magnet', label: 'Magnet', value: 50 },      // +50px pickup radius
+            { type: 'greed',  label: 'Greed',  value: 20 },      // +20% Gold
+            { type: 'wisdom', label: 'Wisdom', value: 15 },      // +15% XP
+            { type: 'might',  label: 'Might',  value: 10 },      // +10% Total Attack
+            { type: 'fear',   label: 'Fear',   value: 15 }       // +15% Damage (Weakens enemy)
+        ];
+        item.affix = specialPool[Math.floor(Math.random() * specialPool.length)];
+        item.name = `${item.affix.label} ${item.name}`; 
+    }
+
     return item;
 };
 
@@ -64,6 +77,7 @@ class Enemy {
         let hpMultiplier = Math.pow(1.3, GameState.level);
         this.hp = 30 * hpMultiplier; this.maxHp = this.hp; this.damage = 5 * hpMultiplier; this.id = Math.random(); this.attackCooldown = 0;
     }
+
     update(dt) {
         if (!player) return;
         let dx = player.x - this.x, dy = player.y - this.y, dist = Math.hypot(dx, dy);
@@ -75,17 +89,29 @@ class Enemy {
             if (!isWall(nextX, this.y)) this.x = nextX; if (!isWall(this.x, nextY)) this.y = nextY;
         }
     }
+
     takeDamage(amt, isCrit) {
-        this.hp -= amt; spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${Math.floor(amt)}` : Math.floor(amt), isCrit ? '#ff0' : '#fff');
+        // APPLY "FEAR" AFFIX (Weakens enemy defense, making them take more damage)
+        let fearMultiplier = 1 + (player.getFearValue() / 100);
+        let finalDamage = amt * fearMultiplier;
+
+        this.hp -= finalDamage; 
+        spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${Math.floor(finalDamage)}` : Math.floor(finalDamage), isCrit ? '#ff0' : '#fff');
         if (this.hp <= 0) this.die();
     }
+
     die() {
         let idx = entities.indexOf(this); if(idx > -1) entities.splice(idx, 1);
-        gainXp(10 * GameState.level);
+        
+        // APPLY "WISDOM" AFFIX (XP Multiplier)
+        let xpReward = 10 * GameState.level;
+        gainXp(Math.floor(xpReward * player.getXpMultiplier()));
+
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
         if (Math.random() < 0.2) spawnLoot(this.x, this.y, 'shard');
         if (Math.random() < 0.13) spawnLoot(this.x, this.y, 'gear');
     }
+
     draw(ctx) {
         ctx.fillStyle = '#ff5252'; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#000'; ctx.fillRect(this.x - 15, this.y - 25, 30, 4);
@@ -96,14 +122,26 @@ class Enemy {
 // --- WORLD ENTITIES ---
 class Loot {
     constructor(x, y, type) { this.x = x; this.y = y; this.type = type; this.radius = 8; this.life = 15; this.floatY = 0; this.time = Math.random() * 10; }
+
     update(dt) {
         this.life -= dt; if (this.life <= 0) { entities.splice(entities.indexOf(this), 1); return; }
         this.time += dt * 5; this.floatY = Math.sin(this.time) * 5;
-        if (player && Math.hypot(player.x - this.x, player.y - this.y) < player.radius + this.radius + 10) { this.pickup(); entities.splice(entities.indexOf(this), 1); }
+        
+        // APPLY "MAGNET" AFFIX (Dynamic Pickup Radius)
+        let dist = Math.hypot(player.x - this.x, player.y - this.y);
+        if (player && dist < player.getPickupRadius()) { 
+            this.pickup(); 
+            entities.splice(entities.indexOf(this), 1); 
+        }
     }
+
     pickup() {
         if (this.type === 'gold') {
-            let amt = randomInt(5, 15) * GameState.level; PlayerData.gold += amt; spawnFloatingText(this.x, this.y, `+${amt} Gold`, '#ffd700');
+            // APPLY "GREED" AFFIX (Gold Farmer)
+            let baseAmt = randomInt(5, 15) * GameState.level;
+            let finalAmt = Math.floor(baseAmt * player.getGoldMultiplier());
+            PlayerData.gold += finalAmt; 
+            spawnFloatingText(this.x, this.y, `+${finalAmt} Gold`, '#ffd700');
         } else if (this.type === 'shard') {
             PlayerData.shards += 1; spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
         } else if (this.type === 'gear') {
@@ -113,6 +151,7 @@ class Loot {
         if (typeof UI !== 'undefined') { UI.updateCurrencies(); if (UI.renderInventory) UI.renderInventory(); }
         if (typeof saveGame !== 'undefined') saveGame();
     }
+
     draw(ctx) {
         ctx.fillStyle = this.type === 'gold' ? '#ffd700' : this.type === 'shard' ? '#00e5ff' : '#bb86fc'; ctx.beginPath();
         if(this.type === 'shard') { ctx.moveTo(this.x, this.y - 10 + this.floatY); ctx.lineTo(this.x + 8, this.y + this.floatY); ctx.lineTo(this.x, this.y + 10 + this.floatY); ctx.lineTo(this.x - 8, this.y + this.floatY); }
