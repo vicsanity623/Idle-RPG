@@ -3,318 +3,67 @@
  * Core engine and system managers.
  */
 
-// --- GLOBAL CONSTANTS, DOM REGISTRY & CONFIG ---
-const TILE_SIZE = 64,
-      MAP_SIZE = 40, 
-      GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'],
-      
-      REFS = {
-          canvas:           document.getElementById('game-canvas'),
-          pLevel:           document.getElementById('p-level'),
-          hpFill:           document.getElementById('hp-fill'),
-          hpText:           document.getElementById('hp-text'),
-          xpFill:           document.getElementById('xp-fill'),
-          xpText:           document.getElementById('xp-text'),
-          cGold:            document.getElementById('c-gold'),
-          cShard:           document.getElementById('c-shard'),
-          invModal:         document.getElementById('inventory-modal'),
-          statsSheet:       document.getElementById('stats-sheet'),
-          gearGrid:         document.getElementById('gear-grid'),
-          bagGrid:          document.getElementById('bag-grid'),
-          notification:     document.getElementById('notification'),
-          dailyLogin:       document.getElementById('daily-login'),
-          deltaPopup:       document.getElementById('stat-delta-popup'),
-          deltaTitle:       document.getElementById('delta-title'),
-          deltaContent:     document.getElementById('delta-content'),
-          depthLevel:       document.getElementById('d-level'),
-          loadingFill:      document.getElementById('loading-fill'),
-          loadingScreen:    document.getElementById('loading-screen'),
-          mainMenu:         document.getElementById('main-menu'),
-          uiLayer:          document.getElementById('ui-layer'),
-          playBtn:          document.getElementById('play-btn'),
-          itemDetailPanel:  document.getElementById('item-detail-panel'),
-          detailName:       document.getElementById('detail-item-name'),
-          detailRarity:     document.getElementById('detail-rarity-text'),
-          selectedStats:    document.getElementById('selected-stats-list'),
-          equippedStats:    document.getElementById('equipped-stats-list'),
-          equipBtn:         document.getElementById('equip-unequip-btn'),
-          discardBtn:       document.getElementById('discard-btn'),
-          portalUI:         document.getElementById('portal-ui'),
-          portalCost:       document.getElementById('portal-cost-text'),
-          unlockBtn:        document.getElementById('unlock-portal-btn'),
-          cooldowns:        [0, 1, 2, 3].map(i => document.getElementById(`cd-${i}`))
-      },
+// --- 1. CORE CONFIGURATION ---
+const TILE_SIZE = 64;
+const MAP_SIZE = 40;
+const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
-      ctx = REFS.canvas ? REFS.canvas.getContext('2d') : null,
-      randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
-      randomFloat = (min, max) => Math.random() * (max - min) + min,
-      
-      GameState = {
-          state: 'BOOT', 
-          level: 1,
-          camera: { x: 0, y: 0 },
-          lastTime: 0,
-          frame: 0,
-          pendingLevelUp: false
-      },
-      
-      Input = {
-          joystick: { active: false, angle: 0, x:0, y:0 },
-          dashPressed: false
-      },
+// --- 2. THE REGISTRY (Centralized DOM references) ---
+const REFS = {
+    canvas:           document.getElementById('game-canvas'),
+    pLevel:           document.getElementById('p-level'),
+    hpFill:           document.getElementById('hp-fill'),
+    hpText:           document.getElementById('hp-text'),
+    xpFill:           document.getElementById('xp-fill'),
+    xpText:           document.getElementById('xp-text'),
+    cGold:            document.getElementById('c-gold'),
+    cShard:           document.getElementById('c-shard'),
+    invModal:         document.getElementById('inventory-modal'),
+    statsSheet:       document.getElementById('stats-sheet'),
+    gearGrid:         document.getElementById('gear-grid'),
+    bagGrid:          document.getElementById('bag-grid'),
+    notification:     document.getElementById('notification'),
+    dailyLogin:       document.getElementById('daily-login'),
+    deltaPopup:       document.getElementById('stat-delta-popup'),
+    deltaTitle:       document.getElementById('delta-title'),
+    deltaContent:     document.getElementById('delta-content'),
+    depthLevel:       document.getElementById('d-level'),
+    loadingFill:      document.getElementById('loading-fill'),
+    loadingScreen:    document.getElementById('loading-screen'),
+    mainMenu:         document.getElementById('main-menu'),
+    uiLayer:          document.getElementById('ui-layer'),
+    playBtn:          document.getElementById('play-btn'),
+    itemDetailPanel:  document.getElementById('item-detail-panel'),
+    detailName:       document.getElementById('detail-item-name'),
+    detailRarity:     document.getElementById('detail-rarity-text'),
+    selectedStats:    document.getElementById('selected-stats-list'),
+    equippedStats:    document.getElementById('equipped-stats-list'),
+    equipBtn:         document.getElementById('equip-unequip-btn'),
+    discardBtn:       document.getElementById('discard-btn'),
+    portalUI:         document.getElementById('portal-ui'),
+    portalCost:       document.getElementById('portal-cost-text'),
+    unlockBtn:        document.getElementById('unlock-portal-btn'),
+    cooldowns:        [0, 1, 2, 3].map(i => document.getElementById(`cd-${i}`))
+};
 
-      endJoystick = () => {
-          Input.joystick.active = false;
-          let jBase = document.getElementById('j-base');
-          if (jBase) jBase.style.display = 'none';
-      },
+// --- 3. ENGINE GLOBALS (Attached to window for E2E testing) ---
+const ctx = REFS.canvas ? REFS.canvas.getContext('2d') : null;
 
-      UI = {
-          updateStats: () => {
-              if (!player) return;
-              REFS.pLevel.innerText = PlayerData.level;
-              REFS.hpFill.style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
-              REFS.hpText.innerText = `${Math.floor(player.hp)} / ${Math.floor(player.getMaxHp())}`;
-              REFS.xpFill.style.width = `${(PlayerData.xp / PlayerData.maxXp) * 100}%`;
-              REFS.xpText.innerText = `${Math.floor(PlayerData.xp)} / ${PlayerData.maxXp}`;
-          },
-          
-          updateCurrencies: () => {
-              REFS.cGold.innerText = PlayerData.gold;
-              REFS.cShard.innerText = PlayerData.shards;
-          },
-          
-          updateHotbar: (skills) => {
-              skills.forEach((s, i) => {
-                  let overlay = REFS.cooldowns[i];
-                  if (overlay) overlay.style.height = `${(s.current / s.cdMax) * 100}%`;
-              });
-          },
-          
-          updateMinimap: () => {
-              let mmCanvas = document.getElementById('minimap');
-              if (!mmCanvas) return;
-              let mmCtx = mmCanvas.getContext('2d');
-              mmCtx.clearRect(0,0,100,100);
-              let cellW = 100 / MAP_SIZE;
-              for(let r=0; r<MAP_SIZE; r++){
-                  for(let c=0; c<MAP_SIZE; c++){
-                      if(exploredGrid[r][c]) {
-                          mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#333' : '#777';
-                          mmCtx.fillRect(c*cellW, r*cellW, cellW, cellW);
-                      }
-                  }
-              }
-              mmCtx.fillStyle = '#bb86fc';
-              mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
-              if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
-                  mmCtx.fillStyle = '#00e5ff';
-                  mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
-              }
-          },
-          
-          toggleInventory: () => {
-              if (REFS.invModal.style.display === 'flex') {
-                  REFS.invModal.style.display = 'none';
-              } else {
-                  REFS.invModal.style.display = 'flex';
-                  UI.renderInventory();
-              }
-          },
-          
-          renderInventory: () => {
-              if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
+window.GameState = {
+    state: 'BOOT', 
+    level: 1,
+    camera: { x: 0, y: 0 },
+    lastTime: 0,
+    frame: 0,
+    pendingLevelUp: false
+};
 
-              // 1. Stats Sheet (Character Stats + Core Crit Stats)
-              if (REFS.statsSheet && player) {
-                  let html = `
-                      <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
-                      <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
-                      <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
-                      <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
-                      <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
-                      <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
-                  `;
+window.Input = {
+    joystick: { active: false, angle: 0, x:0, y:0 },
+    dashPressed: false
+};
 
-                  // Conditionally show legendary stats ONLY if they are active (> 0)
-                  let mag = player.getAffixValue('magnet');
-                  if (mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${mag}px</span></div>`;
-                  
-                  let greed = player.getAffixValue('greed');
-                  if (greed > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${greed}%</span></div>`;
-
-                  let wisdom = player.getAffixValue('wisdom');
-                  if (wisdom > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${wisdom}%</span></div>`;
-
-                  let fear = player.getFearValue();
-                  if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${fear}% Enemy Def</span></div>`;
-
-                  REFS.statsSheet.innerHTML = html;
-              }
-
-              if (REFS.gearGrid) {
-                  REFS.gearGrid.innerHTML = '';
-                  GEAR_TYPES.forEach(type => {
-                      let gear = PlayerData.gear[type];
-                      if (!gear) return;
-                      let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
-                      let canAfford = PlayerData.shards >= sCost && PlayerData.gold >= gCost;
-                      let statLines = [];
-                      let statMap = { atk:'Atk', hp:'HP', def:'Def', regen:'Reg', critChance:'Crit%', critMult:'CritX', atkSpeed:'Spd' };
-                      for (let [key, label] of Object.entries(statMap)) {
-                          if (stats[key]) {
-                              let val = stats[key], formattedVal = (val < 1 && val > 0) ? val.toFixed(1) : Math.floor(val);
-                              statLines.push(`<span style="color:#03dac6">+${formattedVal}${label}</span>`);
-                          }
-                      }
-                      if (gear.affix) statLines.push(`<span style="color:var(--rarity-legendary)">${gear.affix.label}</span>`);
-                      let div = document.createElement('div');
-                      div.className = 'gear-item';
-                      div.style.cssText = "cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; min-height:140px; padding:8px;";
-                      div.onclick = (e) => { if (e.target.tagName !== 'BUTTON') UI.inspectItem(type, false); };
-                      div.innerHTML = `
-                          <div>
-                              <h4 style="color:${gear.color || 'var(--primary)'}; font-size:0.8rem; line-height:1; margin-bottom:4px;">${gear.name || type}</h4>
-                              <div style="font-size:0.65rem; display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-bottom:5px;">${statLines.join(' ')}</div>
-                          </div>
-                          <button class="upgrade-btn" ${canAfford ? '' : 'disabled'} style="font-size:0.65rem; padding:6px 2px; margin-top:auto;" onclick="UI.upgradeGear('${type}')">
-                              Lv.${lvl} UP (${sCost}💎 / ${gCost}🪙)
-                          </button>`;
-                      REFS.gearGrid.appendChild(div);
-                  });
-              }
-
-              if (REFS.bagGrid) {
-                  REFS.bagGrid.innerHTML = '';
-                  PlayerData.inventory.forEach((item, index) => {
-                      let div = document.createElement('div');
-                      div.className = 'gear-item';
-                      div.innerHTML = `<h4 style="color:${item.color || '#00e5ff'}; font-size:0.8rem;">${item.name || item.slot}</h4>
-                                       <button class="upgrade-btn" style="background:#00e5ff; color:#000;" onclick="UI.inspectItem(${index}, true)">Inspect</button>`;
-                      REFS.bagGrid.appendChild(div);
-                  });
-                  if (PlayerData.inventory.length === 0) REFS.bagGrid.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#777; font-size:0.8rem;">Bag is empty.</p>`;
-              }
-              UI.updateCurrencies();
-          },
-
-          inspectItem: (slotOrIndex, isBagItem) => {
-              let item = isBagItem ? PlayerData.inventory[slotOrIndex] : PlayerData.gear[slotOrIndex];
-              let equippedItem = isBagItem ? PlayerData.gear[item.slot] : item;
-              if (!item) return;
-
-              REFS.itemDetailPanel.style.display = 'block';
-              REFS.detailName.innerText = item.name || slotOrIndex;
-              REFS.detailName.style.color = item.color || 'var(--primary)';
-              REFS.detailRarity.innerText = item.rarity || 'Common';
-              REFS.detailRarity.style.color = item.color || '#fff';
-
-              let statKeys = ['atk', 'hp', 'def', 'regen', 'critChance', 'critMult', 'atkSpeed'],
-                  selectedHtml = '', equippedHtml = '',
-                  itemStats = item.stats || item,
-                  eqStats = equippedItem ? (equippedItem.stats || equippedItem) : {};
-
-              statKeys.forEach(stat => {
-                  let val1 = itemStats[stat] || 0, val2 = eqStats[stat] || 0;
-                  if (val1 === 0 && val2 === 0) return;
-                  let diff = val1 - val2, diffHtml = '';
-                  if (diff > 0) diffHtml = `<small style="color:#0f0">(+${diff.toFixed(1)})</small>`;
-                  else if (diff < 0) diffHtml = `<small style="color:#f00">(${diff.toFixed(1)})</small>`;
-                  let formatVal = (v) => v < 1 && v > 0 ? v.toFixed(2) : Math.floor(v);
-                  selectedHtml += `<p>${stat.toUpperCase()}: <span style="color:var(--shard)">${formatVal(val1)}</span></p>`;
-                  equippedHtml += `<p>${stat.toUpperCase()}: <span style="color:#aaa">${formatVal(val2)}</span> ${diffHtml}</p>`;
-              });
-              
-              if (item.affix) selectedHtml += `<p style="color:var(--rarity-legendary); font-weight:bold; margin-top:5px;">★ ${item.affix.label}: +${item.affix.value}${item.affix.type === 'magnet' ? 'px' : '%'}</p>`;
-
-              REFS.selectedStats.innerHTML = selectedHtml || '<p>No Stats</p>';
-              REFS.equippedStats.innerHTML = equippedHtml || '<p>None</p>';
-
-              if (isBagItem) {
-                  REFS.equipBtn.innerText = "Equip";
-                  REFS.equipBtn.onclick = () => { UI.equipItem(slotOrIndex); REFS.itemDetailPanel.style.display = 'none'; };
-                  REFS.discardBtn.style.display = 'block';
-                  REFS.discardBtn.onclick = () => UI.discardItem(slotOrIndex);
-              } else {
-                  REFS.equipBtn.innerText = "Unequip";
-                  REFS.equipBtn.onclick = () => { UI.unequipItem(slotOrIndex); REFS.itemDetailPanel.style.display = 'none'; };
-                  REFS.discardBtn.style.display = 'none'; 
-              }
-          },
-
-          equipItem: (index) => {
-              if (!PlayerData.inventory[index]) return;
-              let itemToEquip = PlayerData.inventory[index], slot = itemToEquip.slot;
-              let oldStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() };
-              
-              PlayerData.inventory.splice(index, 1);
-              let currentlyEquipped = PlayerData.gear[slot];
-              if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped);
-              PlayerData.gear[slot] = itemToEquip;
-              
-              UI.renderInventory(); UI.updateStats();
-              player.hp = Math.min(player.hp, player.getMaxHp());
-              saveGame();
-
-              let newStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() };
-              let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'}];
-              keys.forEach(s => { let d = newStats[s.k]-oldStats[s.k]; if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); });
-              if (deltas.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
-          },
-
-          discardItem: (index) => {
-              if (!PlayerData.inventory[index]) return;
-              let item = PlayerData.inventory[index], reward = 5;
-              if (item.rarity === 'Legendary') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10;
-              PlayerData.inventory.splice(index, 1); PlayerData.shards += reward;
-              UI.renderInventory(); UI.updateCurrencies(); UI.notify(`Discarded ${item.name} (+${reward} 💎)`);
-              REFS.itemDetailPanel.style.display = 'none'; saveGame();
-          },
-
-          upgradeGear: (type) => {
-              let gear = PlayerData.gear[type]; if (!gear) return;
-              let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
-              if (PlayerData.shards >= sCost && PlayerData.gold >= gCost) {
-                  PlayerData.shards -= sCost; PlayerData.gold -= gCost; gear.level = lvl + 1;
-                  if (stats.atk !== undefined) stats.atk += randomInt(3, 7);
-                  if (stats.hp !== undefined) stats.hp += randomInt(15, 30);
-                  if (stats.def !== undefined) stats.def += randomInt(2, 5);
-                  if (stats.regen !== undefined) stats.regen += 0.2;
-                  if (stats.critChance !== undefined) stats.critChance += 0.4;
-                  if (stats.critMult !== undefined) stats.critMult += 0.03;
-                  if (stats.atkSpeed !== undefined) stats.atkSpeed = Math.min(0.6, stats.atkSpeed + 0.01); 
-                  UI.renderInventory(); UI.updateStats(); saveGame(); UI.notify(`${type} Specialized!`);
-              } else UI.notify("Need more Gold or Shards!");
-          },
-
-          showDelta: (title, lines) => {
-              const iconMap = { 'Max HP': '❤️', 'Attack': '⚔️', 'Defense': '🛡️', 'Regen': '🍏', 'Crit %': '🎯', 'Crit X': '💥', 'Atk Spd': '⚡' };
-              let isLevel = title.toLowerCase().includes("level"), badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
-              REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
-              let html = '';
-              lines.forEach(line => {
-                  let diff = line.diff.toFixed(1), cColor = line.diff > 0 ? '#4caf50' : '#ff5252', symb = line.diff > 0 ? '+' : '';
-                  html += `<div class="delta-row"><span class="delta-icon">${iconMap[line.label] || '✨'}</span><span class="delta-label">${line.label}</span><span class="delta-values">${line.oldVal.toFixed(1)} ➔ ${line.newVal.toFixed(1)}</span><span class="delta-change" style="color:${cColor}">${symb}${diff}</span></div>`;
-              });
-              REFS.deltaContent.innerHTML = html;
-              REFS.deltaPopup.style.display = 'block';
-              setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
-              if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
-              UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 5000);
-          },
-
-          notify: (msg) => {
-              REFS.notification.innerText = msg; REFS.notification.style.opacity = 1;
-              if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
-              UI._notifTimeout = setTimeout(() => REFS.notification.style.opacity = 0, 2000);
-          },
-          
-          checkDailyLogin: () => { if (localStorage.getItem('dof_lastLogin') !== new Date().toDateString()) REFS.dailyLogin.style.display = 'block'; },
-          claimDaily: () => { PlayerData.gold += 500; PlayerData.shards += 50; localStorage.setItem('dof_lastLogin', new Date().toDateString()); REFS.dailyLogin.style.display = 'none'; UI.updateCurrencies(); saveGame(); UI.notify("Daily Claimed!"); }
-      };
-
-// --- PERSISTENT DATA ---
-let PlayerData = {
+window.PlayerData = {
     gold: 0, shards: 0, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
         'Weapon':   { level: 1, atk: 2, critMult: 0.05, rarity: 'Common' },
@@ -330,9 +79,280 @@ let PlayerData = {
     }
 };
 
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomFloat = (min, max) => Math.random() * (max - min);
+
+const endJoystick = () => {
+    Input.joystick.active = false;
+    let jBase = document.getElementById('j-base');
+    if (jBase) jBase.style.display = 'none';
+};
+
+// --- 4. UI SYSTEM ---
+const UI = {
+    updateStats: () => {
+        if (!player) return;
+        REFS.pLevel.innerText = PlayerData.level;
+        REFS.hpFill.style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
+        REFS.hpText.innerText = `${Math.floor(player.hp)} / ${Math.floor(player.getMaxHp())}`;
+        REFS.xpFill.style.width = `${(PlayerData.xp / PlayerData.maxXp) * 100}%`;
+        REFS.xpText.innerText = `${Math.floor(PlayerData.xp)} / ${PlayerData.maxXp}`;
+    },
+    
+    updateCurrencies: () => {
+        REFS.cGold.innerText = PlayerData.gold;
+        REFS.cShard.innerText = PlayerData.shards;
+    },
+    
+    updateHotbar: (skills) => {
+        skills.forEach((s, i) => {
+            let overlay = REFS.cooldowns[i];
+            if (overlay) overlay.style.height = `${(s.current / s.cdMax) * 100}%`;
+        });
+    },
+    
+    updateMinimap: () => {
+        let mmCanvas = document.getElementById('minimap');
+        if (!mmCanvas) return;
+        let mmCtx = mmCanvas.getContext('2d');
+        mmCtx.clearRect(0,0,100,100);
+        let cellW = 100 / MAP_SIZE;
+        for(let r=0; r<MAP_SIZE; r++){
+            for(let c=0; c<MAP_SIZE; c++){
+                if(exploredGrid[r][c]) {
+                    mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#333' : '#777';
+                    mmCtx.fillRect(c*cellW, r*cellW, cellW, cellW);
+                }
+            }
+        }
+        mmCtx.fillStyle = '#bb86fc';
+        mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
+        if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
+            mmCtx.fillStyle = '#00e5ff';
+            mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
+        }
+    },
+    
+    toggleInventory: () => {
+        if (REFS.invModal.style.display === 'flex') {
+            REFS.invModal.style.display = 'none';
+        } else {
+            REFS.invModal.style.display = 'flex';
+            UI.renderInventory();
+        }
+    },
+    
+    renderInventory: () => {
+        if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
+
+        // 1. Stats Sheet
+        if (REFS.statsSheet && player) {
+            let html = `
+                <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
+                <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
+                <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
+                <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
+                <div class="stat-line"><span>Atk Spd</span><span class="stat-val">${(1 / player.getAttackSpeedFactor()).toFixed(2)}/s</span></div>
+                <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
+                <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
+            `;
+            // Dynamic Special Affixes
+            let mag = player.getAffixValue('magnet'); if (mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${mag}px</span></div>`;
+            let grd = player.getAffixValue('greed'); if (grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${grd}%</span></div>`;
+            let wis = player.getAffixValue('wisdom'); if (wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${wis}%</span></div>`;
+            let fear = player.getFearValue(); if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${fear}% Enemy Def</span></div>`;
+            REFS.statsSheet.innerHTML = html;
+        }
+
+        // 2. Equipped Gear Grid
+        if (REFS.gearGrid) {
+            REFS.gearGrid.innerHTML = '';
+            GEAR_TYPES.forEach(type => {
+                let gear = PlayerData.gear[type];
+                if (!gear) return;
+                let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
+                let canAfford = PlayerData.shards >= sCost && PlayerData.gold >= gCost;
+                let statLines = [];
+                let statMap = { atk:'Atk', hp:'HP', def:'Def', regen:'Reg', critChance:'Crit%', critMult:'CritX', atkSpeed:'Spd' };
+                for (let [key, label] of Object.entries(statMap)) {
+                    if (stats[key]) {
+                        let val = stats[key], formattedVal = (val < 1 && val > 0) ? val.toFixed(1) : Math.floor(val);
+                        statLines.push(`<span style="color:#03dac6">+${formattedVal}${label}</span>`);
+                    }
+                }
+                if (gear.affix) statLines.push(`<span style="color:var(--rarity-legendary)">${gear.affix.label}</span>`);
+                let div = document.createElement('div');
+                div.className = 'gear-item';
+                div.style.cssText = "cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; min-height:140px; padding:8px;";
+                div.onclick = (e) => { if (e.target.tagName !== 'BUTTON') UI.inspectItem(type, false); };
+                div.innerHTML = `
+                    <div>
+                        <h4 style="color:${gear.color || 'var(--primary)'}; font-size:0.8rem; line-height:1; margin-bottom:4px;">${gear.name || type}</h4>
+                        <div style="font-size:0.65rem; display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-bottom:5px;">${statLines.join(' ')}</div>
+                    </div>
+                    <button class="upgrade-btn" ${canAfford ? '' : 'disabled'} style="font-size:0.65rem; padding:6px 2px; margin-top:auto;" onclick="UI.upgradeGear('${type}')">
+                        Lv.${lvl} UP (${sCost}💎 / ${gCost}🪙)
+                    </button>`;
+                REFS.gearGrid.appendChild(div);
+            });
+        }
+
+        // 3. Inventory Bag Grid
+        if (REFS.bagGrid) {
+            REFS.bagGrid.innerHTML = '';
+            PlayerData.inventory.forEach((item, index) => {
+                let div = document.createElement('div');
+                div.className = 'gear-item';
+                div.innerHTML = `<h4 style="color:${item.color || '#00e5ff'}; font-size:0.8rem;">${item.name || item.slot}</h4>
+                                 <button class="upgrade-btn" style="background:#00e5ff; color:#000;" onclick="UI.inspectItem(${index}, true)">Inspect</button>`;
+                REFS.bagGrid.appendChild(div);
+            });
+            if (PlayerData.inventory.length === 0) REFS.bagGrid.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#777; font-size:0.8rem;">Bag is empty.</p>`;
+        }
+        UI.updateCurrencies();
+    },
+
+    inspectItem: (slotOrIndex, isBagItem) => {
+        let item = isBagItem ? PlayerData.inventory[slotOrIndex] : PlayerData.gear[slotOrIndex];
+        let equippedItem = isBagItem ? PlayerData.gear[item.slot] : item;
+        if (!item) return;
+
+        REFS.itemDetailPanel.style.display = 'block';
+        REFS.detailName.innerText = item.name || slotOrIndex;
+        REFS.detailName.style.color = item.color || 'var(--primary)';
+        REFS.detailRarity.innerText = item.rarity || 'Common';
+        REFS.detailRarity.style.color = item.color || '#fff';
+
+        let statKeys = ['atk', 'hp', 'def', 'regen', 'critChance', 'critMult', 'atkSpeed'],
+            selectedHtml = '', equippedHtml = '',
+            itemStats = item.stats || item,
+            eqStats = equippedItem ? (equippedItem.stats || equippedItem) : {};
+
+        statKeys.forEach(stat => {
+            let val1 = itemStats[stat] || 0, val2 = eqStats[stat] || 0;
+            if (val1 === 0 && val2 === 0) return;
+            let diff = val1 - val2, diffHtml = '';
+            if (diff > 0) diffHtml = `<small style="color:#0f0">(+${diff.toFixed(1)})</small>`;
+            else if (diff < 0) diffHtml = `<small style="color:#f00">(${diff.toFixed(1)})</small>`;
+            let formatVal = (v) => v < 1 && v > 0 ? v.toFixed(2) : Math.floor(v);
+            selectedHtml += `<p>${stat.toUpperCase()}: <span style="color:var(--shard)">${formatVal(val1)}</span></p>`;
+            equippedHtml += `<p>${stat.toUpperCase()}: <span style="color:#aaa">${formatVal(val2)}</span> ${diffHtml}</p>`;
+        });
+        
+        if (item.affix) selectedHtml += `<p style="color:var(--rarity-legendary); font-weight:bold; margin-top:5px;">★ ${item.affix.label}: +${item.affix.value}${item.affix.type === 'magnet' ? 'px' : '%'}</p>`;
+
+        REFS.selectedStats.innerHTML = selectedHtml || '<p>No Stats</p>';
+        REFS.equippedStats.innerHTML = equippedHtml || '<p>None</p>';
+
+        if (isBagItem) {
+            REFS.equipBtn.innerText = "Equip";
+            REFS.equipBtn.onclick = () => { UI.equipItem(slotOrIndex); REFS.itemDetailPanel.style.display = 'none'; };
+            REFS.discardBtn.style.display = 'block';
+            REFS.discardBtn.onclick = () => UI.discardItem(slotOrIndex);
+        } else {
+            REFS.equipBtn.innerText = "Unequip";
+            REFS.equipBtn.onclick = () => { UI.unequipItem(slotOrIndex); REFS.itemDetailPanel.style.display = 'none'; };
+            REFS.discardBtn.style.display = 'none'; 
+        }
+    },
+
+    equipItem: (index) => {
+        if (!PlayerData.inventory[index]) return;
+        let itemToEquip = PlayerData.inventory[index], slot = itemToEquip.slot;
+        
+        let oldStats = { 
+            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
+            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
+            sp: player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
+            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue()
+        };
+        
+        PlayerData.inventory.splice(index, 1);
+        let currentlyEquipped = PlayerData.gear[slot];
+        if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped);
+        PlayerData.gear[slot] = itemToEquip;
+        
+        UI.renderInventory(); UI.updateStats();
+        player.hp = Math.min(player.hp, player.getMaxHp());
+        saveGame();
+
+        let newStats = { 
+            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
+            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
+            sp: player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
+            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue()
+        };
+
+        let deltas = [], keys = [
+            {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
+            {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
+            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'}
+        ];
+        keys.forEach(s => { 
+            let d = newStats[s.k]-oldStats[s.k]; 
+            if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+        });
+        if (deltas.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
+    },
+
+    discardItem: (index) => {
+        if (!PlayerData.inventory[index]) return;
+        let item = PlayerData.inventory[index], reward = 5;
+        if (item.rarity === 'Legendary') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10;
+        PlayerData.inventory.splice(index, 1); PlayerData.shards += reward;
+        UI.renderInventory(); UI.updateCurrencies(); UI.notify(`Discarded ${item.name} (+${reward} 💎)`);
+        REFS.itemDetailPanel.style.display = 'none'; saveGame();
+    },
+
+    upgradeGear: (type) => {
+        let gear = PlayerData.gear[type]; if (!gear) return;
+        let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
+        if (PlayerData.shards >= sCost && PlayerData.gold >= gCost) {
+            PlayerData.shards -= sCost; PlayerData.gold -= gCost; gear.level = lvl + 1;
+            if (stats.atk !== undefined) stats.atk += randomInt(3, 7);
+            if (stats.hp !== undefined) stats.hp += randomInt(15, 30);
+            if (stats.def !== undefined) stats.def += randomInt(2, 5);
+            if (stats.regen !== undefined) stats.regen += 0.2;
+            if (stats.critChance !== undefined) stats.critChance += 0.4;
+            if (stats.critMult !== undefined) stats.critMult += 0.03;
+            if (stats.atkSpeed !== undefined) stats.atkSpeed = Math.min(0.6, stats.atkSpeed + 0.01); 
+            UI.renderInventory(); UI.updateStats(); saveGame(); UI.notify(`${type} Specialized!`);
+        } else UI.notify("Need more Gold or Shards!");
+    },
+
+    showDelta: (title, lines) => {
+        const iconMap = { 
+            'Max HP': '❤️', 'Attack': '⚔️', 'Defense': '🛡️', 'Regen': '🍏', 
+            'Crit %': '🎯', 'Crit X': '💥', 'Atk Spd': '⚡',
+            'Magnet': '🧲', 'Gold Farmer': '💰', 'XP Fiend': '📖', 'Fear Aura': '💀'
+        };
+        let isLevel = title.toLowerCase().includes("level"), badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
+        REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
+        let html = '';
+        lines.forEach(line => {
+            let diff = line.diff.toFixed(1), cColor = line.diff > 0 ? '#4caf50' : '#ff5252', symb = line.diff > 0 ? '+' : '';
+            html += `<div class="delta-row"><span class="delta-icon">${iconMap[line.label] || '✨'}</span><span class="delta-label">${line.label}</span><span class="delta-values">${line.oldVal.toFixed(1)} ➔ ${line.newVal.toFixed(1)}</span><span class="delta-change" style="color:${cColor}">${symb}${diff}</span></div>`;
+        });
+        REFS.deltaContent.innerHTML = html;
+        REFS.deltaPopup.style.display = 'block';
+        setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
+        if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
+        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 5000);
+    },
+
+    notify: (msg) => {
+        REFS.notification.innerText = msg; REFS.notification.style.opacity = 1;
+        if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
+        UI._notifTimeout = setTimeout(() => REFS.notification.style.opacity = 0, 2000);
+    },
+    
+    checkDailyLogin: () => { if (localStorage.getItem('dof_lastLogin') !== new Date().toDateString()) REFS.dailyLogin.style.display = 'block'; },
+    claimDaily: () => { PlayerData.gold += 500; PlayerData.shards += 50; localStorage.setItem('dof_lastLogin', new Date().toDateString()); REFS.dailyLogin.style.display = 'none'; UI.updateCurrencies(); saveGame(); UI.notify("Daily Claimed!"); }
+};
+
+// --- 5. MAP GENERATION ---
 let mapGrid = [], exploredGrid = [], entities = [], particles = [], floatingTexts = [], portal = null, player = null;
 
-// --- MAP GENERATION ---
 function generateMap() {
     mapGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(1));
     exploredGrid = Array(MAP_SIZE).fill(0).map(() => Array(MAP_SIZE).fill(false));
@@ -353,7 +373,7 @@ function isWall(x, y) {
     return mapGrid[row][col] === 1;
 }
 
-// --- ENGINE FUNCTIONS ---
+// --- 6. ENGINE FUNCTIONS ---
 function spawnFloatingText(x, y, text, color) { floatingTexts.push(new FloatingText(x, y, text, color)); }
 function spawnLoot(x, y, type) { entities.push(new Loot(x, y, type)); }
 
@@ -389,12 +409,24 @@ function gainXp(amt) {
     PlayerData.xp += Math.floor(amt * player.getXpMultiplier());
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
-        let oldStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() }, oldLevel = PlayerData.level;
+        let oldStats = { 
+            hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
+            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
+            mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
+        }, oldLevel = PlayerData.level;
         PlayerData.level++; PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
-        let newStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() };
-        let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'}];
+        let newStats = { 
+            hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
+            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
+            mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
+        };
+        let deltas = [], keys = [
+            {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
+            {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
+            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'}
+        ];
         keys.forEach(s => { let d = newStats[s.k]-oldStats[s.k]; if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); });
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
     }
@@ -410,8 +442,8 @@ function die() {
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
 
 function spawnEnemies() {
-    let numEnemies = 5 + Math.floor(GameState.level * 1.5);
-    for(let i=0; i<numEnemies; i++) {
+    let num = 5 + Math.floor(GameState.level * 1.5);
+    for(let i=0; i<num; i++) {
         let ex, ey;
         do { ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
         entities.push(new Enemy(ex, ey));
@@ -425,7 +457,7 @@ function initLevel() {
     entities.push(player); spawnEnemies(); REFS.depthLevel.innerText = GameState.level; UI.updateMinimap();
 }
 
-// --- INPUT & SAVE ---
+// --- 7. INPUT & SAVE ---
 let jZoneRef = document.getElementById('joystick-zone');
 if (jZoneRef) {
     jZoneRef.addEventListener('touchstart', (e) => {
@@ -452,11 +484,11 @@ function loadGame() {
             let d = JSON.parse(save); PlayerData = { ...PlayerData, ...d };
             if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
             if (PlayerData.dungeonLevel) GameState.level = PlayerData.dungeonLevel;
-        } catch(e) { console.error("Save Error", e); }
+        } catch(e) { console.error("Save Corrupt", e); }
     }
 }
 
-// --- RENDERER ---
+// --- 8. RENDERER ---
 function drawMap(camX, camY) {
     let sCol = Math.max(0, Math.floor(camX / TILE_SIZE)), eCol = Math.min(MAP_SIZE - 1, sCol + Math.ceil(REFS.canvas.width / TILE_SIZE) + 1),
         sRow = Math.max(0, Math.floor(camY / TILE_SIZE)), eRow = Math.min(MAP_SIZE - 1, sRow + Math.ceil(REFS.canvas.height / TILE_SIZE) + 1);
@@ -481,7 +513,7 @@ function draw() {
     if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width/2, REFS.canvas.height/2); }
 }
 
-// --- MAIN LOOP ---
+// --- 9. MAIN LOOP ---
 function loop(timestamp) {
     let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); GameState.lastTime = timestamp;
     if (GameState.state === 'PLAYING') {
@@ -500,14 +532,14 @@ function loop(timestamp) {
             let dist = Math.hypot(player.x - portal.x, player.y - portal.y), cost = GameState.level * 1000;
             if (dist < 50) {
                 REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${cost} Gold`;
-                REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need more Gold!"); };
+                REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need Gold!"); };
             } else REFS.portalUI.style.display = 'none';
         }
     }
     draw(); GameState.frame++; requestAnimationFrame(loop);
 }
 
-// --- STARTUP ---
+// --- 10. BOOTSTRAP ---
 REFS.canvas.width = window.innerWidth; REFS.canvas.height = window.innerHeight;
 window.addEventListener('resize', () => { REFS.canvas.width = window.innerWidth; REFS.canvas.height = window.innerHeight; });
 
