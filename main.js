@@ -5,7 +5,7 @@
 
 // --- 1. CORE CONFIGURATION ---
 const TILE_SIZE = 64;
-const MAP_SIZE = 40;
+const MAP_SIZE = 80;
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
 // --- 2. THE REGISTRY (Centralized DOM references) ---
@@ -66,15 +66,15 @@ window.Input = {
 window.PlayerData = {
     gold: 0, shards: 0, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
-        'Weapon':   { level: 1, atk: 2, critMult: 0.05, rarity: 'Common' },
+        'Weapon':   { level: 1, atk: 1, critMult: 0.02, rarity: 'Common' },
         'Armor':    { level: 1, hp: 1, def: 1, rarity: 'Common' },
-        'Legs':     { level: 1, def: 2, hp: 2, rarity: 'Common' },
-        'Fists':    { level: 1, critChance: 0.5, atk: 5, rarity: 'Common' },
-        'Head':     { level: 1, hp: 3, def: 2, rarity: 'Common' },
-        'Robe':     { level: 1, regen: 0.01, hp: 2, rarity: 'Common' },
-        'Ring':     { level: 1, atk: 1, critChance: 1.5, rarity: 'Common' },
+        'Legs':     { level: 1, def: 1, hp: 1, rarity: 'Common' },
+        'Fists':    { level: 1, critChance: 0.1, atk: 1, rarity: 'Common' },
+        'Head':     { level: 1, hp: 1, def: 1, rarity: 'Common' },
+        'Robe':     { level: 1, regen: 0.01, hp: 1, rarity: 'Common' },
+        'Ring':     { level: 1, atk: 1, critChance: 0.3, rarity: 'Common' },
         'Earrings': { level: 1, critMult: 0.02, regen: 0.02, rarity: 'Common' },
-        'Necklace': { level: 1, regen: 0.5, hp: 2, rarity: 'Common' },
+        'Necklace': { level: 1, regen: 0.01, hp: 1, rarity: 'Common' },
         'Boots':    { level: 1, def: 1, atkSpeed: 0.01, rarity: 'Common' } 
     }
 };
