@@ -7,20 +7,28 @@
 const PLAYER_ATTACK_RANGE = 200,
       dashDistance = 150,
       LEVEL_SCALING = {
-          hp: 0.05,    // 5% per level
-          atk: 0.04,   // 4% per level
-          def: 0.03,   // 3% per level
+          hp:    0.05, // 5% per level
+          atk:   0.04, // 4% per level
+          def:   0.03, // 3% per level
           regen: 0.02, // 2% per level
-          crit: 0.01   // 1% per level
+          crit:  0.01  // 1% per level
       };
 
 class Player {
     constructor(x, y) {
-        this.x = x; this.y = y; this.radius = 20; this.vx = 0; this.vy = 0; this.speed = 250; this.color = '#bb86fc';
+        this.x = x; 
+        this.y = y; 
+        this.radius = 20; 
+        this.vx = 0; 
+        this.vy = 0; 
+        this.speed = 250; 
+        this.color = '#bb86fc';
         this.hp = this.getMaxHp();
         this.skills = [
-            { id: 'pot', cdMax: 10, current: 0 }, { id: 'atk', cdMax: 1, current: 0 },
-            { id: 'aura', cdMax: 5, current: 0 }, { id: 'dash', cdMax: 3, current: 0 }
+            { id: 'pot',  cdMax: 10, current: 0 }, 
+            { id: 'atk',  cdMax: 1,  current: 0 },
+            { id: 'aura', cdMax: 5,  current: 0 }, 
+            { id: 'dash', cdMax: 3,  current: 0 }
         ];
         this.lastMoveAngle = 0; 
     }
@@ -31,7 +39,6 @@ class Player {
         let total = 0;
         for (let slot in PlayerData.gear) {
             let item = PlayerData.gear[slot];
-            // Check if the item has the special bonus object and matches the requested type
             if (item && item.affix && item.affix.type === affixType) {
                 total += item.affix.value;
             }
@@ -59,39 +66,26 @@ class Player {
     getAttackPower() { 
         let base = 10 + this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
                    this.getGearStat('Ring', 'atk');
-        
-        // Apply Level Scaling
         let scaledAtk = base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)));
-        
-        // APPLY "MIGHT" AFFIX (+% Total Attack)
         let mightBonus = 1 + (this.getAffixValue('might') / 100);
-        
         return Math.floor(scaledAtk * mightBonus); 
     }
 
-    // --- NEW SPECIAL STAT GETTERS ---
-
     getPickupRadius() {
-        // Base radius 60 + Magnet Pixels
         return 60 + this.getAffixValue('magnet');
     }
 
     getGoldMultiplier() {
-        // Base 1.0 + Gold Farmer %
         return 1 + (this.getAffixValue('greed') / 100);
     }
 
     getXpMultiplier() {
-        // Base 1.0 + XP Fiend %
         return 1 + (this.getAffixValue('wisdom') / 100);
     }
 
     getFearValue() {
-        // Returns % to weaken enemy defense
         return this.getAffixValue('fear');
     }
-
-    // --- CORE DEFENSE & UTILITY ---
 
     getDefense() { 
         let base = this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + 
@@ -141,7 +135,11 @@ class Player {
 
     updateFog() {
         let col = Math.floor(this.x / TILE_SIZE), row = Math.floor(this.y / TILE_SIZE);
-        for(let r = row-4; r <= row+4; r++) for(let c = col-4; c <= col+4; c++) if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
+        for(let r = row-4; r <= row+4; r++) {
+            for(let c = col-4; c <= col+4; c++) {
+                if(r>=0 && r<MAP_SIZE && c>=0 && c<MAP_SIZE) exploredGrid[r][c] = true;
+            }
+        }
     }
 
     handleSkills(dt) {
@@ -165,7 +163,12 @@ class Player {
         }
         if (Input.dashPressed && this.skills[3].current <= 0) {
             let targetX = this.x + Math.cos(this.lastMoveAngle) * dashDistance, targetY = this.y + Math.sin(this.lastMoveAngle) * dashDistance;
-            if (!isWall(targetX, targetY)) { this.x = targetX; this.y = targetY; spawnFloatingText(this.x, this.y, "DASH!", '#00ffff'); this.skills[3].current = this.skills[3].cdMax; }
+            if (!isWall(targetX, targetY)) { 
+                this.x = targetX; 
+                this.y = targetY; 
+                spawnFloatingText(this.x, this.y, "DASH!", '#00ffff'); 
+                this.skills[3].current = this.skills[3].cdMax; 
+            }
             Input.dashPressed = false; 
         }
         UI.updateHotbar(this.skills);
@@ -179,7 +182,8 @@ class Player {
 
     takeDamage(amt) {
         let finalDamage = Math.max(1, amt - Math.min(amt * 0.8, this.getDefense()));
-        this.hp -= finalDamage; spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
+        this.hp -= finalDamage; 
+        spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
         if (this.hp <= 0) die();
     }
 
