@@ -232,8 +232,11 @@ const UI = {
             let val1 = itemStats[stat] || 0, val2 = eqStats[stat] || 0;
             if (val1 === 0 && val2 === 0) return;
             let diff = val1 - val2, diffHtml = '';
-            if (diff > 0) diffHtml = `<small style="color:#0f0">(+${diff.toFixed(1)})</small>`;
-            else if (diff < 0) diffHtml = `<small style="color:#f00">(${diff.toFixed(1)})</small>`;
+            
+            // FIX: Restored the precision check so 0.04 doesn't round down to 0.0
+            if (diff > 0) diffHtml = `<small style="color:#0f0">(+${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
+            else if (diff < 0) diffHtml = `<small style="color:#f00">(${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
+            
             let formatVal = (v) => v < 1 && v > 0 ? v.toFixed(2) : Math.floor(v);
             selectedHtml += `<p>${stat.toUpperCase()}: <span style="color:var(--shard)">${formatVal(val1)}</span></p>`;
             equippedHtml += `<p>${stat.toUpperCase()}: <span style="color:#aaa">${formatVal(val2)}</span> ${diffHtml}</p>`;
