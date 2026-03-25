@@ -125,6 +125,7 @@ const TILE_SIZE = 64,
           renderInventory: () => {
               if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
+              // 1. Stats Sheet (Character Stats)
               if (REFS.statsSheet && player) {
                   REFS.statsSheet.innerHTML = `
                       <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
@@ -136,6 +137,7 @@ const TILE_SIZE = 64,
                   `;
               }
 
+              // 2. Equipped Gear Grid (UNIVERSAL STAT SCANNER)
               if (REFS.gearGrid) {
                   REFS.gearGrid.innerHTML = '';
                   GEAR_TYPES.forEach(type => {
@@ -148,29 +150,50 @@ const TILE_SIZE = 64,
                       let goldCost = itemLevel * 500;
                       let canAfford = PlayerData.shards >= shardCost && PlayerData.gold >= goldCost;
 
-                      let bonusText = "";
-                      if (stats.atk) bonusText += `Atk: +${Math.floor(stats.atk)} `;
-                      if (stats.hp) bonusText += `HP: +${Math.floor(stats.hp)} `;
-                      if (stats.def) bonusText += `Def: +${Math.floor(stats.def)} `;
+                      // --- NEW: Universal Stat Display Logic ---
+                      let statLines = [];
+                      // Define how we want the stats to be labeled
+                      let statMap = { 
+                          atk: 'Atk', hp: 'HP', def: 'Def', 
+                          regen: 'Reg', critChance: 'Crit%', 
+                          critMult: 'CritX', atkSpeed: 'Spd' 
+                      };
+
+                      for (let [key, label] of Object.entries(statMap)) {
+                          if (stats[key]) {
+                              let val = stats[key];
+                              // Format: Big numbers = whole, Small numbers = 1 decimal
+                              let formattedVal = (val < 1 && val > 0) ? val.toFixed(1) : Math.floor(val);
+                              statLines.push(`<span style="color:#03dac6">+${formattedVal}${label}</span>`);
+                          }
+                      }
 
                       let div = document.createElement('div');
                       div.className = 'gear-item';
-                      div.style.cursor = "pointer";
+                      div.style.cssText = "cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; min-height:140px; padding:8px;";
+                      
                       div.onclick = (e) => {
                           if (e.target.tagName !== 'BUTTON') UI.inspectItem(type, false);
                       };
 
                       div.innerHTML = `
-                          <h4 style="color:${gear.color || 'var(--primary)'}">${gear.name || type}</h4>
-                          <p style="font-size:0.7rem; color:#03dac6; min-height:15px;">${bonusText}</p>
-                          <button class="upgrade-btn" ${canAfford ? '' : 'disabled'} onclick="UI.upgradeGear('${type}')">
-                              Upgrade (${shardCost}💎 / ${goldCost}🪙)
+                          <div>
+                              <h4 style="color:${gear.color || 'var(--primary)'}; font-size:0.8rem; line-height:1; margin-bottom:4px;">${gear.name || type}</h4>
+                              <div style="font-size:0.65rem; display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-bottom:5px;">
+                                  ${statLines.join(' ')}
+                              </div>
+                          </div>
+                          <button class="upgrade-btn" ${canAfford ? '' : 'disabled'} 
+                                  style="font-size:0.65rem; padding:6px 2px; margin-top:auto;"
+                                  onclick="UI.upgradeGear('${type}')">
+                              Lv.${itemLevel} UP (${shardCost}💎 / ${goldCost}🪙)
                           </button>
                       `;
                       REFS.gearGrid.appendChild(div);
                   });
               }
 
+              // 3. Inventory Bag Grid
               if (REFS.bagGrid) {
                   REFS.bagGrid.innerHTML = '';
                   if (PlayerData.inventory.length > 0) {
@@ -178,13 +201,13 @@ const TILE_SIZE = 64,
                           let div = document.createElement('div');
                           div.className = 'gear-item';
                           div.innerHTML = `
-                              <h4 style="color:${item.color || '#00e5ff'}">${item.name || item.slot}</h4>
+                              <h4 style="color:${item.color || '#00e5ff'}; font-size:0.8rem;">${item.name || item.slot}</h4>
                               <button class="upgrade-btn" style="background:#00e5ff; color:#000;" onclick="UI.inspectItem(${index}, true)">Inspect</button>
                           `;
                           REFS.bagGrid.appendChild(div);
                       });
                   } else {
-                      REFS.bagGrid.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#777;">Bag is empty.</p>`;
+                      REFS.bagGrid.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#777; font-size:0.8rem;">Bag is empty.</p>`;
                   }
               }
               UI.updateCurrencies();
