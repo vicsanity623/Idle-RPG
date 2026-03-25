@@ -381,32 +381,48 @@ function spawnFloatingText(x, y, text, color) { floatingTexts.push(new FloatingT
 function spawnLoot(x, y, type) { entities.push(new Loot(x, y, type)); }
 
 class Projectile {
-    constructor(x, y, target, speed, damage, isCrit) {
-        this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; this.isCrit = isCrit;
-        this.color = isCrit ? '#ffeb3b' : '#bb86fc'; this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; this.isAlive = true; 
+    constructor(x, y, target, speed, damage, isCrit, isEnemy = false) {
+        this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; 
+        this.isCrit = isCrit; this.isEnemy = isEnemy;
+        // Visuals: Red for enemies, Purple/Gold for player
+        this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc'); 
+        this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; this.isAlive = true; 
     }
     update(dt) {
         if (!this.isAlive) return;
         this.currentLifetime += dt;
         if (this.currentLifetime >= this.lifetime) { this.isAlive = false; return; }
+        
+        // Target can be either player or enemy
         if (this.target && this.target.hp > 0) {
-            let dx = this.target.x - this.x, dy = this.target.y - this.y, angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed * dt; this.y += Math.sin(angle) * this.speed * dt;
-            if (Math.hypot(dx, dy) < this.radius + this.target.radius) { this.target.takeDamage(this.damage, this.isCrit); this.isAlive = false; spawnAura(this.x, this.y); }
+            let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
+            let angle = Math.atan2(dy, dx);
+            this.x += Math.cos(angle) * this.speed * dt; 
+            this.y += Math.sin(angle) * this.speed * dt;
+            
+            if (dist < this.radius + this.target.radius) { 
+                // Enemy projectiles don't need crit logic for now, or use damage directly
+                this.target.takeDamage(this.damage, this.isCrit); 
+                this.isAlive = false; 
+                spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
+            }
         } else { this.isAlive = false; }
     }
     draw(ctx) {
         if (!this.isAlive) return;
-        ctx.save(); ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        ctx.save(); 
+        if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
+        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); 
+        ctx.restore();
     }
 }
 
-function spawnProjectile(x1, y1, target, damage, isCrit) {
+function spawnProjectile(x1, y1, target, damage, isCrit, isEnemy = false) {
     if (!player) return;
-    entities.push(new Projectile(x1, y1, target, 600, damage, isCrit));
+    entities.push(new Projectile(x1, y1, target, 600, damage, isCrit, isEnemy));
 }
 
-function spawnAura(x, y) { for(let i=0; i<20; i++) particles.push(new Particle(x, y, '#ff9800')); }
+function spawnAura(x, y, color = '#ff9800') { for(let i=0; i<20; i++) particles.push(new Particle(x, y, color)); }
 
 function gainXp(amt) {
     PlayerData.xp += Math.floor(amt * player.getXpMultiplier());
