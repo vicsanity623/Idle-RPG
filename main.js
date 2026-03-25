@@ -461,10 +461,14 @@ function die() {
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
 
 function spawnEnemies() {
-    let num = 5 + Math.floor(GameState.level * 1.5);
+    // Starts at 3 enemies for Depth 1, adding 1 per depth level.
+    let num = 2 + GameState.level; 
     for(let i=0; i<num; i++) {
         let ex, ey;
-        do { ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
+        do { 
+            ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
+            ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
+        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
         entities.push(new Enemy(ex, ey));
     }
 }
@@ -543,8 +547,24 @@ function loop(timestamp) {
         for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
         if (GameState.frame % 10 === 0) UI.updateStats();
         if (GameState.frame % 120 === 0) { 
-            let ec = 0; for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++;
-            if (ec < 10 + GameState.level) spawnEnemies(); 
+            let ec = 0; 
+            for(let i=0; i<entities.length; i++) {
+                if(entities[i] instanceof Enemy) ec++;
+            }
+            // Only spawn more if we are below the depth limit (3 at Depth 1)
+            let maxEnemies = 2 + GameState.level;
+            if (ec < maxEnemies) {
+                // Just spawn 1-2 more to maintain pressure without a massive wave
+                let toSpawn = Math.min(2, maxEnemies - ec);
+                for(let s=0; s < toSpawn; s++) {
+                    let ex, ey;
+                    do { 
+                        ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
+                        ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
+                    } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
+                    entities.push(new Enemy(ex, ey));
+                }
+            }
         }
         if (GameState.frame % 30 === 0) UI.updateMinimap();
         if (portal) {
