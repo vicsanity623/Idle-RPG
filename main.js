@@ -294,6 +294,33 @@ const TILE_SIZE = 64,
               
               if (deltaLines.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltaLines);
           },
+      
+          discardItem: (index) => {
+              if (!PlayerData.inventory || !PlayerData.inventory[index]) return;
+
+              // 1. Get the item data before removing it
+              let item = PlayerData.inventory[index];
+              
+              // 2. Determine Shard reward
+              let shardReward = 5;
+              if (item.rarity === 'Legendary') shardReward = 50;
+              else if (item.rarity === 'Epic') shardReward = 20;
+              else if (item.rarity === 'Rare') shardReward = 10;
+
+              // 3. Remove from inventory and add shards
+              PlayerData.inventory.splice(index, 1);
+              PlayerData.shards += shardReward;
+
+              // 4. Refresh UI using REFS
+              UI.renderInventory();
+              UI.updateCurrencies();
+              UI.notify(`Discarded ${item.name} (+${shardReward} 💎)`);
+
+              // 5. Hide the inspection panel
+              if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
+
+              saveGame();
+          },
 
           upgradeGear: (type) => {
               let gear = PlayerData.gear[type];
