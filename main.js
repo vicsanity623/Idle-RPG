@@ -333,19 +333,22 @@ const UI = {
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
         let html = '';
         lines.forEach(line => {
-            // If the change is very small, show 2 decimals, otherwise 1.
             let precision = Math.abs(line.diff) < 0.1 ? 2 : 1;
             let diffStr = line.diff.toFixed(precision);
             
             let cColor = line.diff > 0 ? '#4caf50' : '#ff5252';
             let symb = line.diff > 0 ? '+' : '';
-            
-            // We also use toFixed on the old/new values so they look clean
+        
+            // We style the old value red, the arrow neutral, and the new value green
             html += `
                 <div class="delta-row">
                     <span class="delta-icon">${iconMap[line.label] || '✨'}</span>
                     <span class="delta-label">${line.label}</span>
-                    <span class="delta-values">${line.oldVal.toFixed(1)} ➔ ${line.newVal.toFixed(1)}</span>
+                    <span class="delta-values">
+                        <span style="color:#ff5252">${line.oldVal.toFixed(1)}</span> 
+                        <span style="color:#aaa; margin: 0 4px;">➔</span> 
+                        <span style="color:#4caf50">${line.newVal.toFixed(1)}</span>
+                    </span>
                     <span class="delta-change" style="color:${cColor}">${symb}${diffStr}</span>
                 </div>`;
         });
