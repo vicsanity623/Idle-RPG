@@ -132,6 +132,7 @@ const TILE_SIZE = 64,
                       <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
                       <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
                       <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
+                      <div class="stat-line"><span>Atk Spd</span><span class="stat-val">${(1 / player.getAttackSpeedFactor()).toFixed(2)}/s</span></div>
                       <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
                       <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
                   `;
@@ -244,22 +245,78 @@ const TILE_SIZE = 64,
 
           equipItem: (index) => {
               if (!PlayerData.inventory[index]) return;
-              let itemToEquip = PlayerData.inventory[index], slot = itemToEquip.slot;
-              let oldStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() };
+              let itemToEquip = PlayerData.inventory[index], 
+                  slot = itemToEquip.slot;
+
+              // 1. Snapshot ALL stats (Core + Legendary) before equipping
+              let oldStats = { 
+                  hp:    player.getMaxHp(), 
+                  atk:   player.getAttackPower(), 
+                  def:   player.getDefense(), 
+                  regen: player.getRegen(), 
+                  crit:  player.getCritChance(), 
+                  cx:    player.getCritMultiplier(), 
+                  sp:    player.getAttackSpeedFactor(),
+                  mag:   player.getAffixValue('magnet'),
+                  grd:   player.getAffixValue('greed'),
+                  wis:   player.getAffixValue('wisdom'),
+                  fear:  player.getFearValue()
+              };
               
+              // 2. Perform the swap
               PlayerData.inventory.splice(index, 1);
               let currentlyEquipped = PlayerData.gear[slot];
               if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped);
               PlayerData.gear[slot] = itemToEquip;
               
-              UI.renderInventory(); UI.updateStats();
+              // 3. Update state
+              UI.renderInventory(); 
+              UI.updateStats();
               player.hp = Math.min(player.hp, player.getMaxHp());
               saveGame();
 
-              let newStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() };
-              let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'}];
-              keys.forEach(s => { let d = newStats[s.k]-oldStats[s.k]; if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); });
-              if (deltas.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
+              // 4. Snapshot ALL stats after equipping
+              let newStats = { 
+                  hp:    player.getMaxHp(), 
+                  atk:   player.getAttackPower(), 
+                  def:   player.getDefense(), 
+                  regen: player.getRegen(), 
+                  crit:  player.getCritChance(), 
+                  cx:    player.getCritMultiplier(), 
+                  sp:    player.getAttackSpeedFactor(),
+                  mag:   player.getAffixValue('magnet'),
+                  grd:   player.getAffixValue('greed'),
+                  wis:   player.getAffixValue('wisdom'),
+                  fear:  player.getFearValue()
+              };
+
+              // 5. Compare the snapshots
+              let deltas = [];
+              let keys = [
+                  { k: 'hp',    l: 'Max HP' }, 
+                  { k: 'atk',   l: 'Attack' }, 
+                  { k: 'def',   l: 'Defense' }, 
+                  { k: 'regen', l: 'Regen' }, 
+                  { k: 'crit',  l: 'Crit %' }, 
+                  { k: 'cx',    l: 'Crit X' }, 
+                  { k: 'sp',    l: 'Atk Spd' },
+                  { k: 'mag',   l: 'Magnet' }, 
+                  { k: 'grd',   l: 'Gold Farmer' }, 
+                  { k: 'wis',   l: 'XP Fiend' }, 
+                  { k: 'fear',  l: 'Fear Aura' }
+              ];
+
+              keys.forEach(s => { 
+                  let d = newStats[s.k] - oldStats[s.k]; 
+                  if (Math.abs(d) > 0.001) {
+                      deltas.push({ label: s.l, oldVal: oldStats[s.k], newVal: newStats[s.k], diff: d });
+                  } 
+              });
+
+              // 6. Show the visual feedback
+              if (deltas.length > 0) {
+                  UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
+              }
           },
 
           discardItem: (index) => {
@@ -288,7 +345,10 @@ const TILE_SIZE = 64,
           },
 
           showDelta: (title, lines) => {
-              const iconMap = { 'Max HP': '❤️', 'Attack': '⚔️', 'Defense': '🛡️', 'Regen': '🍏', 'Crit %': '🎯', 'Crit X': '💥', 'Atk Spd': '⚡' };
+              const iconMap = { 
+                  'Max HP': '❤️', 'Attack': '⚔️', 'Defense': '🛡️', 'Regen': '🍏', 
+                  'Crit %': '🎯', 'Crit X': '💥', 'Atk Spd': '⚡',
+                  'Magnet': '🧲', 'Gold Farmer': '💰', 'XP Fiend': '📖', 'Fear Aura': '💀'
               let isLevel = title.toLowerCase().includes("level"), badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
               REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
               let html = '';
@@ -386,19 +446,82 @@ function spawnProjectile(x1, y1, target, damage, isCrit) {
 function spawnAura(x, y) { for(let i=0; i<20; i++) particles.push(new Particle(x, y, '#ff9800')); }
 
 function gainXp(amt) {
+    // 1. Apply Wisdom multiplier for XP gain
     PlayerData.xp += Math.floor(amt * player.getXpMultiplier());
+
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
-        let oldStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() }, oldLevel = PlayerData.level;
-        PlayerData.level++; PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        
+        // 2. Snapshot ALL old stats before level up
+        let oldStats = { 
+            hp:    player.getMaxHp(), 
+            atk:   player.getAttackPower(), 
+            def:   player.getDefense(), 
+            regen: player.getRegen(), 
+            crit:  player.getCritChance(), 
+            cx:    player.getCritMultiplier(), 
+            sp:    player.getAttackSpeedFactor(),
+            mag:   player.getAffixValue('magnet'),
+            grd:   player.getAffixValue('greed'),
+            wis:   player.getAffixValue('wisdom'),
+            fear:  player.getFearValue()
+        };
+        let oldLevel = PlayerData.level;
+
+        // 3. Increment Level
+        PlayerData.level++; 
+        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        
+        // 4. Reset Player HP and show VFX
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
-        let newStats = { hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor() };
-        let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'}];
-        keys.forEach(s => { let d = newStats[s.k]-oldStats[s.k]; if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); });
+
+        // 5. Snapshot ALL new stats after level up
+        let newStats = { 
+            hp:    player.getMaxHp(), 
+            atk:   player.getAttackPower(), 
+            def:   player.getDefense(), 
+            regen: player.getRegen(), 
+            crit:  player.getCritChance(), 
+            cx:    player.getCritMultiplier(), 
+            sp:    player.getAttackSpeedFactor(),
+            mag:   player.getAffixValue('magnet'),
+            grd:   player.getAffixValue('greed'),
+            wis:   player.getAffixValue('wisdom'),
+            fear:  player.getFearValue()
+        };
+
+        // 6. Define which keys to check for the popup
+        let deltas = [];
+        let keys = [
+            { k: 'hp',    l: 'Max HP' }, 
+            { k: 'atk',   l: 'Attack' }, 
+            { k: 'def',   l: 'Defense' }, 
+            { k: 'regen', l: 'Regen' }, 
+            { k: 'crit',  l: 'Crit %' }, 
+            { k: 'cx',    l: 'Crit X' }, 
+            { k: 'sp',    l: 'Atk Spd' }, 
+            { k: 'mag',   l: 'Magnet' }, 
+            { k: 'grd',   l: 'Gold Farmer' }, 
+            { k: 'wis',   l: 'XP Fiend' }, 
+            { k: 'fear',  l: 'Fear Aura' }
+        ];
+
+        // 7. Calculate differences
+        keys.forEach(s => { 
+            let d = newStats[s.k] - oldStats[s.k]; 
+            if (Math.abs(d) > 0.001) {
+                deltas.push({ label: s.l, oldVal: oldStats[s.k], newVal: newStats[s.k], diff: d });
+            }
+        });
+
+        // 8. Trigger SOTA Popup
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
     }
-    UI.updateStats(); saveGame();
+
+    // 9. Finalize UI and Save
+    UI.updateStats(); 
+    saveGame();
 }
 
 function die() {
