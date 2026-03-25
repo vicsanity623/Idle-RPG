@@ -325,9 +325,9 @@ const UI = {
 
     showDelta: (title, lines) => {
         const iconMap = { 
-            'Max HP': '❤️', 'Attack': '⚔️', 'Defense': '🛡️', 'Regen': '🍏', 
-            'Crit %': '🎯', 'Crit X': '💥', 'Atk Spd': '⚡',
-            'Magnet': '🧲', 'Gold Farmer': '💰', 'XP Fiend': '📖', 'Fear Aura': '💀'
+            'Max HP': '•', 'Attack': '•', 'Defense': '•', 'Regen': '•', 
+            'Crit %': '•', 'Crit X': '•', 'Atk Spd': '•',
+            'Magnet': '•', 'Gold Farmer': '•', 'XP Fiend': '•', 'Fear Aura': '•'
         };
         let isLevel = title.toLowerCase().includes("level"), badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
@@ -356,7 +356,7 @@ const UI = {
         REFS.deltaPopup.style.display = 'block';
         setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
-        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 3000);
+        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 2000);
     },
 
     notify: (msg) => {
