@@ -144,7 +144,6 @@ class Player {
         if (!isWall(this.x, nextY)) this.y = nextY;
 
         this.handleSkills(dt); this.updateFog();
-        UI.updateStats();
     }
 
     updateFog() {
