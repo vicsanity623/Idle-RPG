@@ -5,7 +5,7 @@
 
 // --- 1. CORE CONFIGURATION ---
 const TILE_SIZE = 64;
-const MAP_SIZE = 40;
+const MAP_SIZE = 80;
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
 // --- 2. THE REGISTRY (Centralized DOM references) ---
@@ -66,15 +66,15 @@ window.Input = {
 window.PlayerData = {
     gold: 0, shards: 0, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
-        'Weapon':   { level: 1, atk: 2, critMult: 0.05, rarity: 'Common' },
+        'Weapon':   { level: 1, atk: 1, critMult: 0.02, rarity: 'Common' },
         'Armor':    { level: 1, hp: 1, def: 1, rarity: 'Common' },
-        'Legs':     { level: 1, def: 2, hp: 2, rarity: 'Common' },
-        'Fists':    { level: 1, critChance: 0.5, atk: 5, rarity: 'Common' },
-        'Head':     { level: 1, hp: 3, def: 2, rarity: 'Common' },
-        'Robe':     { level: 1, regen: 0.01, hp: 2, rarity: 'Common' },
-        'Ring':     { level: 1, atk: 1, critChance: 1.5, rarity: 'Common' },
+        'Legs':     { level: 1, def: 1, hp: 1, rarity: 'Common' },
+        'Fists':    { level: 1, critChance: 0.1, atk: 1, rarity: 'Common' },
+        'Head':     { level: 1, hp: 1, def: 1, rarity: 'Common' },
+        'Robe':     { level: 1, regen: 0.01, hp: 1, rarity: 'Common' },
+        'Ring':     { level: 1, atk: 1, critChance: 0.3, rarity: 'Common' },
         'Earrings': { level: 1, critMult: 0.02, regen: 0.02, rarity: 'Common' },
-        'Necklace': { level: 1, regen: 0.5, hp: 2, rarity: 'Common' },
+        'Necklace': { level: 1, regen: 0.01, hp: 1, rarity: 'Common' },
         'Boots':    { level: 1, def: 1, atkSpeed: 0.01, rarity: 'Common' } 
     }
 };
@@ -170,7 +170,7 @@ const UI = {
             GEAR_TYPES.forEach(type => {
                 let gear = PlayerData.gear[type];
                 if (!gear) return;
-                let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
+                let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 20;
                 let canAfford = PlayerData.shards >= sCost && PlayerData.gold >= gCost;
                 let statLines = [];
                 let statMap = { atk:'Atk', hp:'HP', def:'Def', regen:'Reg', critChance:'Crit%', critMult:'CritX', atkSpeed:'Spd' };
@@ -309,7 +309,7 @@ const UI = {
 
     upgradeGear: (type) => {
         let gear = PlayerData.gear[type]; if (!gear) return;
-        let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 500;
+        let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 20;
         if (PlayerData.shards >= sCost && PlayerData.gold >= gCost) {
             PlayerData.shards -= sCost; PlayerData.gold -= gCost; gear.level = lvl + 1;
             if (stats.atk !== undefined) stats.atk += randomInt(3, 7);
@@ -333,14 +333,27 @@ const UI = {
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
         let html = '';
         lines.forEach(line => {
-            let diff = line.diff.toFixed(1), cColor = line.diff > 0 ? '#4caf50' : '#ff5252', symb = line.diff > 0 ? '+' : '';
-            html += `<div class="delta-row"><span class="delta-icon">${iconMap[line.label] || '✨'}</span><span class="delta-label">${line.label}</span><span class="delta-values">${line.oldVal.toFixed(1)} ➔ ${line.newVal.toFixed(1)}</span><span class="delta-change" style="color:${cColor}">${symb}${diff}</span></div>`;
+            // If the change is very small, show 2 decimals, otherwise 1.
+            let precision = Math.abs(line.diff) < 0.1 ? 2 : 1;
+            let diffStr = line.diff.toFixed(precision);
+            
+            let cColor = line.diff > 0 ? '#4caf50' : '#ff5252';
+            let symb = line.diff > 0 ? '+' : '';
+            
+            // We also use toFixed on the old/new values so they look clean
+            html += `
+                <div class="delta-row">
+                    <span class="delta-icon">${iconMap[line.label] || '✨'}</span>
+                    <span class="delta-label">${line.label}</span>
+                    <span class="delta-values">${line.oldVal.toFixed(1)} ➔ ${line.newVal.toFixed(1)}</span>
+                    <span class="delta-change" style="color:${cColor}">${symb}${diffStr}</span>
+                </div>`;
         });
         REFS.deltaContent.innerHTML = html;
         REFS.deltaPopup.style.display = 'block';
         setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
-        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 5000);
+        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 3000);
     },
 
     notify: (msg) => {
