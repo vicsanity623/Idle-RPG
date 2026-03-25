@@ -4,7 +4,7 @@
  */
 
 // --- HERO-SPECIFIC CONSTANTS ---
-const PLAYER_ATTACK_RANGE = 650,
+const PLAYER_ATTACK_RANGE = 400,
       dashDistance = 550,
       LEVEL_SCALING = {
           hp:    0.05, // 5% per level
