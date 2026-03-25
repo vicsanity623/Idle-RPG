@@ -64,18 +64,18 @@ window.Input = {
 };
 
 window.PlayerData = {
-    gold: 0, shards: 0, level: 5, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
+    gold: 400, shards: 20, level: 5, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
-        'Weapon':   { level: 1, atk: 1, critMult: 0.5, rarity: 'Common' },
+        'Weapon':   { level: 1, atk: 1, critMult: 0.1, rarity: 'Common' },
         'Armor':    { level: 1, hp: 1, def: 1, rarity: 'Common' },
         'Legs':     { level: 1, def: 1, hp: 1, rarity: 'Common' },
-        'Fists':    { level: 1, critChance: 0.3, atk: 6, rarity: 'Common' },
+        'Fists':    { level: 1, critChance: 0.1, atk: 1, rarity: 'Common' },
         'Head':     { level: 1, hp: 1, def: 1, rarity: 'Common' },
-        'Robe':     { level: 1, regen: 0.25, hp: 4, rarity: 'Common' },
-        'Ring':     { level: 1, atk: 1, critChance: 0.3, rarity: 'Common' },
-        'Earrings': { level: 1, critMult: 0.2, regen: 0.25, rarity: 'Common' },
-        'Necklace': { level: 1, regen: 0.25, hp: 4, rarity: 'Common' },
-        'Boots':    { level: 1, def: 1, atkSpeed: 0.03, rarity: 'Common' } 
+        'Robe':     { level: 1, regen: 0.1, hp: 1, rarity: 'Common' },
+        'Ring':     { level: 1, atk: 1, critChance: 0.1, rarity: 'Common' },
+        'Earrings': { level: 1, critMult: 0.1, regen: 0.1, rarity: 'Common' },
+        'Necklace': { level: 1, regen: 0.1, hp: 1, rarity: 'Common' },
+        'Boots':    { level: 1, def: 1, atkSpeed: 0.01, rarity: 'Common' } 
     }
 };
 
