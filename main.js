@@ -332,29 +332,37 @@ const UI = {
         let isLevel = title.toLowerCase().includes("level"), badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
         let html = '';
+        
         lines.forEach(line => {
-            let precision = Math.abs(line.diff) < 0.1 ? 2 : 1;
-            let diffStr = line.diff.toFixed(precision);
+            // 1. Identify if lower is better (only for Attack Speed/Cooldown)
+            const isLowerBetter = line.label === 'Atk Spd';
+            const improved = isLowerBetter ? line.diff < 0 : line.diff > 0;
             
-            let cColor = line.diff > 0 ? '#4caf50' : '#ff5252';
+            // 2. Dynamic precision: show 2 decimals for small values so progress is visible
+            const valPrec = (line.oldVal < 5) ? 2 : 1; 
+            const diffPrec = Math.abs(line.diff) < 0.1 ? 2 : 1;
+            
+            let diffStr = line.diff.toFixed(diffPrec);
+            let cColor = improved ? '#4caf50' : '#ff5252';
             let symb = line.diff > 0 ? '+' : '';
         
-            // We style the old value red, the arrow neutral, and the new value green
             html += `
                 <div class="delta-row">
                     <span class="delta-icon">${iconMap[line.label] || '✨'}</span>
                     <span class="delta-label">${line.label}</span>
                     <span class="delta-values">
-                        <span style="color:#ff5252">${line.oldVal.toFixed(1)}</span> 
+                        <span style="color:#ff5252">${line.oldVal.toFixed(valPrec)}</span> 
                         <span style="color:#aaa; margin: 0 4px;">➔</span> 
-                        <span style="color:#4caf50">${line.newVal.toFixed(1)}</span>
+                        <span style="color:#4caf50">${line.newVal.toFixed(valPrec)}</span>
                     </span>
                     <span class="delta-change" style="color:${cColor}">${symb}${diffStr}</span>
                 </div>`;
         });
+
         REFS.deltaContent.innerHTML = html;
         REFS.deltaPopup.style.display = 'block';
         setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
+        
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
         UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 2000);
     },
