@@ -125,7 +125,6 @@ const TILE_SIZE = 64,
           renderInventory: () => {
               if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
-              // 1. Stats Sheet
               if (REFS.statsSheet && player) {
                   REFS.statsSheet.innerHTML = `
                       <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
@@ -137,7 +136,6 @@ const TILE_SIZE = 64,
                   `;
               }
 
-              // 2. Equipped Gear Grid
               if (REFS.gearGrid) {
                   REFS.gearGrid.innerHTML = '';
                   GEAR_TYPES.forEach(type => {
@@ -157,10 +155,8 @@ const TILE_SIZE = 64,
 
                       let div = document.createElement('div');
                       div.className = 'gear-item';
-                      // We make the whole card clickable for "Inspection"
                       div.style.cursor = "pointer";
                       div.onclick = (e) => {
-                          // Only inspect if they didn't click the upgrade button itself
                           if (e.target.tagName !== 'BUTTON') UI.inspectItem(type, false);
                       };
 
@@ -175,7 +171,6 @@ const TILE_SIZE = 64,
                   });
               }
 
-              // 3. Inventory Bag Grid
               if (REFS.bagGrid) {
                   REFS.bagGrid.innerHTML = '';
                   if (PlayerData.inventory.length > 0) {
@@ -251,7 +246,6 @@ const TILE_SIZE = 64,
               if (!PlayerData.inventory[index]) return;
               let itemToEquip = PlayerData.inventory[index],
                   slot = itemToEquip.slot,
-                  // SNAPSHOT ALL OLD STATS
                   oldStats = { 
                       hp: player.getMaxHp(), atk: player.getAttackPower(), 
                       def: player.getDefense(), regen: player.getRegen(), 
@@ -269,7 +263,6 @@ const TILE_SIZE = 64,
               player.hp = Math.min(player.hp, player.getMaxHp());
               saveGame();
 
-              // SNAPSHOT ALL NEW STATS
               let newStats = { 
                   hp: player.getMaxHp(), atk: player.getAttackPower(), 
                   def: player.getDefense(), regen: player.getRegen(), 
@@ -277,7 +270,6 @@ const TILE_SIZE = 64,
                   atkSpeed: player.getAttackSpeedFactor()
               };
               
-              // COMPARE ALL STATS FOR POPUP
               let deltaLines = [];
               let statCheck = [
                   { k: 'hp', l: 'Max HP' }, { k: 'atk', l: 'Attack' }, 
@@ -299,25 +291,20 @@ const TILE_SIZE = 64,
           discardItem: (index) => {
               if (!PlayerData.inventory || !PlayerData.inventory[index]) return;
 
-              // 1. Get the item data before removing it
               let item = PlayerData.inventory[index];
               
-              // 2. Determine Shard reward
               let shardReward = 5;
               if (item.rarity === 'Legendary') shardReward = 50;
               else if (item.rarity === 'Epic') shardReward = 20;
               else if (item.rarity === 'Rare') shardReward = 10;
 
-              // 3. Remove from inventory and add shards
               PlayerData.inventory.splice(index, 1);
               PlayerData.shards += shardReward;
 
-              // 4. Refresh UI using REFS
               UI.renderInventory();
               UI.updateCurrencies();
               UI.notify(`Discarded ${item.name} (+${shardReward} 💎)`);
 
-              // 5. Hide the inspection panel
               if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
               saveGame();
@@ -604,13 +591,10 @@ function loop(timestamp) {
             floatingTexts[i].update(dt);
         }
 
-        // OPTIMIZATION 1: Only update the UI stats 6 times per second (every 10 frames)
-        // This stops "DOM Thrashing" and keeps the phone cool.
         if (GameState.frame % 10 === 0) {
             UI.updateStats();
         }
 
-        // OPTIMIZATION 2: Efficient Enemy Counting (No .filter() array creation)
         if (GameState.frame % 120 === 0) {
             let enemyCount = 0;
             for (let i = 0; i < entities.length; i++) {
