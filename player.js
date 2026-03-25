@@ -4,8 +4,8 @@
  */
 
 // --- HERO-SPECIFIC CONSTANTS ---
-const PLAYER_ATTACK_RANGE = 350,
-      dashDistance = 350,
+const PLAYER_ATTACK_RANGE = 650,
+      dashDistance = 550,
       LEVEL_SCALING = {
           hp:    0.05, // 5% per level
           atk:   0.04, // 4% per level
@@ -18,7 +18,7 @@ class Player {
     constructor(x, y) {
         this.x = x; 
         this.y = y; 
-        this.radius = 20; 
+        this.radius = 18; 
         this.vx = 0; 
         this.vy = 0; 
         this.speed = 250; 
@@ -64,7 +64,7 @@ class Player {
     }
 
     getAttackPower() { 
-        let base = 10 + this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
+        let base = 12 + this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
                    this.getGearStat('Ring', 'atk');
         let scaledAtk = base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)));
         let mightBonus = 1 + (this.getAffixValue('might') / 100);
@@ -72,7 +72,7 @@ class Player {
     }
 
     getPickupRadius() {
-        return 60 + this.getAffixValue('magnet');
+        return 250 + this.getAffixValue('magnet');
     }
 
     getGoldMultiplier() {
