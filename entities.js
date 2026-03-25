@@ -103,8 +103,8 @@ class Enemy {
         if (this.isRaged) return;
         this.isRaged = true;
         this.rageTimer = 5.0; // 5 Seconds of rage
-        this.speed = this.baseSpeed * 1.5;
-        spawnFloatingText(this.x, this.y - 30, "ENRAGED!", '#ff0000');
+        this.speed = this.baseSpeed * 2.5;
+        spawnFloatingText(this.x, this.y - 50, "ENRAGED!", '#ff0000');
     }
 
     update(dt) {
