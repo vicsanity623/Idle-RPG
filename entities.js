@@ -19,20 +19,22 @@ const HiveMind = {
 
 const generateRandomGear = (level) => {
     let gearTemplates = [
-        { slot: 'Head', name: 'Helmet', stats: { def: 2, hp: 5 } },
-        { slot: 'Armor', name: 'Chestplate', stats: { def: 4, hp: 10 } },
-        { slot: 'Legs', name: 'Greaves', stats: { def: 3, hp: 7 } },
-        { slot: 'Boots', name: 'Boots', stats: { def: 1, atkSpeed: 0.05 } },
-        { slot: 'Weapon', name: 'Sword', stats: { atk: 5, critMult: 0.1 } },
-        { slot: 'Ring', name: 'Ring', stats: { atk: 2, critChance: 2 } },
-        { slot: 'Necklace', name: 'Amulet', stats: { hp: 8, regen: 0.5 } },
-        { slot: 'Earrings', name: 'Earrings', stats: { regen: 0.2, critMult: 0.05 } }
+        { slot: 'Head',     name: 'Helmet',     stats: { def: 5, hp: 15 } },
+        { slot: 'Armor',    name: 'Chestplate', stats: { def: 8, hp: 25 } },
+        { slot: 'Legs',     name: 'Greaves',    stats: { def: 6, hp: 20 } },
+        { slot: 'Boots',    name: 'Boots',      stats: { def: 4, atkSpeed: 0.05 } },
+        { slot: 'Weapon',   name: 'Sword',      stats: { atk: 12, critMult: 0.15 } },
+        { slot: 'Ring',     name: 'Ring',       stats: { atk: 6, critChance: 3 } },
+        { slot: 'Necklace', name: 'Amulet',     stats: { hp: 15, regen: 0.5 } },
+        { slot: 'Earrings', name: 'Earrings',   stats: { regen: 0.4, critMult: 0.1 } }
     ];
     let chosenTemplate = gearTemplates[Math.floor(Math.random() * gearTemplates.length)];
     
     let roll = Math.random(), rarityName = 'Common', rarityColor = 'var(--rarity-common)', statMult = 1.0;
-    if (roll < 0.03) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 2.0; }
-    else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 1.6; }
+    
+    // Rarity Multipliers: Legendary is 2.2x stronger than Common
+    if (roll < 0.03) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 2.2; }
+    else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 1.7; }
     else if (roll < 0.40) { rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; statMult = 1.3; }
 
     let item = {
@@ -45,22 +47,26 @@ const generateRandomGear = (level) => {
     };
 
     for (let stat in chosenTemplate.stats) {
-        let rawValue = chosenTemplate.stats[stat] * (1 + level * 0.1) * randomFloat(0.8, 1.2) * statMult;
+        // Updated Math: 15% scaling per level + 10% random variance
+        let rawValue = chosenTemplate.stats[stat] * (1 + level * 0.15) * randomFloat(0.9, 1.1) * statMult;
+        
         if (stat === 'hp' || stat === 'atk' || stat === 'def') {
-            item.stats[stat] = Math.floor(rawValue);
+            // Main Stats: Ensure they are clean whole numbers and never 0
+            item.stats[stat] = Math.max(1, Math.round(rawValue)); 
         } else {
+            // Utility Stats: Keep 3 decimal places for math accuracy
             item.stats[stat] = Number(rawValue.toFixed(3)); 
         }
     }
 
-    // --- NEW: SPECIAL LEGENDARY AFFIX GENERATION ---
+    // Special Legendary Affix generation
     if (rarityName === 'Legendary' && Math.random() < 0.4) { 
         const specialPool = [
-            { type: 'magnet', label: 'Magnet', value: 50 },      // +50px pickup radius
-            { type: 'greed',  label: 'Greed',  value: 20 },      // +20% Gold
-            { type: 'wisdom', label: 'Wisdom', value: 15 },      // +15% XP
-            { type: 'might',  label: 'Might',  value: 10 },      // +10% Total Attack
-            { type: 'fear',   label: 'Fear',   value: 15 }       // +15% Damage (Weakens enemy)
+            { type: 'magnet', label: 'Magnet', value: 50 },
+            { type: 'greed',  label: 'Greed',  value: 20 },
+            { type: 'wisdom', label: 'Wisdom', value: 15 },
+            { type: 'might',  label: 'Might',  value: 10 },
+            { type: 'fear',   label: 'Fear',   value: 15 }
         ];
         item.affix = specialPool[Math.floor(Math.random() * specialPool.length)];
         item.name = `${item.affix.label} ${item.name}`; 
