@@ -25,7 +25,7 @@ class Player {
         this.color = '#bb86fc';
         this.hp = this.getMaxHp();
         this.skills = [
-            { id: 'heal',  cdMax: 10, current: 0 }, 
+            { id: 'heal',  cdMax: 17, current: 0 }, 
             { id: 'atk',  cdMax: 0.7,  current: 0 },
             { id: 'aura', cdMax: 5,  current: 0 }, 
             { id: 'dash', cdMax: 3,  current: 0 }
@@ -72,7 +72,7 @@ class Player {
     }
 
     getPickupRadius() {
-        return 250 + this.getAffixValue('magnet');
+        return 80 + this.getAffixValue('magnet');
     }
 
     getGoldMultiplier() {
