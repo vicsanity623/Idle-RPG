@@ -18,6 +18,8 @@ const HiveMind = {
 };
 
 const generateRandomGear = (level) => {
+    const effectiveLevel = Math.max(level, window.PlayerData.level || 1);
+
     let gearTemplates = [
         { slot: 'Head',     name: 'Helmet',     stats: { def: 20, hp: 80 } },
         { slot: 'Armor',    name: 'Chestplate', stats: { def: 25, hp: 120 } },
@@ -28,12 +30,10 @@ const generateRandomGear = (level) => {
         { slot: 'Necklace', name: 'Amulet',     stats: { hp: 60, regen: 2.5 } },
         { slot: 'Earrings', name: 'Earrings',   stats: { regen: 1.8, critMult: 0.25 } }
     ];
+
     let chosenTemplate = gearTemplates[Math.floor(Math.random() * gearTemplates.length)];
     
     let roll = Math.random(), rarityName = 'Common', rarityColor = 'var(--rarity-common)', statMult = 1.0;
-    
-    // NEW POWER FLOORS: 
-    // Rare/Epic/Legendary now add a massive FLAT bonus before multipliers.
     let rarityFlatBonus = 0;
 
     if (roll < 0.05) { 
@@ -57,12 +57,10 @@ const generateRandomGear = (level) => {
     };
 
     for (let stat in chosenTemplate.stats) {
-        // Apply different weight to flat bonus based on stat type
         let weight = (stat === 'hp') ? 5 : (stat === 'atk' || stat === 'def') ? 1 : 0.1;
         let baseStat = chosenTemplate.stats[stat] + (rarityFlatBonus * weight);
         
-        // Final calculation: (Base + RarityBonus) * LevelFactor * Multiplier
-        let rawValue = baseStat * (1 + level * 0.15) * randomFloat(0.98, 1.02) * statMult;
+        let rawValue = baseStat * (1 + effectiveLevel * 0.35) * randomFloat(1.05, 1.15) * statMult;
 
         if (stat === 'hp' || stat === 'atk' || stat === 'def') {
             item.stats[stat] = Math.max(1, Math.round(rawValue)); 
@@ -71,7 +69,15 @@ const generateRandomGear = (level) => {
         }
     }
 
-    // (Keep Affix code below the same...)
+    const equipped = window.PlayerData.gear[item.slot];
+    if (equipped) {
+        for (let stat in item.stats) {
+            if (equipped[stat] && item.stats[stat] <= equipped[stat]) {
+                item.stats[stat] = Math.ceil(equipped[stat] * 1.15);
+            }
+        }
+    }
+
     return item;
 };
 
