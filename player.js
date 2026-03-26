@@ -5,7 +5,7 @@
 
 // --- HERO-SPECIFIC CONSTANTS ---
 const PLAYER_ATTACK_RANGE = 280,
-      dashDistance = 550,
+      DASH_DISTANCE = 550,
       LEVEL_SCALING = {
           hp:    0.05, // 5% per level
           atk:   0.04, // 4% per level
