@@ -572,19 +572,17 @@
                 });
             }
 
-            // Listen for when the inventory modal becomes visible to update skill states
-            // This assumes the modal uses 'display: none' and 'display: flex' or similar
-            // and that a transitionend event fires when it becomes visible.
-            // A more robust solution might involve a dedicated function called when the modal is opened.
-            inventoryModal.addEventListener('transitionend', () => {
-                // Check if the modal is actually visible (e.g., by checking its computed style)
-                if (window.getComputedStyle(inventoryModal).display !== 'none') {
-                    if (typeof player !== 'undefined' && player) {
-                        skillPointsDisplay.textContent = player.skillPoints;
-                        updateSkillTreeLockStates();
-                    }
+            /**
+             * Refreshes the UI for the Skills & Talents panel.
+             * This function should be called whenever the inventory modal is opened
+             * or when player skill points/learned skills change.
+             */
+            window.refreshSkillTreeUI = function() {
+                if (typeof player !== 'undefined' && player) {
+                    skillPointsDisplay.textContent = player.skillPoints;
+                    updateSkillTreeLockStates();
                 }
-            });
+            };
 
             // Initial call to set up states if the player object is already available
             // This might be called again when the game starts or player loads.
