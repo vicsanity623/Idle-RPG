@@ -486,7 +486,7 @@ function die() {
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
 
 function spawnEnemies() {
-    let num = 5 + GameState.level; 
+    let num = 10 + GameState.level; 
     for(let i=0; i<num; i++) {
         let ex, ey;
         do { 
