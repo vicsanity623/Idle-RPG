@@ -602,7 +602,7 @@ function loop(timestamp) {
         }
         if (GameState.frame % 30 === 0) UI.updateMinimap();
         if (portal) {
-            let dist = Math.hypot(player.x - portal.x, player.y - portal.y), cost = GameState.level * 1000;
+            let dist = Math.hypot(player.x - portal.x, player.y - portal.y), cost = GameState.level * 250;
             if (dist < 50) {
                 REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${cost} Gold`;
                 REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need Gold!"); };
