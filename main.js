@@ -539,7 +539,9 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { PlayerData.dungeonLevel = GameState.level; localStorage.setItem('dof_save', JSON.stringify(PlayerData)); }
+function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; 
+    localStorage.setItem('dof_save', JSON.stringify(PlayerData));
+}
 
 function loadGame() {
     let save = localStorage.getItem('dof_save');
@@ -557,7 +559,16 @@ function loadGame() {
                  UI.notify("System Updated: Old gear discarded for new power gear.");
             }
 
+            if (player) {
+                player.skillPoints = d.skillPoints || 0;
+                player.learnedSkills = d.learnedSkills || [];
+            }
+
             if (PlayerData.dungeonLevel) GameState.level = PlayerData.dungeonLevel;
+            
+            // Update the UI
+            if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
+
         } catch(e) { console.error("Save Corrupt", e); }
     }
 }
