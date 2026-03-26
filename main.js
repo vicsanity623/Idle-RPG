@@ -140,6 +140,10 @@ const UI = {
         } else {
             REFS.invModal.style.display = 'flex';
             UI.renderInventory();
+            // Call the globally accessible skill tree refresh function as per recent edits
+            if (typeof refreshSkillTreeUI === 'function') {
+                refreshSkillTreeUI();
+            }
         }
     },
     
