@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dungeons-of-fate-v5'; // Bumping to v3 to trigger a purge of the old logic
+const CACHE_NAME = 'dungeons-of-fate-v6';
 
 const ASSETS_TO_CACHE = [
     './',
