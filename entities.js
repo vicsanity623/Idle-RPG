@@ -18,6 +18,7 @@ const HiveMind = {
 };
 
 const generateRandomGear = (level) => {
+    const effectiveLevel = Math.max(level, window.PlayerData.level || 1);
     let gearTemplates = [
         { slot: 'Head',     name: 'Helmet',     stats: { def: 20, hp: 80 } },
         { slot: 'Armor',    name: 'Chestplate', stats: { def: 25, hp: 120 } },
@@ -62,7 +63,7 @@ const generateRandomGear = (level) => {
         let baseStat = chosenTemplate.stats[stat] + (rarityFlatBonus * weight);
         
         // Final calculation: (Base + RarityBonus) * LevelFactor * Multiplier
-        let rawValue = baseStat * (1 + level * 0.15) * randomFloat(0.98, 1.02) * statMult;
+        let rawValue = baseStat * (1 + effectiveLevel * 0.35) * randomFloat(1.05, 1.15) * statMult;
 
         if (stat === 'hp' || stat === 'atk' || stat === 'def') {
             item.stats[stat] = Math.max(1, Math.round(rawValue)); 
