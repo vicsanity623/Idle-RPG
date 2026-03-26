@@ -466,7 +466,7 @@ function gainXp(amt) {
             crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
             mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
         }, oldLevel = PlayerData.level;
-        PlayerData.level++; PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        PlayerData.level++; player.skillPoints++; PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
         let newStats = { 
@@ -482,7 +482,12 @@ function gainXp(amt) {
         keys.forEach(s => { let d = newStats[s.k]-oldStats[s.k]; if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); });
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
     }
-    UI.updateStats(); saveGame();
+    if (typeof refreshSkillTreeUI === 'function') {
+            refreshSkillTreeUI();
+        }
+    }
+    UI.updateStats();
+    saveGame();
 }
 
 function die() {
@@ -509,6 +514,9 @@ function initLevel() {
     generateMap(); entities = []; particles = []; floatingTexts = [];
     let startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2, startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     if(!player) player = new Player(startX, startY); else { player.x = startX; player.y = startY; }
+    if (typeof initializeSkillTree === 'function') {
+        initializeSkillTree();
+    }
     entities.push(player); spawnEnemies(); REFS.depthLevel.innerText = GameState.level; UI.updateMinimap();
 }
 
