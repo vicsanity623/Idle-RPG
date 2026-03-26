@@ -107,12 +107,24 @@
 
         /* --- SOTA LEVEL UP POPUP --- */
         #stat-delta-popup {
-            position: absolute; top: 15%; left: 50%; transform: translate(-50%, -20%);
-            width: 320px; background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(15, 15, 25, 0.98) 100%);
-            border: 1px solid rgba(255, 215, 0, 0.3); border-top: 4px solid var(--primary);
-            border-radius: 12px; padding: 25px 15px 20px 15px; color: white; opacity: 0;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(187, 134, 252, 0.2);
-            z-index: 2000; pointer-events: none; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute; 
+            bottom: 90px; /* Positioned just above the hotbar (20px + 50px height + 20px margin) */
+            left: 50%; 
+            transform: translate(-50%, 20px); /* Start slightly lower for the slide-up effect */
+            width: 340px; 
+            max-height: 45vh; /* Prevents it from going past the center of the screen */
+            background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(15, 15, 25, 0.98) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.3); 
+            border-top: 4px solid var(--primary);
+            border-radius: 12px; 
+            padding: 20px 15px 15px 15px; 
+            color: white; 
+            opacity: 0;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(187, 134, 252, 0.2);
+            z-index: 2000; 
+            pointer-events: none; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow-y: auto; /* Allows scrolling if you have a massive list of stats */
         }
         #delta-title { font-size: 1.4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; text-shadow: 0 0 10px var(--primary); text-align: center; }
         .delta-row { display: grid; grid-template-columns: 24px 80px 1fr 60px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 6px 10px; border-radius: 6px; margin-top: 4px; }
