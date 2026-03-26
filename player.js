@@ -163,7 +163,7 @@ class Player {
             spawnFloatingText(this.x, this.y, "HEALED", '#0f0'); this.skills[0].current = this.skills[0].cdMax;
         }
         if (Input.dashPressed && this.skills[3].current <= 0) {
-            let targetX = this.x + Math.cos(this.lastMoveAngle) * dashDistance, targetY = this.y + Math.sin(this.lastMoveAngle) * dashDistance;
+            let targetX = this.x + Math.cos(this.lastMoveAngle) * DASH_DISTANCE, targetY = this.y + Math.sin(this.lastMoveAngle) * DASH_DISTANCE;
             if (!isWall(targetX, targetY)) { 
                 this.x = targetX; 
                 this.y = targetY; 
