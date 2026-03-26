@@ -134,7 +134,7 @@ class Enemy {
         let dx = player.x - this.x, dy = player.y - this.y, dist = Math.hypot(dx, dy);
 
         // Flanking and Movement Logic
-        if (dist < 300) {
+        if (dist < 800) {
             let angleToPlayer = Math.atan2(dy, dx);
             // Higher depth = smarter, tighter flanking
             let aggroFactor = Math.min(1.5, 1 + (GameState.level * 0.1));
@@ -206,7 +206,7 @@ class Enemy {
         this.hp -= finalDamage; 
         
         // Rage trigger on damage (25% chance) or if HP low
-        if (!this.isRaged && (Math.random() < 0.25 || this.hp < this.maxHp * 0.3)) {
+        if (!this.isRaged && (Math.random() < 0.15 || this.hp < this.maxHp * 0.3)) {
             this.triggerRage();
         }
 
