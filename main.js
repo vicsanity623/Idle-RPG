@@ -362,7 +362,11 @@ const UI = {
 
         REFS.deltaContent.innerHTML = html;
         REFS.deltaPopup.style.display = 'block';
-        setTimeout(() => { REFS.deltaPopup.style.opacity = 1; REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; }, 10);
+        setTimeout(() => { 
+            REFS.deltaPopup.style.opacity = 1; 
+            // CHANGE THIS LINE: Remove the vertical translation so it stays at the bottom
+            REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; 
+        }, 10);
         
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
         UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 2000);
