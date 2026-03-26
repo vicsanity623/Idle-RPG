@@ -459,30 +459,52 @@ function spawnAura(x, y, color = '#ff9800') { for(let i=0; i<20; i++) particles.
 
 function gainXp(amt) {
     PlayerData.xp += Math.floor(amt * player.getXpMultiplier());
+    
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
+        
         let oldStats = { 
             hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
             crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
             mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
         }, oldLevel = PlayerData.level;
-        PlayerData.level++; PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+
+        // Reward Level and Skill Point
+        PlayerData.level++; 
+        player.skillPoints++; 
+        
+        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
         player.hp = player.getMaxHp();
+        
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
+        
         let newStats = { 
             hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
             crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
             mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
         };
+
         let deltas = [], keys = [
             {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
             {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
             {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'}
         ];
-        keys.forEach(s => { let d = newStats[s.k]-oldStats[s.k]; if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); });
+
+        keys.forEach(s => { 
+            let d = newStats[s.k] - oldStats[s.k]; 
+            if(Math.abs(d) > 0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+        });
+
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
+
+        // Refresh the skill tree UI since we just added a point
+        if (typeof refreshSkillTreeUI === 'function') {
+            refreshSkillTreeUI();
+        }
     }
-    UI.updateStats(); saveGame();
+
+    UI.updateStats();
+    saveGame();
 }
 
 function die() {
@@ -509,6 +531,9 @@ function initLevel() {
     generateMap(); entities = []; particles = []; floatingTexts = [];
     let startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2, startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     if(!player) player = new Player(startX, startY); else { player.x = startX; player.y = startY; }
+    if (typeof initializeSkillTree === 'function') {
+        initializeSkillTree();
+    }
     entities.push(player); spawnEnemies(); REFS.depthLevel.innerText = GameState.level; UI.updateMinimap();
 }
 
@@ -531,7 +556,9 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { PlayerData.dungeonLevel = GameState.level; localStorage.setItem('dof_save', JSON.stringify(PlayerData)); }
+function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills;
+    localStorage.setItem('dof_save', JSON.stringify(PlayerData));
+}
 
 function loadGame() {
     let save = localStorage.getItem('dof_save');
@@ -549,7 +576,16 @@ function loadGame() {
                  UI.notify("System Updated: Old gear discarded for new power gear.");
             }
 
+            if (player) {
+                player.skillPoints = d.skillPoints || 0;
+                player.learnedSkills = d.learnedSkills || [];
+            }
+
             if (PlayerData.dungeonLevel) GameState.level = PlayerData.dungeonLevel;
+            
+            // Update the UI
+            if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
+
         } catch(e) { console.error("Save Corrupt", e); }
     }
 }

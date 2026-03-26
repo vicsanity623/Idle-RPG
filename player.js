@@ -24,7 +24,8 @@ class Player {
         this.speed = 250; 
         this.color = '#bb86fc';
         this.hp = this.getMaxHp();
-        this.skillPoints = 0; // New property to support Skills & Talents Panel
+        this.skillPoints = 0;
+        this.learnedSkills = [];
         this.skills = [
             { id: 'heal',  cdMax: 17, current: 0 }, 
             { id: 'atk',  cdMax: 0.7,  current: 0 },
@@ -67,7 +68,9 @@ class Player {
     getAttackPower() { 
         let base = 12 + this.getGearStat('Weapon', 'atk') + this.getGearStat('Fists', 'atk') + 
                    this.getGearStat('Ring', 'atk');
+        if (this.hasSkill(1)) base += 5;
         let scaledAtk = base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)));
+        if (this.hasSkill(2)) scaledAtk *= 1.10;
         let mightBonus = 1 + (this.getAffixValue('might') / 100);
         return scaledAtk * mightBonus; 
     }
@@ -97,6 +100,7 @@ class Player {
     getRegen() { 
         let base = this.getGearStat('Robe', 'regen') + this.getGearStat('Necklace', 'regen') + 
                    this.getGearStat('Earrings', 'regen');
+        if (this.hasSkill(4)) base += 5;
         return base * (1 + (LEVEL_SCALING.regen * (PlayerData.level - 1))); 
     }
 
@@ -173,6 +177,27 @@ class Player {
             Input.dashPressed = false; 
         }
         UI.updateHotbar(this.skills);
+    }
+
+    hasSkill(skillId) {
+        return this.learnedSkills.includes(skillId);
+    }
+
+    canLearnSkill(skillId, cost, prereqId) {
+        if (this.hasSkill(skillId)) return false;
+        if (this.skillPoints < cost) return false;
+        if (prereqId !== 0 && !this.hasSkill(prereqId)) return false;
+        return true;
+    }
+
+    learnSkill(skillId, cost, prereqId) {
+        if (this.canLearnSkill(skillId, cost, prereqId)) {
+            this.skillPoints -= cost;
+            this.learnedSkills.push(skillId);
+            if (skillId === 3) this.speed *= 1.10;
+            return true;
+        }
+        return false;
     }
 
     getNearestEnemy(range) {
