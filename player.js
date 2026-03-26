@@ -24,6 +24,7 @@ class Player {
         this.speed = 250; 
         this.color = '#bb86fc';
         this.hp = this.getMaxHp();
+        this.skillPoints = 0; // New property to support Skills & Talents Panel
         this.skills = [
             { id: 'heal',  cdMax: 17, current: 0 }, 
             { id: 'atk',  cdMax: 0.7,  current: 0 },
