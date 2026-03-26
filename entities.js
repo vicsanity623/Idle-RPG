@@ -90,7 +90,7 @@ class Enemy {
         // --- DIFFICULTY SCALING ---
         const depth = GameState.level;
         const depthSpeedBonus = Math.min(1.15, 1 + (depth * 0.02)); // Max 15% increase
-        this.baseSpeed = randomFloat(130, 180) * depthSpeedBonus;
+        this.baseSpeed = randomFloat(230, 280) * depthSpeedBonus;
         this.speed = this.baseSpeed;
         
         let hpMultiplier = Math.pow(1.3, depth);
@@ -134,7 +134,7 @@ class Enemy {
         let dx = player.x - this.x, dy = player.y - this.y, dist = Math.hypot(dx, dy);
 
         // Flanking and Movement Logic
-        if (dist < 800) {
+        if (dist < 300) {
             let angleToPlayer = Math.atan2(dy, dx);
             // Higher depth = smarter, tighter flanking
             let aggroFactor = Math.min(1.5, 1 + (GameState.level * 0.1));
