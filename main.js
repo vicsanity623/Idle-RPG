@@ -556,7 +556,7 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; 
+function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills;
     localStorage.setItem('dof_save', JSON.stringify(PlayerData));
 }
 
