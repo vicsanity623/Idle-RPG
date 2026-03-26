@@ -524,12 +524,23 @@ if (jZoneRef) {
 }
 
 function saveGame() { PlayerData.dungeonLevel = GameState.level; localStorage.setItem('dof_save', JSON.stringify(PlayerData)); }
+
 function loadGame() {
     let save = localStorage.getItem('dof_save');
     if (save) {
         try {
-            let d = JSON.parse(save); PlayerData = { ...PlayerData, ...d };
-            if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
+            let d = JSON.parse(save);
+            if (d.gear && d.gear.Weapon && d.gear.Weapon.atk > 5) {
+                 PlayerData = { ...PlayerData, ...d };
+                 PlayerData.gear = { ...PlayerData.gear, ...d.gear };
+            } else {
+                 PlayerData.gold = d.gold || 0;
+                 PlayerData.shards = d.shards || 0;
+                 PlayerData.level = d.level || 1;
+                 PlayerData.dungeonLevel = d.dungeonLevel || 1;
+                 UI.notify("System Updated: Old gear discarded for new power gear.");
+            }
+
             if (PlayerData.dungeonLevel) GameState.level = PlayerData.dungeonLevel;
         } catch(e) { console.error("Save Corrupt", e); }
     }
