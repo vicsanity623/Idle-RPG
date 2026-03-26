@@ -453,5 +453,166 @@
     <script src="player.js?v=2"></script>
     <script src="entities.js?v=2"></script>
     <script src="main.js?v=2"></script>
+    <script>
+        /**
+         * Initializes the interactivity for the Skills & Talents panel.
+         * Attaches event listeners to skill nodes and manages their visual states.
+         */
+        function initializeSkillTree() {
+            const skillsTreePanel = document.getElementById('skills-tree-panel');
+            const skillPointsDisplay = document.getElementById('skill-points-available');
+            const inventoryModal = document.getElementById('inventory-modal');
+
+            // Update skill points display initially (if player is already loaded)
+            if (typeof player !== 'undefined' && player) {
+                skillPointsDisplay.textContent = player.skillPoints;
+                updateSkillTreeLockStates();
+            }
+
+            // Event listener for clicking on skill nodes
+            skillsTreePanel.addEventListener('click', (event) => {
+                let targetNode = event.target.closest('.skill-node');
+                if (!targetNode) return;
+
+                const skillId = parseInt(targetNode.dataset.skillId);
+                const skillCost = parseInt(targetNode.dataset.cost);
+                const prereqId = parseInt(targetNode.dataset.prereq);
+
+                // Ensure player object exists and has the necessary methods
+                if (typeof player === 'undefined' || !player || !player.learnSkill || !player.canLearnSkill) {
+                    showNotification("Game not fully loaded. Cannot learn skills.", "error");
+                    return;
+                }
+
+                // Check if the skill can be learned
+                if (!player.canLearnSkill(skillId, skillCost, prereqId)) {
+                    if (player.hasSkill(skillId)) {
+                        showNotification("Skill already learned!", "info");
+                    } else if (player.skillPoints < skillCost) {
+                        showNotification("Not enough Skill Points!", "error");
+                    } else if (prereqId !== 0 && !player.hasSkill(prereqId)) {
+                        showNotification("Prerequisite skill not learned!", "error");
+                    }
+                    return;
+                }
+
+                // Attempt to learn the skill
+                if (player.learnSkill(skillId, skillCost, prereqId)) {
+                    // Update UI for the learned skill
+                    targetNode.classList.remove('locked');
+                    targetNode.classList.add('unlocked');
+                    const skillCostElement = targetNode.querySelector('.skill-cost');
+                    if (skillCostElement) skillCostElement.textContent = 'Learned';
+
+                    // Update available skill points display
+                    skillPointsDisplay.textContent = player.skillPoints;
+
+                    showNotification(`Skill "${targetNode.querySelector('.skill-name').textContent}" unlocked!`, "success");
+
+                    // Re-evaluate lock states for all skills, as new skills might become available
+                    updateSkillTreeLockStates();
+                } else {
+                    // Fallback for any unexpected failure in player.learnSkill
+                    showNotification("Failed to learn skill. Check points and prerequisites.", "error");
+                }
+            });
+
+            /**
+             * Updates the visual lock/unlock states of all skill nodes based on player's learned skills and points.
+             */
+            function updateSkillTreeLockStates() {
+                if (typeof player === 'undefined' || !player || !player.hasSkill || !player.canLearnSkill) {
+                    return; // Player object not ready
+                }
+
+                const allSkillNodes = skillsTreePanel.querySelectorAll('.skill-node');
+                allSkillNodes.forEach(node => {
+                    const skillId = parseInt(node.dataset.skillId);
+                    const prereqId = parseInt(node.dataset.prereq);
+                    const skillCost = parseInt(node.dataset.cost);
+
+                    // Reset styles first
+                    node.style.borderColor = '';
+                    node.style.filter = '';
+
+                    if (player.hasSkill(skillId)) {
+                        node.classList.remove('locked');
+                        node.classList.add('unlocked');
+                        const skillCostElement = node.querySelector('.skill-cost');
+                        if (skillCostElement) skillCostElement.textContent = 'Learned';
+                        node.style.borderColor = 'var(--xp-color)'; // Visually distinct for learned
+                        node.style.filter = 'none';
+                    } else {
+                        node.classList.remove('unlocked');
+                        node.classList.add('locked'); // Default to locked
+                        const skillCostElement = node.querySelector('.skill-cost');
+                        if (skillCostElement) skillCostElement.textContent = `${skillCost} SP`;
+
+                        // Check if prerequisites are met to make it 'potentially learnable'
+                        const prereqMet = (prereqId === 0 || player.hasSkill(prereqId));
+
+                        if (prereqMet) {
+                            node.classList.remove('locked'); // Remove 'locked' class if prereqs are met
+                            if (player.skillPoints >= skillCost) {
+                                // Learnable - enough points and prereqs met
+                                node.style.borderColor = 'var(--primary)'; // Highlight as ready to learn
+                                node.style.filter = 'none';
+                            } else {
+                                // Prereqs met, but not enough points
+                                node.style.borderColor = '#666';
+                                node.style.filter = 'grayscale(30%)';
+                            }
+                        } else {
+                            // Prereqs not met, keep it fully locked
+                            node.classList.add('locked');
+                            node.style.borderColor = '#444';
+                            node.style.filter = 'grayscale(70%)';
+                        }
+                    }
+                });
+            }
+
+            // Listen for when the inventory modal becomes visible to update skill states
+            // This assumes the modal uses 'display: none' and 'display: flex' or similar
+            // and that a transitionend event fires when it becomes visible.
+            // A more robust solution might involve a dedicated function called when the modal is opened.
+            inventoryModal.addEventListener('transitionend', () => {
+                // Check if the modal is actually visible (e.g., by checking its computed style)
+                if (window.getComputedStyle(inventoryModal).display !== 'none') {
+                    if (typeof player !== 'undefined' && player) {
+                        skillPointsDisplay.textContent = player.skillPoints;
+                        updateSkillTreeLockStates();
+                    }
+                }
+            });
+
+            // Initial call to set up states if the player object is already available
+            // This might be called again when the game starts or player loads.
+            if (typeof player !== 'undefined' && player) {
+                updateSkillTreeLockStates();
+            }
+        }
+
+        // Placeholder for a notification function (if not already present in main.js)
+        function showNotification(message, type = "info") {
+            const notificationElement = document.getElementById('notification');
+            if (!notificationElement) return;
+
+            notificationElement.textContent = message;
+            notificationElement.style.opacity = 1;
+            notificationElement.style.color = type === "success" ? "var(--xp-color)" : (type === "error" ? "var(--hp-color)" : "var(--gold)");
+
+            // Clear any previous timeout to ensure new notifications are fully displayed
+            clearTimeout(notificationElement._hideTimeout); 
+            notificationElement._hideTimeout = setTimeout(() => {
+                notificationElement.style.opacity = 0;
+            }, 3000);
+        }
+
+        // Call initializeSkillTree after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeSkillTree();
+        });
+    </script>
 </body>
 </html>
