@@ -279,7 +279,8 @@ const UI = {
             hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
             regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
             sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue()
+            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
+            cp: player.getCombatPower()
         };
         
         PlayerData.inventory.splice(index, 1);
@@ -295,17 +296,19 @@ const UI = {
             hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
             regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
             sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue()
+            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
+            cp: player.getCombatPower()
         };
 
         let deltas = [], keys = [
             {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
             {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
-            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'}
+            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'},
+            {k:'cp',l:'cp'}
         ];
         keys.forEach(s => { 
             let d = newStats[s.k]-oldStats[s.k]; 
-            if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+            if(Math.abs(d)>0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
         });
         if (deltas.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
     },
@@ -355,12 +358,12 @@ const UI = {
         REFS.deltaTitle.innerHTML = `
             <div class="level-badge" style="background:${badgeColor}">${badgeText}</div> 
             ${title}
-            <div style="color:#4caf50; font-size: 0.9rem; margin-top: 5px;">
+            <div style="color:#4caf50; font-size: 0.9rem; margin-top: 5px; text-transform: uppercase;">
                 Combat Power: ${cpNew.toFixed(2)}
             </div>
         `;
         
-        lines.forEach(line => {
+        statLines.forEach(line => {
             // 1. Identify if lower is better (only for Attack Speed/Cooldown)
             const isLowerBetter = line.label === 'Atk Spd';
             const improved = isLowerBetter ? line.diff < 0 : line.diff > 0;
@@ -511,12 +514,13 @@ function gainXp(amt) {
         let deltas = [], keys = [
             {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
             {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
-            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'}
+            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'},
+            {k:'cp',l:'cp'}
         ];
 
         keys.forEach(s => { 
             let d = newStats[s.k] - oldStats[s.k]; 
-            if(Math.abs(d) > 0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+            if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
         });
 
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
