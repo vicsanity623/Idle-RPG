@@ -119,6 +119,20 @@ class Player {
         let levelBonus = (PlayerData.level - 1) * 0.005; 
         return Math.max(0.3, 1.0 - levelBonus - this.getGearStat('Boots', 'atkSpeed'));
     }
+    
+    getCombatPower() {
+        // We divide HP by 5 and multiply Regen by 10 to balance the weight of stats
+        let baseSum = (this.getMaxHp() / 5) + 
+                      this.getAttackPower() + 
+                      this.getDefense() + 
+                      (this.getRegen() * 10) + 
+                      (this.getCritChance() * this.getCritMultiplier());
+                      
+        // Multiply the whole sum by the Attack Frequency (Attacks per second)
+        let attackFreq = 1 / this.getAttackSpeedFactor();
+        
+        return baseSum * attackFreq;
+    }
 
     // --- PLAYER SYSTEMS ---
 
