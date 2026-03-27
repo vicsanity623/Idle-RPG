@@ -166,6 +166,13 @@ const UI = {
             let grd = player.getAffixValue('greed'); if (grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${grd}%</span></div>`;
             let wis = player.getAffixValue('wisdom'); if (wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${wis}%</span></div>`;
             let fear = player.getFearValue(); if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${fear}% Enemy Def</span></div>`;
+            let cpValue = player.getCombatPower().toFixed(2);
+            html += `
+                <div style="grid-column: 1 / -1; margin-top: 15px; border-top: 1px solid #444; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 1.5rem; font-weight: 900; color: #4caf50;">CP</span>
+                    <span style="font-size: 1.5rem; font-weight: 900; color: #4caf50;">${cpValue}</span>
+                </div>
+            `;
             REFS.statsSheet.innerHTML = html;
         }
 
@@ -338,6 +345,21 @@ const UI = {
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
         let html = '';
         
+        let cpLine = lines.find(l => l.label === 'cp'); // We don't want it in the loop
+        // Filter it out of the main list so it doesn't show as a bullet point
+        let statLines = lines.filter(l => l.label !== 'cp');
+        
+        let cpOld = lines.find(l => l.label === 'cp')?.oldVal || 0;
+        let cpNew = lines.find(l => l.label === 'cp')?.newVal || 0;
+        
+        REFS.deltaTitle.innerHTML = `
+            <div class="level-badge" style="background:${badgeColor}">${badgeText}</div> 
+            ${title}
+            <div style="color:#4caf50; font-size: 0.9rem; margin-top: 5px;">
+                Combat Power: ${cpNew.toFixed(2)}
+            </div>
+        `;
+        
         lines.forEach(line => {
             // 1. Identify if lower is better (only for Attack Speed/Cooldown)
             const isLowerBetter = line.label === 'Atk Spd';
@@ -467,6 +489,7 @@ function gainXp(amt) {
             hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
             crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
             mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
+            cp: player.getCombatPower()
         }, oldLevel = PlayerData.level;
 
         // Reward Level and Skill Point
@@ -482,6 +505,7 @@ function gainXp(amt) {
             hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
             crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
             mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
+            cp: player.getCombatPower()
         };
 
         let deltas = [], keys = [
@@ -556,7 +580,8 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills;
+function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; PlayerData.xp = PlayerData.xp;
+    PlayerData.maxXp = PlayerData.maxXp;
     localStorage.setItem('dof_save', JSON.stringify(PlayerData));
 }
 
@@ -575,6 +600,8 @@ function loadGame() {
                  PlayerData.dungeonLevel = d.dungeonLevel || 1;
                  UI.notify("System Updated: Old gear discarded for new power gear.");
             }
+            
+            if (d.maxXp) PlayerData.maxXp = d.maxXp;
 
             if (player) {
                 player.skillPoints = d.skillPoints || 0;
