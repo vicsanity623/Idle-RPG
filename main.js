@@ -46,7 +46,7 @@ const REFS = {
     cooldowns:        [0, 1, 2, 3].map(i => document.getElementById(`cd-${i}`))
 };
 
-// --- 3. ENGINE GLOBALS (Attached to window for E2E testing) ---
+// --- 3. ENGINE GLOBALS ---
 const ctx = REFS.canvas ? REFS.canvas.getContext('2d') : null;
 
 window.GameState = {
@@ -63,9 +63,9 @@ window.Input = {
     dashPressed: false
 };
 
-// --- In main.js ---
 window.PlayerData = {
     gold: 750, shards: 100, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
+    skillPoints: 0, learnedSkills: {},
     gear: {
         'Weapon':   { level: 1, atk: 25, critMult: 0.20, rarity: 'Common' },
         'Armor':    { level: 1, hp: 60, def: 15, rarity: 'Common' },
@@ -128,10 +128,6 @@ const UI = {
         }
         mmCtx.fillStyle = '#bb86fc';
         mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
-        if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
-            mmCtx.fillStyle = '#00e5ff';
-            mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
-        }
     },
     
     toggleInventory: () => {
@@ -140,10 +136,7 @@ const UI = {
         } else {
             REFS.invModal.style.display = 'flex';
             UI.renderInventory();
-            // Call the globally accessible skill tree refresh function as per recent edits
-            if (typeof refreshSkillTreeUI === 'function') {
-                refreshSkillTreeUI();
-            }
+            if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
         }
     },
     
@@ -166,6 +159,8 @@ const UI = {
             let grd = player.getAffixValue('greed'); if (grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${grd}%</span></div>`;
             let wis = player.getAffixValue('wisdom'); if (wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${wis}%</span></div>`;
             let fear = player.getFearValue(); if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${fear}% Enemy Def</span></div>`;
+            
+            // Combat Power Section
             let cpValue = player.getCombatPower().toFixed(2);
             html += `
                 <div style="grid-column: 1 / -1; margin-top: 15px; border-top: 1px solid #444; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
@@ -244,8 +239,6 @@ const UI = {
             let val1 = itemStats[stat] || 0, val2 = eqStats[stat] || 0;
             if (val1 === 0 && val2 === 0) return;
             let diff = val1 - val2, diffHtml = '';
-            
-            // FIX: Restored the precision check so 0.04 doesn't round down to 0.0
             if (diff > 0) diffHtml = `<small style="color:#0f0">(+${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
             else if (diff < 0) diffHtml = `<small style="color:#f00">(${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
             
@@ -278,8 +271,7 @@ const UI = {
         let oldStats = { 
             hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
             regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
-            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue()
+            sp: 1 / player.getAttackSpeedFactor(), cp: player.getCombatPower()
         };
         
         PlayerData.inventory.splice(index, 1);
@@ -287,36 +279,21 @@ const UI = {
         if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped);
         PlayerData.gear[slot] = itemToEquip;
         
-        UI.renderInventory(); UI.updateStats();
-        player.hp = Math.min(player.hp, player.getMaxHp());
-        saveGame();
+        UI.renderInventory(); UI.updateStats(); saveGame();
 
         let newStats = { 
             hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
             regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
-            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue()
+            sp: 1 / player.getAttackSpeedFactor(), cp: player.getCombatPower()
         };
 
-        let deltas = [], keys = [
-            {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
-            {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
-            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'}
-        ];
+        let deltas = [];
+        let keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},{k:'cp',l:'cp'}];
         keys.forEach(s => { 
             let d = newStats[s.k]-oldStats[s.k]; 
             if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
         });
         if (deltas.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
-    },
-
-    discardItem: (index) => {
-        if (!PlayerData.inventory[index]) return;
-        let item = PlayerData.inventory[index], reward = 5;
-        if (item.rarity === 'Legendary') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10;
-        PlayerData.inventory.splice(index, 1); PlayerData.shards += reward;
-        UI.renderInventory(); UI.updateCurrencies(); UI.notify(`Discarded ${item.name} (+${reward} 💎)`);
-        REFS.itemDetailPanel.style.display = 'none'; saveGame();
     },
 
     upgradeGear: (type) => {
@@ -336,76 +313,39 @@ const UI = {
     },
 
     showDelta: (title, lines) => {
-        const iconMap = { 
-            'Max HP': '•', 'Attack': '•', 'Defense': '•', 'Regen': '•', 
-            'Crit %': '•', 'Crit X': '•', 'Atk Spd': '•',
-            'Magnet': '•', 'Gold Farmer': '•', 'XP Fiend': '•', 'Fear Aura': '•'
-        };
+        const iconMap = { 'Max HP': '•', 'Attack': '•', 'Defense': '•', 'Regen': '•', 'Crit %': '•', 'Crit X': '•', 'Atk Spd': '•' };
         let isLevel = title.toLowerCase().includes("level"), badgeText = isLevel ? "PROMOTED" : "EQUIPMENT", badgeColor = isLevel ? "var(--primary)" : "var(--shard)";
-        REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
+        
+        let cpData = lines.find(l => l.label === 'cp');
+        let statLines = lines.filter(l => l.label !== 'cp');
+        let cpHeader = cpData ? `<div style="color:#4caf50; font-size:0.9rem; font-weight:bold; margin-top:5px;">Combat Power: ${cpData.newVal.toFixed(2)}</div>` : "";
+
+        REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}${cpHeader}`;
         let html = '';
         
-        let cpLine = lines.find(l => l.label === 'cp'); // We don't want it in the loop
-        // Filter it out of the main list so it doesn't show as a bullet point
-        let statLines = lines.filter(l => l.label !== 'cp');
-        
-        let cpOld = lines.find(l => l.label === 'cp')?.oldVal || 0;
-        let cpNew = lines.find(l => l.label === 'cp')?.newVal || 0;
-        
-        REFS.deltaTitle.innerHTML = `
-            <div class="level-badge" style="background:${badgeColor}">${badgeText}</div> 
-            ${title}
-            <div style="color:#4caf50; font-size: 0.9rem; margin-top: 5px;">
-                Combat Power: ${cpNew.toFixed(2)}
-            </div>
-        `;
-        
-        lines.forEach(line => {
-            // 1. Identify if lower is better (only for Attack Speed/Cooldown)
-            const isLowerBetter = line.label === 'Atk Spd';
-            const improved = isLowerBetter ? line.diff < 0 : line.diff > 0;
-            
-            // 2. Dynamic precision: show 2 decimals for small values so progress is visible
-            const valPrec = (line.oldVal < 5) ? 2 : 1; 
-            const diffPrec = Math.abs(line.diff) < 0.1 ? 2 : 1;
-            
-            let diffStr = line.diff.toFixed(diffPrec);
-            let cColor = improved ? '#4caf50' : '#ff5252';
-            let symb = line.diff > 0 ? '+' : '';
-        
-            html += `
-                <div class="delta-row">
-                    <span class="delta-icon">${iconMap[line.label] || '✨'}</span>
-                    <span class="delta-label">${line.label}</span>
-                    <span class="delta-values">
-                        <span style="color:#ff5252">${line.oldVal.toFixed(valPrec)}</span> 
-                        <span style="color:#aaa; margin: 0 4px;">➔</span> 
-                        <span style="color:#4caf50">${line.newVal.toFixed(valPrec)}</span>
-                    </span>
-                    <span class="delta-change" style="color:${cColor}">${symb}${diffStr}</span>
-                </div>`;
+        statLines.forEach(line => {
+            let valPrec = (line.newVal < 10) ? 2 : 1; 
+            let diffPrec = Math.abs(line.diff) < 0.1 ? 2 : 1;
+            let cColor = line.diff > 0 ? '#4caf50' : '#ff5252';
+            html += `<div class="delta-row">
+                <span class="delta-label">${line.label}</span>
+                <span class="delta-values"><span style="color:#ff5252">${line.oldVal.toFixed(valPrec)}</span> <span style="color:#aaa">➔</span> <span style="color:#4caf50">${line.newVal.toFixed(valPrec)}</span></span>
+                <span class="delta-change" style="color:${cColor}">${line.diff > 0 ? '+' : ''}${line.diff.toFixed(diffPrec)}</span>
+            </div>`;
         });
-
         REFS.deltaContent.innerHTML = html;
         REFS.deltaPopup.style.display = 'block';
         setTimeout(() => { 
             REFS.deltaPopup.style.opacity = 1; 
-            // CHANGE THIS LINE: Remove the vertical translation so it stays at the bottom
             REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; 
         }, 10);
-        
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout);
-        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 2000);
+        UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 3000);
     },
 
-    notify: (msg) => {
-        REFS.notification.innerText = msg; REFS.notification.style.opacity = 1;
-        if (UI._notifTimeout) clearTimeout(UI._notifTimeout);
-        UI._notifTimeout = setTimeout(() => REFS.notification.style.opacity = 0, 2000);
-    },
-    
+    notify: (msg) => { REFS.notification.innerText = msg; REFS.notification.style.opacity = 1; setTimeout(() => REFS.notification.style.opacity = 0, 2000); },
     checkDailyLogin: () => { if (localStorage.getItem('dof_lastLogin') !== new Date().toDateString()) REFS.dailyLogin.style.display = 'block'; },
-    claimDaily: () => { PlayerData.gold += 500; PlayerData.shards += 50; localStorage.setItem('dof_lastLogin', new Date().toDateString()); REFS.dailyLogin.style.display = 'none'; UI.updateCurrencies(); saveGame(); UI.notify("Daily Claimed!"); }
+    claimDaily: () => { PlayerData.gold += 500; PlayerData.shards += 50; localStorage.setItem('dof_lastLogin', new Date().toDateString()); REFS.dailyLogin.style.display = 'none'; UI.updateCurrencies(); saveGame(); }
 };
 
 // --- 5. MAP GENERATION ---
@@ -439,7 +379,6 @@ class Projectile {
     constructor(x, y, target, speed, damage, isCrit, isEnemy = false) {
         this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; 
         this.isCrit = isCrit; this.isEnemy = isEnemy;
-        // Visuals: Red for enemies, Purple/Gold for player
         this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc'); 
         this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; this.isAlive = true; 
     }
@@ -447,16 +386,11 @@ class Projectile {
         if (!this.isAlive) return;
         this.currentLifetime += dt;
         if (this.currentLifetime >= this.lifetime) { this.isAlive = false; return; }
-        
-        // Target can be either player or enemy
         if (this.target && this.target.hp > 0) {
             let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
             let angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed * dt; 
-            this.y += Math.sin(angle) * this.speed * dt;
-            
+            this.x += Math.cos(angle) * this.speed * dt; this.y += Math.sin(angle) * this.speed * dt;
             if (dist < this.radius + this.target.radius) { 
-                // Enemy projectiles don't need crit logic for now, or use damage directly
                 this.target.takeDamage(this.damage, this.isCrit); 
                 this.isAlive = false; 
                 spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
@@ -465,10 +399,8 @@ class Projectile {
     }
     draw(ctx) {
         if (!this.isAlive) return;
-        ctx.save(); 
-        if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
-        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); 
-        ctx.restore();
+        ctx.save(); if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
+        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
 }
 
@@ -481,54 +413,30 @@ function spawnAura(x, y, color = '#ff9800') { for(let i=0; i<20; i++) particles.
 
 function gainXp(amt) {
     PlayerData.xp += Math.floor(amt * player.getXpMultiplier());
-    
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
-        
         let oldStats = { 
             hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
-            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
-            mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
-            cp: player.getCombatPower()
+            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp: 1 / player.getAttackSpeedFactor(), cp: player.getCombatPower()
         }, oldLevel = PlayerData.level;
 
-        // Reward Level and Skill Point
         PlayerData.level++; 
         player.skillPoints++; 
-        
         PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
         player.hp = player.getMaxHp();
         
-        spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
-        
         let newStats = { 
             hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
-            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
-            mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue()
-            cp: player.getCombatPower()
+            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp: 1 / player.getAttackSpeedFactor(), cp: player.getCombatPower()
         };
 
-        let deltas = [], keys = [
-            {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
-            {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
-            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'}
-        ];
-
-        keys.forEach(s => { 
-            let d = newStats[s.k] - oldStats[s.k]; 
-            if(Math.abs(d) > 0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
-        });
-
+        let deltas = [];
+        let keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},{k:'cp',l:'cp'}];
+        keys.forEach(s => { let d = newStats[s.k]-oldStats[s.k]; if(Math.abs(d)>0.001) deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); });
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
-
-        // Refresh the skill tree UI since we just added a point
-        if (typeof refreshSkillTreeUI === 'function') {
-            refreshSkillTreeUI();
-        }
+        if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
     }
-
-    UI.updateStats();
-    saveGame();
+    UI.updateStats(); saveGame();
 }
 
 function die() {
@@ -543,10 +451,7 @@ function spawnEnemies() {
     let num = 10 + GameState.level; 
     for(let i=0; i<num; i++) {
         let ex, ey;
-        do { 
-            ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
-            ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
-        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
+        do { ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
         entities.push(new Enemy(ex, ey));
     }
 }
@@ -555,10 +460,14 @@ function initLevel() {
     generateMap(); entities = []; particles = []; floatingTexts = [];
     let startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2, startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     if(!player) player = new Player(startX, startY); else { player.x = startX; player.y = startY; }
-    if (typeof initializeSkillTree === 'function') {
-        initializeSkillTree();
-    }
+    
+    // Sync Saved Stats to Live Player
+    player.skillPoints = PlayerData.skillPoints || 0;
+    player.learnedSkills = PlayerData.learnedSkills || {};
+
+    if (typeof initializeSkillTree === 'function') initializeSkillTree();
     entities.push(player); spawnEnemies(); REFS.depthLevel.innerText = GameState.level; UI.updateMinimap();
+    if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
 }
 
 // --- 7. INPUT & SAVE ---
@@ -580,9 +489,13 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; PlayerData.xp = PlayerData.xp;
-    PlayerData.maxXp = PlayerData.maxXp;
-    localStorage.setItem('dof_save', JSON.stringify(PlayerData));
+function saveGame() { 
+    PlayerData.dungeonLevel = GameState.level; 
+    if (player) {
+        PlayerData.skillPoints = player.skillPoints;
+        PlayerData.learnedSkills = player.learnedSkills;
+    }
+    localStorage.setItem('dof_save', JSON.stringify(PlayerData)); 
 }
 
 function loadGame() {
@@ -590,29 +503,15 @@ function loadGame() {
     if (save) {
         try {
             let d = JSON.parse(save);
-            if (d.gear && d.gear.Weapon && d.gear.Weapon.atk > 5) {
+            if (d.gear && d.gear.Weapon && d.gear.Weapon.atk > 10) {
                  PlayerData = { ...PlayerData, ...d };
-                 PlayerData.gear = { ...PlayerData.gear, ...d.gear };
             } else {
-                 PlayerData.gold = d.gold || 0;
-                 PlayerData.shards = d.shards || 0;
-                 PlayerData.level = d.level || 1;
+                 PlayerData.gold = d.gold || 0; PlayerData.shards = d.shards || 0;
+                 PlayerData.level = d.level || 1; PlayerData.xp = d.xp || 0; PlayerData.maxXp = d.maxXp || 100;
                  PlayerData.dungeonLevel = d.dungeonLevel || 1;
-                 UI.notify("System Updated: Old gear discarded for new power gear.");
             }
-            
-            if (d.maxXp) PlayerData.maxXp = d.maxXp;
-
-            if (player) {
-                player.skillPoints = d.skillPoints || 0;
-                player.learnedSkills = d.learnedSkills || [];
-            }
-
             if (PlayerData.dungeonLevel) GameState.level = PlayerData.dungeonLevel;
-            
-            // Update the UI
             if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
-
         } catch(e) { console.error("Save Corrupt", e); }
     }
 }
@@ -624,8 +523,7 @@ function drawMap(camX, camY) {
     for (let r = sRow; r <= eRow; r++) {
         for (let c = sCol; c <= eCol; c++) {
             if (!exploredGrid[r][c]) { ctx.fillStyle = '#000'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); continue; }
-            ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616';
-            ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
+            ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
         }
     }
 }
@@ -653,20 +551,12 @@ function loop(timestamp) {
         for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
         if (GameState.frame % 10 === 0) UI.updateStats();
         if (GameState.frame % 120 === 0) { 
-            let ec = 0; 
-            for(let i=0; i<entities.length; i++) {
-                if(entities[i] instanceof Enemy) ec++;
-            }
-            
+            let ec = 0; for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++;
             let maxEnemies = 5 + GameState.level;
             if (ec < maxEnemies) {
                 let toSpawn = Math.min(2, maxEnemies - ec);
                 for(let s=0; s < toSpawn; s++) {
-                    let ex, ey;
-                    do { 
-                        ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
-                        ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
-                    } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
+                    let ex, ey; do { ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
                     entities.push(new Enemy(ex, ey));
                 }
             }
@@ -674,10 +564,8 @@ function loop(timestamp) {
         if (GameState.frame % 30 === 0) UI.updateMinimap();
         if (portal) {
             let dist = Math.hypot(player.x - portal.x, player.y - portal.y), cost = GameState.level * 250;
-            if (dist < 50) {
-                REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${cost} Gold`;
-                REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need Gold!"); };
-            } else REFS.portalUI.style.display = 'none';
+            if (dist < 50) { REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${cost} Gold`; REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need Gold!"); }; } 
+            else REFS.portalUI.style.display = 'none';
         }
     }
     draw(); GameState.frame++; requestAnimationFrame(loop);
