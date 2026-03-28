@@ -690,7 +690,7 @@ function initLevel() {
     UI.updateStats();
 }
 
-// --- 7. INPUT & SAVE ---
+// --- 7. INPUT & SAVE (BULLETPROOF MERGE) ---
 let jZoneRef = document.getElementById('joystick-zone');
 if (jZoneRef) {
     jZoneRef.addEventListener('touchstart', (e) => {
@@ -709,8 +709,12 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; PlayerData.xp = PlayerData.xp;
-    PlayerData.maxXp = PlayerData.maxXp;
+function saveGame() { 
+    PlayerData.dungeonLevel = GameState.level; 
+    if (player) {
+        PlayerData.skillPoints = player.skillPoints; 
+        PlayerData.learnedSkills = player.learnedSkills; 
+    }
     localStorage.setItem('dof_save', JSON.stringify(PlayerData));
 }
 
@@ -719,28 +723,23 @@ function loadGame() {
     if (save) {
         try {
             let d = JSON.parse(save);
-            if (d.gear && d.gear.Weapon && d.gear.Weapon.atk > 5) {
-                 PlayerData = { ...PlayerData, ...d };
-                 PlayerData.gear = { ...PlayerData.gear, ...d.gear };
-            } else {
-                 PlayerData.gold = d.gold || 0;
-                 PlayerData.shards = d.shards || 0;
-                 PlayerData.level = d.level || 1;
-                 PlayerData.dungeonLevel = d.dungeonLevel || 1;
-                 UI.notify("System Updated: Old gear discarded for new power gear.");
-            }
             
-            if (d.maxXp) PlayerData.maxXp = d.maxXp;
+            // Safe Deep Merge
+            PlayerData.gold = d.gold ?? PlayerData.gold;
+            PlayerData.shards = d.shards ?? PlayerData.shards;
+            PlayerData.level = d.level ?? PlayerData.level;
+            PlayerData.dungeonLevel = d.dungeonLevel ?? PlayerData.dungeonLevel;
+            PlayerData.xp = d.xp ?? PlayerData.xp;
+            PlayerData.maxXp = d.maxXp ?? PlayerData.maxXp;
+            PlayerData.skillPoints = d.skillPoints ?? PlayerData.skillPoints;
+            PlayerData.learnedSkills = d.learnedSkills ?? PlayerData.learnedSkills;
+            
+            if (d.inventory) PlayerData.inventory = d.inventory;
+            if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
 
-            if (player) {
-                player.skillPoints = d.skillPoints || 0;
-                player.learnedSkills = d.learnedSkills || [];
-            }
-
-            if (PlayerData.dungeonLevel) GameState.level = PlayerData.dungeonLevel;
+            GameState.level = PlayerData.dungeonLevel;
             
             if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
-
         } catch(e) { console.error("Save Corrupt", e); }
     }
 }
