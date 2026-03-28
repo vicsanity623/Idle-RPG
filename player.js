@@ -27,10 +27,10 @@ class Player {
         this.skillPoints = 0;
         this.learnedSkills = [];
         this.skills = [
-            { id: 'heal',  cdMax: 17, current: 0 }, 
-            { id: 'atk',  cdMax: 0.7,  current: 0 },
-            { id: 'aura', cdMax: 5,  current: 0 }, 
-            { id: 'dash', cdMax: 3,  current: 0 }
+            { id: 'heal', cdMax: 17,  current: 0 }, 
+            { id: 'atk',  cdMax: 0.7, current: 0 },
+            { id: 'aura', cdMax: 5,   current: 0 }, 
+            { id: 'dash', cdMax: 3,   current: 0 }
         ];
         this.lastMoveAngle = 0; 
     }
@@ -62,7 +62,7 @@ class Player {
         let base = 100 + this.getGearStat('Armor', 'hp') + this.getGearStat('Head', 'hp') + 
                    this.getGearStat('Legs', 'hp') + this.getGearStat('Robe', 'hp') + 
                    this.getGearStat('Necklace', 'hp');
-        return base * (1 + (LEVEL_SCALING.hp * (PlayerData.level - 1))); 
+        return Math.floor(base * (1 + (LEVEL_SCALING.hp * (PlayerData.level - 1)))); 
     }
 
     getAttackPower() { 
@@ -72,7 +72,7 @@ class Player {
         let scaledAtk = base * (1 + (LEVEL_SCALING.atk * (PlayerData.level - 1)));
         if (this.hasSkill(2)) scaledAtk *= 1.10;
         let mightBonus = 1 + (this.getAffixValue('might') / 100);
-        return scaledAtk * mightBonus; 
+        return Math.floor(scaledAtk * mightBonus); 
     }
 
     getPickupRadius() {
@@ -94,7 +94,7 @@ class Player {
     getDefense() { 
         let base = this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + 
                    this.getGearStat('Legs', 'def') + this.getGearStat('Boots', 'def');
-        return base * (1 + (LEVEL_SCALING.def * (PlayerData.level - 1))); 
+        return Math.floor(base * (1 + (LEVEL_SCALING.def * (PlayerData.level - 1)))); 
     }
 
     getRegen() { 

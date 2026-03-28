@@ -20,7 +20,7 @@
             --glow-color: rgba(187, 134, 252, 0.3);
             --border-glow: 0px 0px 10px var(--glow-color);
 
-            /* Rarity Palette (Managed by JS, styles here for reference) */
+            /* Rarity Palette */
             --rarity-common: #A0A0A0;
             --rarity-rare: #00BFFF;
             --rarity-epic: #8A2BE2;
@@ -108,11 +108,11 @@
         /* --- SOTA LEVEL UP POPUP --- */
         #stat-delta-popup {
             position: absolute; 
-            bottom: 90px; /* Positioned just above the hotbar (20px + 50px height + 20px margin) */
+            bottom: 90px; 
             left: 50%; 
-            transform: translate(-50%, 20px); /* Start slightly lower for the slide-up effect */
+            transform: translate(-50%, 20px); 
             width: 340px; 
-            max-height: 45vh; /* Prevents it from going past the center of the screen */
+            max-height: 45vh; 
             background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(15, 15, 25, 0.98) 100%);
             border: 1px solid rgba(255, 215, 0, 0.3); 
             border-top: 4px solid var(--primary);
@@ -124,7 +124,7 @@
             z-index: 2000; 
             pointer-events: none; 
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            overflow-y: auto; /* Allows scrolling if you have a massive list of stats */
+            overflow-y: auto; 
         }
         #delta-title { font-size: 1.4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; text-shadow: 0 0 10px var(--primary); text-align: center; }
         .delta-row { display: grid; grid-template-columns: 24px 80px 1fr 60px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 6px 10px; border-radius: 6px; margin-top: 4px; }
@@ -133,20 +133,10 @@
         .level-badge { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #000; padding: 4px 15px; border-radius: 20px; font-weight: 900; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5); white-space: nowrap; }
 
         /* --- OTHER UI ELEMENTS --- */
-        /* Portal Unlock UI */
         #portal-ui {
-            position: absolute;
-            bottom: 150px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid var(--gold);
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            display: none;
-            z-index: 100;
-            pointer-events: auto;
+            position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85); border: 2px solid var(--gold); padding: 15px;
+            border-radius: 10px; text-align: center; display: none; z-index: 100; pointer-events: auto;
             box-shadow: 0 0 15px var(--gold);
         }
         #notification { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2rem; color: var(--gold); text-shadow: 0 0 5px #000; opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 1000; }
@@ -158,158 +148,139 @@
         .modal-body::-webkit-scrollbar { width: 6px; }
         .modal-body::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
 
-    /* New CSS for Skills & Talents Panel */
-    .skills-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Adjust as needed for layout */
-        gap: 15px;
-        padding-bottom: 20px;
-        position: relative; /* For potential connecting lines between nodes */
-    }
+        /* --- SKILLS & TALENTS PANEL --- */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+            gap: 15px;
+            padding-bottom: 20px;
+            position: relative; 
+        }
 
-    #skill-connections-svg { /* NEW */
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none; /* Allow clicks to pass through to nodes */
-        z-index: 1; /* Below skill nodes */
-    }
+        #skill-connections-svg { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; 
+            z-index: 1; 
+        }
 
-    .skill-connection-line { /* NEW */
-        stroke: rgba(100, 100, 100, 0.5);
-        stroke-width: 2px;
-        transition: stroke 0.2s, stroke-width 0.2s;
-    }
+        .skill-connection-line { 
+            stroke: rgba(100, 100, 100, 0.5);
+            stroke-width: 2px;
+            transition: stroke 0.2s, stroke-width 0.2s;
+        }
 
-    .skill-connection-line.highlighted { /* NEW */
-        stroke: var(--primary);
-        stroke-width: 4px;
-        filter: drop-shadow(0 0 5px var(--primary));
-    }
+        .skill-connection-line.highlighted { 
+            stroke: var(--primary);
+            stroke-width: 4px;
+            filter: drop-shadow(0 0 5px var(--primary));
+        }
 
-    .skill-node {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid #444;
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
-        transition: 0.2s;
-        position: relative;
-        overflow: visible; /* Allow tooltip to overflow */
-        box-shadow: 0 0 5px rgba(0,0,0,0.5);
-        z-index: 2; /* Above SVG lines */
-    }
+        .skill-node {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+            overflow: visible; 
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            z-index: 2; 
+        }
 
-    .skill-node:hover {
-        border-color: var(--primary);
-        background: rgba(187, 134, 252, 0.05);
-        box-shadow: 0 0 15px var(--glow-color);
-    }
+        .skill-node:hover {
+            border-color: var(--primary);
+            background: rgba(187, 134, 252, 0.05);
+            box-shadow: 0 0 15px var(--glow-color);
+        }
 
-    .skill-node.highlighted { /* NEW */
-        box-shadow: 0 0 20px var(--primary);
-        border-color: var(--primary);
-        transform: scale(1.02);
-    }
+        .skill-node.highlighted { 
+            box-shadow: 0 0 20px var(--primary);
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
 
-    .skill-node {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid #444;
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-        cursor: pointer;
-        transition: 0.2s;
-        position: relative;
-        overflow: visible; /* Allow tooltip to overflow */
-        box-shadow: 0 0 5px rgba(0,0,0,0.5);
-    }
+        .skill-node.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #666;
+            filter: grayscale(70%);
+        }
 
-    .skill-node:hover {
-        border-color: var(--primary);
-        background: rgba(187, 134, 252, 0.05);
-        box-shadow: 0 0 15px var(--glow-color);
-    }
+        .skill-node.unlocked {
+            border-color: var(--xp-color);
+            background: rgba(3, 218, 198, 0.1);
+            box-shadow: 0 0 15px rgba(3, 218, 198, 0.3);
+        }
 
-    .skill-node.locked {
-        opacity: 0.5;
-        cursor: not-allowed;
-        border-color: #666;
-        filter: grayscale(70%);
-    }
+        .skill-icon {
+            font-size: 2rem;
+            margin-bottom: 5px;
+            line-height: 1;
+        }
 
-    .skill-node.unlocked {
-        border-color: var(--xp-color);
-        background: rgba(3, 218, 198, 0.1);
-        box-shadow: 0 0 15px rgba(3, 218, 198, 0.3);
-    }
+        .skill-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+            text-transform: capitalize;
+        }
 
-    .skill-icon {
-        font-size: 2rem;
-        margin-bottom: 5px;
-        line-height: 1;
-    }
+        .skill-cost {
+            font-size: 0.75rem;
+            color: var(--shard);
+            font-weight: bold;
+        }
 
-    .skill-name {
-        font-size: 0.9rem;
-        font-weight: bold;
-        color: var(--primary);
-        margin-bottom: 5px;
-        text-transform: capitalize;
-    }
+        /* Tooltip for skill nodes */
+        .skill-tooltip {
+            position: absolute;
+            bottom: calc(100% + 10px); 
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            padding: 12px;
+            width: 220px;
+            text-align: left;
+            font-size: 0.85rem;
+            color: #eee;
+            display: none; 
+            pointer-events: none; 
+            z-index: 200;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
 
-    .skill-cost {
-        font-size: 0.75rem;
-        color: var(--shard);
-        font-weight: bold;
-    }
+        .skill-node:hover .skill-tooltip {
+            display: block;
+        }
 
-    /* Tooltip for skill nodes */
-    .skill-tooltip {
-        position: absolute;
-        bottom: calc(100% + 10px); /* Position above the node with some margin */
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.95);
-        border: 1px solid var(--primary);
-        border-radius: 8px;
-        padding: 12px;
-        width: 220px;
-        text-align: left;
-        font-size: 0.85rem;
-        color: #eee;
-        display: none; /* Hidden by default */
-        pointer-events: none; /* Don't block clicks */
-        z-index: 200;
-        box-shadow: 0 0 20px rgba(0,0,0,0.8);
-        backdrop-filter: blur(5px);
-    }
+        .skill-tooltip h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
 
-    .skill-node:hover .skill-tooltip {
-        display: block;
-    }
-
-    .skill-tooltip h4 {
-        color: var(--primary);
-        margin-bottom: 8px;
-        font-size: 1rem;
-    }
-
-    .skill-tooltip p {
-        margin-bottom: 5px;
-        line-height: 1.3;
-    }
-    .skill-tooltip p:last-child {
-        margin-bottom: 0;
-    }
-    .skill-tooltip .cost-info {
-        color: var(--shard);
-        font-weight: bold;
-        margin-top: 8px;
-    }
+        .skill-tooltip p {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+        .skill-tooltip p:last-child {
+            margin-bottom: 0;
+        }
+        .skill-tooltip .cost-info {
+            color: var(--shard);
+            font-weight: bold;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -397,10 +368,9 @@
 
                 <h3>Skills & Talents (<span id="skill-points-available">0</span> SP Available)</h3>
                 <div id="skills-tree-panel" class="skills-grid">
-                    <svg id="skill-connections-svg"></svg> <!-- NEW: SVG container for skill connection lines -->
-                    <!-- Example Skill Node (these would be dynamically generated by JS) -->
+                    <svg id="skill-connections-svg"></svg> 
                     <div class="skill-node locked" data-skill-id="1" data-cost="1" data-prereq="0">
-                        <div class="skill-icon">ðª</div>
+                        <div class="skill-icon">💪</div>
                         <div class="skill-name">Strength Training</div>
                         <div class="skill-cost">1 SP</div>
                         <div class="skill-tooltip">
@@ -411,18 +381,18 @@
                         </div>
                     </div>
                     <div class="skill-node locked" data-skill-id="2" data-cost="1" data-prereq="1">
-                        <div class="skill-icon">ð¨</div>
+                        <div class="skill-icon">🔨</div>
                         <div class="skill-name">Heavy Blow</div>
                         <div class="skill-cost">1 SP</div>
                         <div class="skill-tooltip">
                             <h4>Heavy Blow</h4>
-                            <p>Your basic attacks have a 10% chance to deal bonus damage.</p>
+                            <p>Your basic attacks deal 10% bonus damage.</p>
                             <p>Requires: Strength Training</p>
                             <p class="cost-info">Cost: 1 Skill Point</p>
                         </div>
                     </div>
                     <div class="skill-node locked" data-skill-id="3" data-cost="1" data-prereq="0">
-                        <div class="skill-icon">ð</div>
+                        <div class="skill-icon">🏃</div>
                         <div class="skill-name">Agile Footwork</div>
                         <div class="skill-cost">1 SP</div>
                         <div class="skill-tooltip">
@@ -433,17 +403,16 @@
                         </div>
                     </div>
                     <div class="skill-node locked" data-skill-id="4" data-cost="1" data-prereq="3">
-                        <div class="skill-icon">ð¨</div>
+                        <div class="skill-icon">💨</div>
                         <div class="skill-name">Evasion Mastery</div>
                         <div class="skill-cost">1 SP</div>
                         <div class="skill-tooltip">
                             <h4>Evasion Mastery</h4>
-                            <p>Increases your chance to dodge incoming attacks by 5%.</p>
+                            <p>Increases your base Health Regen by 5.</p>
                             <p>Requires: Agile Footwork</p>
                             <p class="cost-info">Cost: 1 Skill Point</p>
                         </div>
                     </div>
-                    <!-- More skill nodes would be added here, potentially with visual lines connecting prerequisites -->
                 </div>
 
                 <!-- Item Inspection & Comparison Panel -->
@@ -511,8 +480,8 @@
             const skillsTreePanel = document.getElementById('skills-tree-panel');
             const skillPointsDisplay = document.getElementById('skill-points-available');
             const inventoryModal = document.getElementById('inventory-modal');
-            const skillConnectionsSvg = document.getElementById('skill-connections-svg'); // NEW: Reference to SVG container
-            let skillNodes = []; // Cache for skill node elements
+            const skillConnectionsSvg = document.getElementById('skill-connections-svg'); 
+            let skillNodes = []; 
 
             // Helper to get center coordinates of an element relative to the skillsTreePanel
             function getElementCenter(element) {
@@ -524,12 +493,9 @@
                 };
             }
 
-            /**
-             * NEW: Draws lines between skill nodes based on prerequisites.
-             */
             function drawSkillConnections() {
-                skillConnectionsSvg.innerHTML = ''; // Clear existing lines
-                skillNodes = Array.from(skillsTreePanel.querySelectorAll('.skill-node')); // Re-fetch nodes
+                skillConnectionsSvg.innerHTML = ''; 
+                skillNodes = Array.from(skillsTreePanel.querySelectorAll('.skill-node')); 
 
                 const nodeMap = new Map();
                 skillNodes.forEach(node => {
@@ -558,12 +524,8 @@
                 });
             }
 
-            /**
-             * NEW: Highlights the path to a target skill node.
-             * @param {HTMLElement} targetNode The skill node to highlight the path to.
-             */
             function highlightSkillPath(targetNode) {
-                clearSkillPathHighlight(); // Clear any previous highlights
+                clearSkillPathHighlight(); 
 
                 const pathNodes = new Set();
                 const pathLines = new Set();
@@ -573,10 +535,10 @@
                 while (currentNode && !player.hasSkill(parseInt(currentNode.dataset.skillId))) {
                     pathNodes.add(currentNode);
                     const prereqId = parseInt(currentNode.dataset.prereq);
-                    if (prereqId === 0) break; // Reached a root skill
+                    if (prereqId === 0) break; 
 
                     const prereqNode = skillNodes.find(n => parseInt(n.dataset.skillId) === prereqId);
-                    if (!prereqNode) break; // Prereq node not found
+                    if (!prereqNode) break; 
 
                     // Find the line connecting prereqNode to currentNode
                     const line = skillConnectionsSvg.querySelector(`[data-from-skill="${prereqId}"][data-to-skill="${parseInt(currentNode.dataset.skillId)}"]`);
@@ -591,19 +553,16 @@
                 pathLines.forEach(line => line.classList.add('highlighted'));
             }
 
-            /**
-             * NEW: Clears all skill path highlighting.
-             */
             function clearSkillPathHighlight() {
                 skillsTreePanel.querySelectorAll('.skill-node.highlighted').forEach(node => node.classList.remove('highlighted'));
                 skillConnectionsSvg.querySelectorAll('.skill-connection-line.highlighted').forEach(line => line.classList.remove('highlighted'));
             }
 
-            // Update skill points display initially (if player is already loaded)
+            // Update skill points display initially
             if (typeof player !== 'undefined' && player) {
                 skillPointsDisplay.textContent = player.skillPoints;
                 updateSkillTreeLockStates();
-                drawSkillConnections(); // NEW: Draw connections on initial load
+                drawSkillConnections(); 
             }
 
             // Event listener for clicking on skill nodes
@@ -615,7 +574,6 @@
                 const skillCost = parseInt(targetNode.dataset.cost);
                 const prereqId = parseInt(targetNode.dataset.prereq);
 
-                // Ensure player object exists and has the necessary methods
                 if (typeof player === 'undefined' || !player || !player.learnSkill || !player.canLearnSkill) {
                     showNotification("Game not fully loaded. Cannot learn skills.", "error");
                     return;
@@ -635,30 +593,21 @@
 
                 // Attempt to learn the skill
                 if (player.learnSkill(skillId, skillCost, prereqId)) {
-                    // Update UI for the learned skill
                     targetNode.classList.remove('locked');
                     targetNode.classList.add('unlocked');
                     const skillCostElement = targetNode.querySelector('.skill-cost');
                     if (skillCostElement) skillCostElement.textContent = 'Learned';
 
-                    // Update available skill points display
                     skillPointsDisplay.textContent = player.skillPoints;
-
                     showNotification(`Skill "${targetNode.querySelector('.skill-name').textContent}" unlocked!`, "success");
-
-                    // Re-evaluate lock states for all skills, as new skills might become available
                     updateSkillTreeLockStates();
-                    // drawSkillConnections(); // Re-drawing connections is not strictly necessary unless nodes are added/removed dynamically
                 } else {
-                    // Fallback for any unexpected failure in player.learnSkill
                     showNotification("Failed to learn skill. Check points and prerequisites.", "error");
                 }
             });
 
-            // NEW: Event listeners for hover to highlight paths
             skillsTreePanel.addEventListener('mouseover', (event) => {
                 let targetNode = event.target.closest('.skill-node');
-                // Only highlight for unlearned skills that have prerequisites or are not root skills
                 if (targetNode && !player.hasSkill(parseInt(targetNode.dataset.skillId))) {
                     highlightSkillPath(targetNode);
                 }
@@ -671,20 +620,16 @@
                 }
             });
 
-            /**
-             * Updates the visual lock/unlock states of all skill nodes based on player's learned skills and points.
-             */
             function updateSkillTreeLockStates() {
                 if (typeof player === 'undefined' || !player || !player.hasSkill || !player.canLearnSkill) {
-                    return; // Player object not ready
+                    return; 
                 }
 
-                skillNodes.forEach(node => { // Use the cached skillNodes
+                skillNodes.forEach(node => { 
                     const skillId = parseInt(node.dataset.skillId);
                     const prereqId = parseInt(node.dataset.prereq);
                     const skillCost = parseInt(node.dataset.cost);
 
-                    // Reset styles first
                     node.style.borderColor = '';
                     node.style.filter = '';
 
@@ -693,30 +638,26 @@
                         node.classList.add('unlocked');
                         const skillCostElement = node.querySelector('.skill-cost');
                         if (skillCostElement) skillCostElement.textContent = 'Learned';
-                        node.style.borderColor = 'var(--xp-color)'; // Visually distinct for learned
+                        node.style.borderColor = 'var(--xp-color)'; 
                         node.style.filter = 'none';
                     } else {
                         node.classList.remove('unlocked');
-                        node.classList.add('locked'); // Default to locked
+                        node.classList.add('locked'); 
                         const skillCostElement = node.querySelector('.skill-cost');
                         if (skillCostElement) skillCostElement.textContent = `${skillCost} SP`;
 
-                        // Check if prerequisites are met to make it 'potentially learnable'
                         const prereqMet = (prereqId === 0 || player.hasSkill(prereqId));
 
                         if (prereqMet) {
-                            node.classList.remove('locked'); // Remove 'locked' class if prereqs are met
+                            node.classList.remove('locked'); 
                             if (player.skillPoints >= skillCost) {
-                                // Learnable - enough points and prereqs met
-                                node.style.borderColor = 'var(--primary)'; // Highlight as ready to learn
+                                node.style.borderColor = 'var(--primary)'; 
                                 node.style.filter = 'none';
                             } else {
-                                // Prereqs met, but not enough points
                                 node.style.borderColor = '#666';
                                 node.style.filter = 'grayscale(30%)';
                             }
                         } else {
-                            // Prereqs not met, keep it fully locked
                             node.classList.add('locked');
                             node.style.borderColor = '#444';
                             node.style.filter = 'grayscale(70%)';
@@ -725,28 +666,20 @@
                 });
             }
 
-            /**
-             * Refreshes the UI for the Skills & Talents panel.
-             * This function should be called whenever the inventory modal is opened
-             * or when player skill points/learned skills change.
-             */
             window.refreshSkillTreeUI = function() {
                 if (typeof player !== 'undefined' && player) {
                     skillPointsDisplay.textContent = player.skillPoints;
                     updateSkillTreeLockStates();
-                    drawSkillConnections(); // NEW: Ensure connections are redrawn if layout changes or on refresh
+                    drawSkillConnections(); 
                 }
             };
 
-            // Initial call to set up states if the player object is already available
-            // This might be called again when the game starts or player loads.
             if (typeof player !== 'undefined' && player) {
                 updateSkillTreeLockStates();
-                drawSkillConnections(); // NEW: Initial draw
+                drawSkillConnections(); 
             }
         }
 
-        // Placeholder for a notification function (if not already present in main.js)
         function showNotification(message, type = "info") {
             const notificationElement = document.getElementById('notification');
             if (!notificationElement) return;
@@ -755,14 +688,12 @@
             notificationElement.style.opacity = 1;
             notificationElement.style.color = type === "success" ? "var(--xp-color)" : (type === "error" ? "var(--hp-color)" : "var(--gold)");
 
-            // Clear any previous timeout to ensure new notifications are fully displayed
             clearTimeout(notificationElement._hideTimeout); 
             notificationElement._hideTimeout = setTimeout(() => {
                 notificationElement.style.opacity = 0;
             }, 3000);
         }
 
-        // Call initializeSkillTree after the DOM is fully loaded
         document.addEventListener('DOMContentLoaded', () => {
             initializeSkillTree();
         });

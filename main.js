@@ -536,9 +536,18 @@ function gainXp(amt) {
 }
 
 function die() {
-    GameState.state = 'DEAD'; PlayerData.gold = Math.floor(PlayerData.gold / 2); PlayerData.shards = Math.floor(PlayerData.shards / 2);
-    UI.notify("YOU DIED. Wealth halved."); GameState.level = 1; saveGame();
-    setTimeout(() => { initLevel(); GameState.state = 'PLAYING'; }, 2000);
+    GameState.state = 'DEAD'; 
+    PlayerData.gold = Math.floor(PlayerData.gold / 2); 
+    PlayerData.shards = Math.floor(PlayerData.shards / 2);
+    
+    UI.notify("YOU DIED. Wealth halved."); 
+    
+    saveGame();
+    
+    setTimeout(() => { 
+        initLevel(); 
+        GameState.state = 'PLAYING'; 
+    }, 2000);
 }
 
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
@@ -550,19 +559,40 @@ function spawnEnemies() {
         do { 
             ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
             ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
-        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 300);
+        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400); // Increased safe spawn radius
         entities.push(new Enemy(ex, ey));
     }
 }
 
 function initLevel() {
-    generateMap(); entities = []; particles = []; floatingTexts = [];
-    let startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2, startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
-    if(!player) player = new Player(startX, startY); else { player.x = startX; player.y = startY; }
+    generateMap(); 
+    entities = []; 
+    particles = []; 
+    floatingTexts = [];
+    
+    let startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2, 
+        startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
+    
+    if(!player) {
+        player = new Player(startX, startY); 
+    } else { 
+        player.x = startX; 
+        player.y = startY; 
+        // FULLY HEAL PLAYER ON LEVEL INIT / REVIVE
+        player.hp = player.getMaxHp(); 
+    }
+    
     if (typeof initializeSkillTree === 'function') {
         initializeSkillTree();
     }
-    entities.push(player); spawnEnemies(); REFS.depthLevel.innerText = GameState.level; UI.updateMinimap();
+    
+    entities.push(player); 
+    spawnEnemies(); 
+    REFS.depthLevel.innerText = GameState.level; 
+    UI.updateMinimap();
+    
+    // Instantly update the UI so health isn't showing 0 on revive
+    UI.updateStats();
 }
 
 // --- 7. INPUT & SAVE ---
