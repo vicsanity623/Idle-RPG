@@ -69,10 +69,8 @@ const generateRandomGear = (level) => {
         }
     }
 
-    // --- FIX: Robust "Bad Luck Protection" ---
     const equipped = window.PlayerData.gear[item.slot];
     if (equipped) {
-        // Safely check both Starter Gear (root) and Dropped Gear (.stats)
         let eqStats = equipped.stats || equipped;
         for (let stat in item.stats) {
             if (eqStats[stat] && item.stats[stat] <= eqStats[stat]) {
@@ -144,7 +142,6 @@ class Enemy {
         // Flanking and Movement Logic
         if (dist < 800) {
             let angleToPlayer = Math.atan2(dy, dx);
-            // Higher depth = smarter, tighter flanking
             let aggroFactor = Math.min(1.5, 1 + (GameState.level * 0.1));
             let flankOffset = ((this.id > 0.5 ? 1 : -1) * (Math.PI / 3) * HiveMind.flankWeight * aggroFactor);
             let targetAngle = angleToPlayer + flankOffset;
@@ -204,7 +201,6 @@ class Enemy {
     }
 
     fireProjectile() {
-        // Use the same helper from main.js, but flagged as isEnemy=true
         spawnProjectile(this.x, this.y, player, this.damage, false, true);
     }
 
@@ -213,12 +209,10 @@ class Enemy {
         let finalDamage = amt * fearMultiplier;
         this.hp -= finalDamage; 
         
-        // Rage trigger on damage (25% chance) or if HP low
         if (!this.isRaged && (Math.random() < 0.15 || this.hp < this.maxHp * 0.3)) {
             this.triggerRage();
         }
 
-        // Applied window.FormatNumber to damage popups
         spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${window.FormatNumber(finalDamage)}` : window.FormatNumber(finalDamage), isCrit ? '#ff0' : '#fff');
         if (this.hp <= 0) this.die();
     }
@@ -269,7 +263,6 @@ class Loot {
             let baseAmt = randomInt(5, 15) * GameState.level;
             let finalAmt = Math.floor(baseAmt * player.getGoldMultiplier());
             PlayerData.gold += finalAmt; 
-            // Applied window.FormatNumber to Gold pickup popups
             spawnFloatingText(this.x, this.y, `+${window.FormatNumber(finalAmt)} Gold`, '#ffd700');
         } else if (this.type === 'shard') {
             PlayerData.shards += 1; spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
