@@ -1,8 +1,9 @@
-const CACHE_NAME = 'dungeons-of-fate-v10';
+const CACHE_NAME = 'dungeons-of-fate-v11';
 
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
+    './style.css', // Added for Bestiary modal styling
     './player.js',
     './entities.js',
     './main.js',
