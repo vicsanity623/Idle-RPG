@@ -218,7 +218,8 @@ class Enemy {
             this.triggerRage();
         }
 
-        spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${Math.floor(finalDamage)}` : Math.floor(finalDamage), isCrit ? '#ff0' : '#fff');
+        // Applied window.FormatNumber to damage popups
+        spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${window.FormatNumber(finalDamage)}` : window.FormatNumber(finalDamage), isCrit ? '#ff0' : '#fff');
         if (this.hp <= 0) this.die();
     }
 
@@ -268,7 +269,8 @@ class Loot {
             let baseAmt = randomInt(5, 15) * GameState.level;
             let finalAmt = Math.floor(baseAmt * player.getGoldMultiplier());
             PlayerData.gold += finalAmt; 
-            spawnFloatingText(this.x, this.y, `+${finalAmt} Gold`, '#ffd700');
+            // Applied window.FormatNumber to Gold pickup popups
+            spawnFloatingText(this.x, this.y, `+${window.FormatNumber(finalAmt)} Gold`, '#ffd700');
         } else if (this.type === 'shard') {
             PlayerData.shards += 1; spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
         } else if (this.type === 'gear') {
