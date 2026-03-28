@@ -69,11 +69,19 @@ const generateRandomGear = (level) => {
         }
     }
 
+    // --- FIX: Robust "Bad Luck Protection" ---
     const equipped = window.PlayerData.gear[item.slot];
     if (equipped) {
+        // Safely check both Starter Gear (root) and Dropped Gear (.stats)
+        let eqStats = equipped.stats || equipped;
         for (let stat in item.stats) {
-            if (equipped[stat] && item.stats[stat] <= equipped[stat]) {
-                item.stats[stat] = Math.ceil(equipped[stat] * 1.15);
+            if (eqStats[stat] && item.stats[stat] <= eqStats[stat]) {
+                let boostedVal = eqStats[stat] * 1.15; // 15% guaranteed boost
+                if (stat === 'hp' || stat === 'atk' || stat === 'def') {
+                    item.stats[stat] = Math.ceil(boostedVal);
+                } else {
+                    item.stats[stat] = Number(boostedVal.toFixed(3));
+                }
             }
         }
     }
