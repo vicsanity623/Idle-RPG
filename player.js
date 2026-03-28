@@ -25,7 +25,6 @@ class Player {
         this.color = '#bb86fc';
         
         // --- 1. INITIALIZE ARRAYS & READ FROM SAVE DATA ---
-        // FIX: Grab saved skills so you don't lose them on page refresh!
         this.skillPoints = window.PlayerData.skillPoints || 0;
         this.learnedSkills = window.PlayerData.learnedSkills || [];
         
@@ -46,7 +45,7 @@ class Player {
         this.pipeBombAbsorbed = 0;
         this.scorchActiveTimer = 0;
 
-        // --- 2. CALCULATE HP (Safe because learnedSkills now exists) ---
+        // --- 2. CALCULATE HP ---
         this.hp = this.getMaxHp();
     }
 
@@ -209,30 +208,35 @@ class Player {
             }
             Input.dashPressed = false; 
         }
-        UI.updateHotbar(this.skills);
+        
+        UI.updateHotbar(); // Dynamically updates all cooldown overlays
 
-        // --- EXPANDED SKILLS PROCESSING ---
+        // --- EXPANDED SKILLS PROCESSING WITH SOTA EFFECTS ---
         for(let i=0; i<this.skillCooldowns.length; i++) {
             if (this.skillCooldowns[i] > 0) this.skillCooldowns[i] -= dt;
         }
 
         // 5 Invincibility
         if (this.hasSkill(5) && this.skillCooldowns[5] <= 0) {
-            this.invincibleTimer = 3; this.skillCooldowns[5] = 14;
+            this.invincibleTimer = 3; this.skillCooldowns[5] = ACTIVE_SKILLS_CONFIG[5].cd;
             spawnFloatingText(this.x, this.y, "INVINCIBLE", '#fff');
+            entities.push(new ExpandingRing(this.x, this.y, '#ffd700', 100, 0.4));
         }
+        
         // 6 Scorch Trail
         if (this.hasSkill(6) && this.skillCooldowns[6] <= 0) {
-            this.scorchActiveTimer = 5; this.skillCooldowns[6] = 9;
+            this.scorchActiveTimer = 5; this.skillCooldowns[6] = ACTIVE_SKILLS_CONFIG[6].cd;
         }
         if (this.scorchActiveTimer > 0) {
             this.scorchActiveTimer -= dt;
             if (Math.random() < 0.25) entities.push(new ScorchTrailEntity(this.x, this.y, this.getAttackPower() * 0.5));
         }
+        
         // 7 Heat Wave
         if (this.hasSkill(7) && this.skillCooldowns[7] <= 0) {
             spawnFloatingText(this.x, this.y, "HEAT WAVE", '#ff5500');
-            spawnAura(this.x, this.y, '#ff5500');
+            spawnSotaParticles(this.x, this.y, '#ff5500', 50, 400);
+            entities.push(new ExpandingRing(this.x, this.y, '#ff5500', 300, 0.5));
             entities.forEach(e => {
                 if (e instanceof Enemy && Math.hypot(this.x-e.x, this.y-e.y) < 250) {
                     e.takeDamage(this.getAttackPower() * 3, true);
@@ -240,33 +244,42 @@ class Player {
                     e.x += Math.cos(ang) * 120; e.y += Math.sin(ang) * 120;
                 }
             });
-            this.skillCooldowns[7] = 17;
+            this.skillCooldowns[7] = ACTIVE_SKILLS_CONFIG[7].cd;
         }
+        
         // 8 Blink
         if (this.hasSkill(8) && this.skillCooldowns[8] <= 0) {
             let nearest = this.getNearestEnemy(600);
             if (nearest) {
+                spawnSotaParticles(this.x, this.y, '#bb86fc', 30, 200); // Particles at old spot
                 this.x = nearest.x + 40; this.y = nearest.y + 40;
-                this.invincibleTimer = 2; this.skillCooldowns[8] = 8;
+                spawnSotaParticles(this.x, this.y, '#bb86fc', 30, 200); // Particles at new spot
+                this.invincibleTimer = 2; this.skillCooldowns[8] = ACTIVE_SKILLS_CONFIG[8].cd;
                 spawnFloatingText(this.x, this.y, "BLINK", '#bb86fc');
             }
         }
+        
         // 9 Rage
         if (this.hasSkill(9) && this.skillCooldowns[9] <= 0) {
-            this.rageTimer = 3; this.skillCooldowns[9] = 6;
+            this.rageTimer = 3; this.skillCooldowns[9] = ACTIVE_SKILLS_CONFIG[9].cd;
             spawnFloatingText(this.x, this.y, "RAGE", '#ff0000');
+            entities.push(new ExpandingRing(this.x, this.y, '#ff0000', 150, 0.3));
         }
+        
         // 10 Twister
         if (this.hasSkill(10) && this.skillCooldowns[10] <= 0) {
             entities.push(new TwisterEntity(this.x, this.y, this.getAttackPower() * 5, 0));
             entities.push(new TwisterEntity(this.x, this.y, this.getAttackPower() * 5, Math.PI));
-            this.skillCooldowns[10] = 12;
+            this.skillCooldowns[10] = ACTIVE_SKILLS_CONFIG[10].cd;
         }
+        
         // 11 Summon
         if (this.hasSkill(11) && this.skillCooldowns[11] <= 0) {
             entities.push(new SummonCloneEntity(this.x, this.y, this.getAttackPower() * 9));
-            this.skillCooldowns[11] = 13;
+            this.skillCooldowns[11] = ACTIVE_SKILLS_CONFIG[11].cd;
+            spawnSotaParticles(this.x, this.y, '#ff0000', 40, 300);
         }
+        
         // 12 Rain Fire
         if (this.hasSkill(12) && this.skillCooldowns[12] <= 0) {
             for(let i=0; i<6; i++) {
@@ -274,24 +287,29 @@ class Player {
                 let ty = this.y + (Math.random() - 0.5)*500;
                 entities.push(new RainFireEntity(tx, ty, this.getAttackPower() * 2));
             }
-            this.skillCooldowns[12] = 10;
+            this.skillCooldowns[12] = ACTIVE_SKILLS_CONFIG[12].cd;
         }
+        
         // 13 Zen
         if (this.hasSkill(13) && this.skillCooldowns[13] <= 0) {
-            this.zenTimer = 5; this.skillCooldowns[13] = 12;
+            this.zenTimer = 5; this.skillCooldowns[13] = ACTIVE_SKILLS_CONFIG[13].cd;
             spawnFloatingText(this.x, this.y, "ZEN", '#fff');
+            entities.push(new ExpandingRing(this.x, this.y, '#ffffff', 200, 0.5));
         }
+        
         // 14 Pipe Bomb
         if (this.hasSkill(14) && this.skillCooldowns[14] <= 0) {
-            this.pipeBombTimer = 5; this.pipeBombAbsorbed = 0; this.skillCooldowns[14] = 20;
+            this.pipeBombTimer = 5; this.pipeBombAbsorbed = 0; this.skillCooldowns[14] = ACTIVE_SKILLS_CONFIG[14].cd;
             spawnFloatingText(this.x, this.y, "ABSORBING", '#ff0');
+            entities.push(new ExpandingRing(this.x, this.y, '#ffff00', 150, 5.0)); // Slow pulse ring
         }
 
         if (this.pipeBombTimer > 0) {
             this.pipeBombTimer -= dt;
             if (this.pipeBombTimer <= 0) {
                 spawnFloatingText(this.x, this.y, "BOOM!", '#ff0');
-                spawnAura(this.x, this.y, '#ffff00');
+                spawnSotaParticles(this.x, this.y, '#ffff00', 80, 500);
+                entities.push(new ExpandingRing(this.x, this.y, '#ffff00', 400, 0.6));
                 entities.forEach(e => {
                     if (e instanceof Enemy && Math.hypot(this.x-e.x, this.y-e.y) < 300) {
                         e.takeDamage(this.pipeBombAbsorbed * 2, true); 
@@ -310,12 +328,14 @@ class Player {
         // 22 Frost Nova
         if (this.hasSkill(22) && this.skillCooldowns[22] <= 0) {
             spawnFloatingText(this.x, this.y, "FROST NOVA", '#00ffff');
+            spawnSotaParticles(this.x, this.y, '#00ffff', 60, 300);
+            entities.push(new ExpandingRing(this.x, this.y, '#00ffff', 250, 0.4));
             entities.forEach(e => {
                 if (e instanceof Enemy && Math.hypot(this.x-e.x, this.y-e.y) < 250) {
                     if (!e.frozen) { e.frozen = true; e.freezeTimer = 3; e.oldSpeed = e.speed; e.speed = 0; }
                 }
             });
-            this.skillCooldowns[22] = 15;
+            this.skillCooldowns[22] = ACTIVE_SKILLS_CONFIG[22].cd;
         }
 
         // Global Enemy Unfreeze Helper
@@ -329,7 +349,7 @@ class Player {
         // 23 Dagger Shield
         if (this.hasSkill(23) && this.skillCooldowns[23] <= 0) {
             entities.push(new DaggerShieldEntity(this, this.getAttackPower()));
-            this.skillCooldowns[23] = 10;
+            this.skillCooldowns[23] = ACTIVE_SKILLS_CONFIG[23].cd;
         }
 
         // 24 Executioner
@@ -337,6 +357,7 @@ class Player {
             entities.forEach(e => {
                 if (e instanceof Enemy && e.hp < e.maxHp * 0.15 && Math.hypot(this.x-e.x, this.y-e.y) < 200) {
                     spawnFloatingText(e.x, e.y, "EXECUTED", '#555');
+                    spawnSotaParticles(e.x, e.y, '#555', 20, 200);
                     e.takeDamage(e.hp + 100, true);
                 }
             });
@@ -347,6 +368,7 @@ class Player {
         if (this.rageTimer > 0) {
             this.rageTimer -= dt;
             this.color = '#ff0000';
+            if (Math.random() < 0.2) spawnSotaParticles(this.x, this.y, '#ff0000', 1, 100); // Trail
         } else if (this.zenTimer > 0) {
             this.zenTimer -= dt;
             this.color = '#ffffff';
@@ -362,10 +384,15 @@ class Player {
         if (prereqId !== 0 && !this.hasSkill(prereqId)) return false;
         return true;
     }
+    
     learnSkill(skillId, cost, prereqId) {
         if (this.canLearnSkill(skillId, cost, prereqId)) {
-            this.skillPoints -= cost; this.learnedSkills.push(skillId);
+            this.skillPoints -= cost; 
+            this.learnedSkills.push(skillId);
             if (skillId === 3) this.speed *= 1.10;
+            
+            // REBUILD UI HOTBAR IMMEDATELY WHEN SKILL IS BOUGHT
+            if (typeof UI !== 'undefined' && UI.buildHotbar) UI.buildHotbar();
             return true;
         }
         return false;
@@ -437,6 +464,7 @@ class SummonCloneEntity {
             let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
             if (dist < 40) {
                 this.target.takeDamage(this.damage, true); this.chain++; this.target = null;
+                spawnSotaParticles(this.target.x, this.target.y, '#ff0000', 15, 200); // Impact explosion
             } else { this.x += (dx/dist) * 900 * dt; this.y += (dy/dist) * 900 * dt; }
         }
     }
@@ -448,7 +476,10 @@ class RainFireEntity {
     update(dt) {
         let dx = this.tx - this.x, dy = this.ty - this.y, dist = Math.hypot(dx, dy);
         if (dist < 50) {
-            spawnAura(this.tx, this.ty, '#ff5500');
+            // SOTA Massive Explosion on Meteor Impact
+            spawnSotaParticles(this.tx, this.ty, '#ff5500', 30, 300);
+            entities.push(new ExpandingRing(this.tx, this.ty, '#ff5500', 150, 0.3));
+            
             entities.forEach(e => { if (e instanceof Enemy && Math.hypot(e.x - this.tx, e.y - this.ty) < 150) e.takeDamage(this.damage, false); });
             entities.splice(entities.indexOf(this), 1);
         } else { this.x += (dx/dist) * this.speed * dt; this.y += (dy/dist) * this.speed * dt; }

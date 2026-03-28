@@ -8,6 +8,22 @@ const TILE_SIZE = 64;
 const MAP_SIZE = 42;
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
+// --- THE SKILLS DICTIONARY (For UI Hotbar Tracking) ---
+const ACTIVE_SKILLS_CONFIG = {
+    5: { icon: '🛡️', cd: 14, name: 'Invincibility' },
+    6: { icon: '🔥', cd: 9, name: 'Scorch' },
+    7: { icon: '🌋', cd: 17, name: 'Heat Wave' },
+    8: { icon: '👁️‍🗨️', cd: 8, name: 'Blink' },
+    9: { icon: '💢', cd: 6, name: 'Rage' },
+    10: { icon: '🌪️', cd: 12, name: 'Twister' },
+    11: { icon: '👥', cd: 13, name: 'Summon' },
+    12: { icon: '☄️', cd: 10, name: 'Rain Fire' },
+    13: { icon: '🧘', cd: 12, name: 'Zen' },
+    14: { icon: '💣', cd: 20, name: 'Pipe Bomb' },
+    22: { icon: '❄️', cd: 15, name: 'Frost Nova' },
+    23: { icon: '🗡️', cd: 10, name: 'Daggers' }
+};
+
 // --- 2. THE REGISTRY (Centralized DOM references) ---
 const REFS = {
     canvas:           document.getElementById('game-canvas'),
@@ -42,8 +58,7 @@ const REFS = {
     discardBtn:       document.getElementById('discard-btn'),
     portalUI:         document.getElementById('portal-ui'),
     portalCost:       document.getElementById('portal-cost-text'),
-    unlockBtn:        document.getElementById('unlock-portal-btn'),
-    cooldowns:        [0, 1, 2, 3].map(i => document.getElementById(`cd-${i}`))
+    unlockBtn:        document.getElementById('unlock-portal-btn')
 };
 
 // --- 3. ENGINE GLOBALS (Attached to window for E2E testing) ---
@@ -93,17 +108,14 @@ window.FormatNumber = function(value) {
     let suffixIndex = Math.floor(Math.log10(value) / 3);
     let displayValue = value / Math.pow(10, suffixIndex * 3);
     
-    // Truncate cleanly up to 3 decimal places without rounding up (e.g. 1.9999 -> 1.999)
     let truncated = Math.floor(displayValue * 1000) / 1000;
-    let numStr = truncated.toString(); // Automatically drops trailing zeroes
+    let numStr = truncated.toString();
     
     let suffix = "";
     if (suffixIndex === 1) suffix = "K";
     else if (suffixIndex === 2) suffix = "M";
     else if (suffixIndex >= 3) {
         let n = suffixIndex - 3;
-        
-        // ZZZZ translates to the 475,253rd combination in Base-26
         if (n <= 475253) {
             let s = "";
             while (n >= 0) {
@@ -112,14 +124,13 @@ window.FormatNumber = function(value) {
             }
             suffix = s;
         } else {
-            // "then we enter 999S-999SSS-999SA-999SSSZ"
-            let adjustedN = n - 475254; // Reset index to restart letter sequence
+            let adjustedN = n - 475254; 
             let subS = "";
             while (adjustedN >= 0) {
                 subS = String.fromCharCode((adjustedN % 26) + 65) + subS;
                 adjustedN = Math.floor(adjustedN / 26) - 1;
             }
-            suffix = "S" + subS; // Expand as 'S', 'SA', 'SB' dynamically into Infinity
+            suffix = "S" + subS; 
         }
     }
     
@@ -151,10 +162,54 @@ const UI = {
         REFS.cShard.innerText = FormatNumber(PlayerData.shards);
     },
     
-    updateHotbar: (skills) => {
-        skills.forEach((s, i) => {
-            let overlay = REFS.cooldowns[i];
-            if (overlay) overlay.style.height = `${(s.current / s.cdMax) * 100}%`;
+    // BUILD THE HOTBAR DYNAMICALLY BASED ON LEARNED SKILLS
+    buildHotbar: () => {
+        let hb = document.getElementById('hotbar');
+        if (!hb) return;
+        hb.innerHTML = ''; // Clear existing hardcoded or old slots
+        
+        let html = '';
+        const baseSkills = [
+            { id: 0, key: 'Pot', icon: '💚' },
+            { id: 1, key: 'Atk', icon: '⚔️' },
+            { id: 2, key: 'Aura', icon: '🔥' },
+            { id: 3, key: 'Dash', icon: '⚡' }
+        ];
+
+        // 1. Inject Core 4 Base Skills
+        baseSkills.forEach(s => {
+            html += `<div class="slot"><div class="slot-key">${s.key}</div><span>${s.icon}</span><div class="cooldown-overlay" id="cd-base-${s.id}"></div></div>`;
+        });
+        
+        // 2. Dynamically Inject Unlocked Active Skills
+        if (player && player.learnedSkills) {
+            player.learnedSkills.forEach(id => {
+                if (ACTIVE_SKILLS_CONFIG[id]) {
+                    html += `<div class="slot ext-slot"><span>${ACTIVE_SKILLS_CONFIG[id].icon}</span><div class="cooldown-overlay" id="cd-ext-${id}"></div></div>`;
+                }
+            });
+        }
+        hb.innerHTML = html;
+    },
+
+    // UPDATE HEIGHTS OF EVERY ACTIVE HOTBAR ITEM
+    updateHotbar: () => {
+        if (!player) return;
+        
+        // 1. Update Core 4
+        player.skills.forEach((s, i) => {
+            let el = document.getElementById(`cd-base-${i}`);
+            if (el) el.style.height = `${(s.current / s.cdMax) * 100}%`;
+        });
+        
+        // 2. Update Unlocked Expanded Skills
+        player.learnedSkills.forEach(id => {
+            let el = document.getElementById(`cd-ext-${id}`);
+            if (el && ACTIVE_SKILLS_CONFIG[id]) {
+                let current = player.skillCooldowns[id] || 0;
+                let maxCd = ACTIVE_SKILLS_CONFIG[id].cd;
+                el.style.height = `${(current / maxCd) * 100}%`;
+            }
         });
     },
     
@@ -186,7 +241,6 @@ const UI = {
         } else {
             REFS.invModal.style.display = 'flex';
             UI.renderInventory();
-            // Call the globally accessible skill tree refresh function as per recent edits
             if (typeof refreshSkillTreeUI === 'function') {
                 refreshSkillTreeUI();
             }
@@ -196,7 +250,6 @@ const UI = {
     renderInventory: () => {
         if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
-        // 1. Stats Sheet
         if (REFS.statsSheet && player) {
             let html = `
                 <div class="stat-line"><span>Max HP</span><span class="stat-val">${FormatNumber(player.getMaxHp())}</span></div>
@@ -207,7 +260,6 @@ const UI = {
                 <div class="stat-line"><span>Crit %</span><span class="stat-val">${FormatNumber(player.getCritChance())}%</span></div>
                 <div class="stat-line"><span>Crit X</span><span class="stat-val">${FormatNumber(player.getCritMultiplier())}x</span></div>
             `;
-            // Dynamic Special Affixes
             let mag = player.getAffixValue('magnet'); if (mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${FormatNumber(mag)}px</span></div>`;
             let grd = player.getAffixValue('greed'); if (grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${FormatNumber(grd)}%</span></div>`;
             let wis = player.getAffixValue('wisdom'); if (wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${FormatNumber(wis)}%</span></div>`;
@@ -222,7 +274,6 @@ const UI = {
             REFS.statsSheet.innerHTML = html;
         }
 
-        // 2. Equipped Gear Grid
         if (REFS.gearGrid) {
             REFS.gearGrid.innerHTML = '';
             GEAR_TYPES.forEach(type => {
@@ -255,7 +306,6 @@ const UI = {
             });
         }
 
-        // 3. Inventory Bag Grid
         if (REFS.bagGrid) {
             REFS.bagGrid.innerHTML = '';
             PlayerData.inventory.forEach((item, index) => {
@@ -480,7 +530,6 @@ class Projectile {
     constructor(x, y, target, speed, damage, isCrit, isEnemy = false) {
         this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; 
         this.isCrit = isCrit; this.isEnemy = isEnemy;
-        // Visuals: Red for enemies, Purple/Gold for player
         this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc'); 
         this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; this.isAlive = true; 
     }
@@ -489,7 +538,6 @@ class Projectile {
         this.currentLifetime += dt;
         if (this.currentLifetime >= this.lifetime) { this.isAlive = false; return; }
         
-        // Target can be either player or enemy
         if (this.target && this.target.hp > 0) {
             let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
             let angle = Math.atan2(dy, dx);
@@ -497,7 +545,6 @@ class Projectile {
             this.y += Math.sin(angle) * this.speed * dt;
             
             if (dist < this.radius + this.target.radius) { 
-                // Enemy projectiles don't need crit logic for now, or use damage directly
                 this.target.takeDamage(this.damage, this.isCrit); 
                 this.isAlive = false; 
                 spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
@@ -520,6 +567,18 @@ function spawnProjectile(x1, y1, target, damage, isCrit, isEnemy = false) {
 
 function spawnAura(x, y, color = '#ff9800') { for(let i=0; i<20; i++) particles.push(new Particle(x, y, color)); }
 
+// SOTA DYNAMIC PARTICLE ENGINE FOR SKILL EFFECTS
+function spawnSotaParticles(x, y, color, count, speed) {
+    for(let i=0; i<count; i++) {
+        let p = new Particle(x, y, color);
+        p.vx = (Math.random() - 0.5) * speed;
+        p.vy = (Math.random() - 0.5) * speed;
+        p.size = randomFloat(2, 6);
+        p.life = randomFloat(0.5, 1.2);
+        particles.push(p);
+    }
+}
+
 function gainXp(amt) {
     PlayerData.xp += Math.floor(amt * player.getXpMultiplier());
     
@@ -533,7 +592,6 @@ function gainXp(amt) {
             cp: player.getCombatPower()
         }, oldLevel = PlayerData.level;
 
-        // Reward Level and Skill Point
         PlayerData.level++; 
         player.skillPoints++; 
         
@@ -563,7 +621,6 @@ function gainXp(amt) {
 
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
 
-        // Refresh the skill tree UI since we just added a point
         if (typeof refreshSkillTreeUI === 'function') {
             refreshSkillTreeUI();
         }
@@ -597,7 +654,7 @@ function spawnEnemies() {
         do { 
             ex = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
             ey = randomInt(2, MAP_SIZE-3) * TILE_SIZE; 
-        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400); // Increased safe spawn radius
+        } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400); 
         entities.push(new Enemy(ex, ey));
     }
 }
@@ -616,7 +673,6 @@ function initLevel() {
     } else { 
         player.x = startX; 
         player.y = startY; 
-        // FULLY HEAL PLAYER ON LEVEL INIT / REVIVE
         player.hp = player.getMaxHp(); 
     }
     
@@ -629,11 +685,12 @@ function initLevel() {
     REFS.depthLevel.innerText = GameState.level; 
     UI.updateMinimap();
     
-    // Instantly update the UI so health isn't showing 0 on revive
+    // BUILD DYNAMIC HOTBAR ON BOOT/REVIVE
+    UI.buildHotbar();
     UI.updateStats();
 }
 
-// --- 7. INPUT & SAVE ---
+// --- 7. INPUT & SAVE (BULLETPROOF MERGE) ---
 let jZoneRef = document.getElementById('joystick-zone');
 if (jZoneRef) {
     jZoneRef.addEventListener('touchstart', (e) => {
@@ -652,8 +709,12 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { PlayerData.dungeonLevel = GameState.level; PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; PlayerData.xp = PlayerData.xp;
-    PlayerData.maxXp = PlayerData.maxXp;
+function saveGame() { 
+    PlayerData.dungeonLevel = GameState.level; 
+    if (player) {
+        PlayerData.skillPoints = player.skillPoints; 
+        PlayerData.learnedSkills = player.learnedSkills; 
+    }
     localStorage.setItem('dof_save', JSON.stringify(PlayerData));
 }
 
@@ -662,29 +723,23 @@ function loadGame() {
     if (save) {
         try {
             let d = JSON.parse(save);
-            if (d.gear && d.gear.Weapon && d.gear.Weapon.atk > 5) {
-                 PlayerData = { ...PlayerData, ...d };
-                 PlayerData.gear = { ...PlayerData.gear, ...d.gear };
-            } else {
-                 PlayerData.gold = d.gold || 0;
-                 PlayerData.shards = d.shards || 0;
-                 PlayerData.level = d.level || 1;
-                 PlayerData.dungeonLevel = d.dungeonLevel || 1;
-                 UI.notify("System Updated: Old gear discarded for new power gear.");
-            }
             
-            if (d.maxXp) PlayerData.maxXp = d.maxXp;
-
-            if (player) {
-                player.skillPoints = d.skillPoints || 0;
-                player.learnedSkills = d.learnedSkills || [];
-            }
-
-            if (PlayerData.dungeonLevel) GameState.level = PlayerData.dungeonLevel;
+            // Safe Deep Merge
+            PlayerData.gold = d.gold ?? PlayerData.gold;
+            PlayerData.shards = d.shards ?? PlayerData.shards;
+            PlayerData.level = d.level ?? PlayerData.level;
+            PlayerData.dungeonLevel = d.dungeonLevel ?? PlayerData.dungeonLevel;
+            PlayerData.xp = d.xp ?? PlayerData.xp;
+            PlayerData.maxXp = d.maxXp ?? PlayerData.maxXp;
+            PlayerData.skillPoints = d.skillPoints ?? PlayerData.skillPoints;
+            PlayerData.learnedSkills = d.learnedSkills ?? PlayerData.learnedSkills;
             
-            // Update the UI
+            if (d.inventory) PlayerData.inventory = d.inventory;
+            if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
+
+            GameState.level = PlayerData.dungeonLevel;
+            
             if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
-
         } catch(e) { console.error("Save Corrupt", e); }
     }
 }
