@@ -23,7 +23,8 @@ class Player {
         this.vy = 0; 
         this.speed = 250; 
         this.color = '#bb86fc';
-        this.hp = this.getMaxHp();
+        
+        // --- 1. INITIALIZE ARRAYS & TIMERS FIRST ---
         this.skillPoints = 0;
         this.learnedSkills = [];
         this.skills = [
@@ -34,7 +35,7 @@ class Player {
         ];
         this.lastMoveAngle = 0; 
         
-        // --- EXPANDED SKILL TIMERS & TRACKERS ---
+        // Expanded Skill Timers & Trackers
         this.skillCooldowns = Array(30).fill(0); 
         this.invincibleTimer = 0;
         this.rageTimer = 0;
@@ -42,6 +43,9 @@ class Player {
         this.pipeBombTimer = 0;
         this.pipeBombAbsorbed = 0;
         this.scorchActiveTimer = 0;
+
+        // --- 2. CALCULATE HP (Now safe because learnedSkills exists) ---
+        this.hp = this.getMaxHp();
     }
 
     getAffixValue(affixType) {
