@@ -223,7 +223,8 @@ class Player {
     takeDamage(amt) {
         let finalDamage = Math.max(1, amt - Math.min(amt * 0.8, this.getDefense()));
         this.hp -= finalDamage; 
-        spawnFloatingText(this.x, this.y - 20, `-${Math.floor(finalDamage)}`, '#f00');
+        // Applied window.FormatNumber to Player damage taken popups
+        spawnFloatingText(this.x, this.y - 20, `-${window.FormatNumber(finalDamage)}`, '#f00');
         if (this.hp <= 0) die();
     }
 
