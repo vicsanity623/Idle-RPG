@@ -80,6 +80,52 @@ window.PlayerData = {
     }
 };
 
+// --- GLOBAL NUMBER FORMATTER ---
+window.FormatNumber = function(value) {
+    if (value === 0 || value == null) return "0";
+    if (Math.abs(value) < 1000) {
+        return (Math.floor(value * 100) / 100).toString();
+    }
+    
+    let isNegative = value < 0;
+    value = Math.abs(value);
+    
+    let suffixIndex = Math.floor(Math.log10(value) / 3);
+    let displayValue = value / Math.pow(10, suffixIndex * 3);
+    
+    // Truncate cleanly up to 3 decimal places without rounding up (e.g. 1.9999 -> 1.999)
+    let truncated = Math.floor(displayValue * 1000) / 1000;
+    let numStr = truncated.toString(); // Automatically drops trailing zeroes
+    
+    let suffix = "";
+    if (suffixIndex === 1) suffix = "K";
+    else if (suffixIndex === 2) suffix = "M";
+    else if (suffixIndex >= 3) {
+        let n = suffixIndex - 3;
+        
+        // ZZZZ translates to the 475,253rd combination in Base-26
+        if (n <= 475253) {
+            let s = "";
+            while (n >= 0) {
+                s = String.fromCharCode((n % 26) + 65) + s;
+                n = Math.floor(n / 26) - 1;
+            }
+            suffix = s;
+        } else {
+            // "then we enter 999S-999SSS-999SA-999SSSZ"
+            let adjustedN = n - 475254; // Reset index to restart letter sequence
+            let subS = "";
+            while (adjustedN >= 0) {
+                subS = String.fromCharCode((adjustedN % 26) + 65) + subS;
+                adjustedN = Math.floor(adjustedN / 26) - 1;
+            }
+            suffix = "S" + subS; // Expand as 'S', 'SA', 'SB' dynamically into Infinity
+        }
+    }
+    
+    return (isNegative ? "-" : "") + numStr + suffix;
+};
+
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const randomFloat = (min, max) => Math.random() * (max - min);
 
@@ -95,14 +141,14 @@ const UI = {
         if (!player) return;
         REFS.pLevel.innerText = PlayerData.level;
         REFS.hpFill.style.width = `${Math.max(0, (player.hp / player.getMaxHp()) * 100)}%`;
-        REFS.hpText.innerText = `${Math.floor(player.hp)} / ${Math.floor(player.getMaxHp())}`;
+        REFS.hpText.innerText = `${FormatNumber(player.hp)} / ${FormatNumber(player.getMaxHp())}`;
         REFS.xpFill.style.width = `${(PlayerData.xp / PlayerData.maxXp) * 100}%`;
-        REFS.xpText.innerText = `${Math.floor(PlayerData.xp)} / ${PlayerData.maxXp}`;
+        REFS.xpText.innerText = `${FormatNumber(PlayerData.xp)} / ${FormatNumber(PlayerData.maxXp)}`;
     },
     
     updateCurrencies: () => {
-        REFS.cGold.innerText = PlayerData.gold;
-        REFS.cShard.innerText = PlayerData.shards;
+        REFS.cGold.innerText = FormatNumber(PlayerData.gold);
+        REFS.cShard.innerText = FormatNumber(PlayerData.shards);
     },
     
     updateHotbar: (skills) => {
@@ -153,20 +199,20 @@ const UI = {
         // 1. Stats Sheet
         if (REFS.statsSheet && player) {
             let html = `
-                <div class="stat-line"><span>Max HP</span><span class="stat-val">${Math.floor(player.getMaxHp())}</span></div>
-                <div class="stat-line"><span>Attack</span><span class="stat-val">${Math.floor(player.getAttackPower())}</span></div>
-                <div class="stat-line"><span>Defense</span><span class="stat-val">${Math.floor(player.getDefense())}</span></div>
-                <div class="stat-line"><span>Regen</span><span class="stat-val">${player.getRegen().toFixed(1)}/s</span></div>
-                <div class="stat-line"><span>Atk Spd</span><span class="stat-val">${(1 / player.getAttackSpeedFactor()).toFixed(2)}/s</span></div>
-                <div class="stat-line"><span>Crit %</span><span class="stat-val">${player.getCritChance().toFixed(1)}%</span></div>
-                <div class="stat-line"><span>Crit X</span><span class="stat-val">${player.getCritMultiplier().toFixed(2)}x</span></div>
+                <div class="stat-line"><span>Max HP</span><span class="stat-val">${FormatNumber(player.getMaxHp())}</span></div>
+                <div class="stat-line"><span>Attack</span><span class="stat-val">${FormatNumber(player.getAttackPower())}</span></div>
+                <div class="stat-line"><span>Defense</span><span class="stat-val">${FormatNumber(player.getDefense())}</span></div>
+                <div class="stat-line"><span>Regen</span><span class="stat-val">${FormatNumber(player.getRegen())}/s</span></div>
+                <div class="stat-line"><span>Atk Spd</span><span class="stat-val">${FormatNumber(1 / player.getAttackSpeedFactor())}/s</span></div>
+                <div class="stat-line"><span>Crit %</span><span class="stat-val">${FormatNumber(player.getCritChance())}%</span></div>
+                <div class="stat-line"><span>Crit X</span><span class="stat-val">${FormatNumber(player.getCritMultiplier())}x</span></div>
             `;
             // Dynamic Special Affixes
-            let mag = player.getAffixValue('magnet'); if (mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${mag}px</span></div>`;
-            let grd = player.getAffixValue('greed'); if (grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${grd}%</span></div>`;
-            let wis = player.getAffixValue('wisdom'); if (wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${wis}%</span></div>`;
-            let fear = player.getFearValue(); if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${fear}% Enemy Def</span></div>`;
-            let cpValue = player.getCombatPower().toFixed(2);
+            let mag = player.getAffixValue('magnet'); if (mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${FormatNumber(mag)}px</span></div>`;
+            let grd = player.getAffixValue('greed'); if (grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${FormatNumber(grd)}%</span></div>`;
+            let wis = player.getAffixValue('wisdom'); if (wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${FormatNumber(wis)}%</span></div>`;
+            let fear = player.getFearValue(); if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${FormatNumber(fear)}% Enemy Def</span></div>`;
+            let cpValue = FormatNumber(player.getCombatPower());
             html += `
                 <div style="grid-column: 1 / -1; margin-top: 15px; border-top: 1px solid #444; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 1.5rem; font-weight: 900; color: #4caf50;">CP</span>
@@ -188,7 +234,7 @@ const UI = {
                 let statMap = { atk:'Atk', hp:'HP', def:'Def', regen:'Reg', critChance:'Crit%', critMult:'CritX', atkSpeed:'Spd' };
                 for (let [key, label] of Object.entries(statMap)) {
                     if (stats[key]) {
-                        let val = stats[key], formattedVal = (val < 1 && val > 0) ? val.toFixed(2) : Math.floor(val);
+                        let val = stats[key], formattedVal = FormatNumber(val);
                         statLines.push(`<span style="color:#03dac6">+${formattedVal}${label}</span>`);
                     }
                 }
@@ -203,7 +249,7 @@ const UI = {
                         <div style="font-size:0.65rem; display:flex; flex-wrap:wrap; gap:4px; justify-content:center; margin-bottom:5px;">${statLines.join(' ')}</div>
                     </div>
                     <button class="upgrade-btn" ${canAfford ? '' : 'disabled'} style="font-size:0.65rem; padding:6px 2px; margin-top:auto;" onclick="UI.upgradeGear('${type}')">
-                        Lv.${lvl} UP (${sCost}💎 / ${gCost}🪙)
+                        Lv.${lvl} UP (${FormatNumber(sCost)}💎 / ${FormatNumber(gCost)}🪙)
                     </button>`;
                 REFS.gearGrid.appendChild(div);
             });
@@ -245,16 +291,15 @@ const UI = {
             if (val1 === 0 && val2 === 0) return;
             let diff = val1 - val2, diffHtml = '';
             
-            // FIX: Restored the precision check so 0.04 doesn't round down to 0.0
-            if (diff > 0) diffHtml = `<small style="color:#0f0">(+${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
-            else if (diff < 0) diffHtml = `<small style="color:#f00">(${diff % 1 !== 0 ? diff.toFixed(2) : diff})</small>`;
+            if (diff > 0) diffHtml = `<small style="color:#0f0">(+${FormatNumber(diff)})</small>`;
+            else if (diff < 0) diffHtml = `<small style="color:#f00">(${FormatNumber(diff)})</small>`;
             
-            let formatVal = (v) => v < 1 && v > 0 ? v.toFixed(2) : Math.floor(v);
+            let formatVal = (v) => FormatNumber(v);
             selectedHtml += `<p>${stat.toUpperCase()}: <span style="color:var(--shard)">${formatVal(val1)}</span></p>`;
             equippedHtml += `<p>${stat.toUpperCase()}: <span style="color:#aaa">${formatVal(val2)}</span> ${diffHtml}</p>`;
         });
         
-        if (item.affix) selectedHtml += `<p style="color:var(--rarity-legendary); font-weight:bold; margin-top:5px;">★ ${item.affix.label}: +${item.affix.value}${item.affix.type === 'magnet' ? 'px' : '%'}</p>`;
+        if (item.affix) selectedHtml += `<p style="color:var(--rarity-legendary); font-weight:bold; margin-top:5px;">★ ${item.affix.label}: +${FormatNumber(item.affix.value)}${item.affix.type === 'magnet' ? 'px' : '%'}</p>`;
 
         REFS.selectedStats.innerHTML = selectedHtml || '<p>No Stats</p>';
         REFS.equippedStats.innerHTML = equippedHtml || '<p>None</p>';
@@ -318,7 +363,7 @@ const UI = {
         let item = PlayerData.inventory[index], reward = 5;
         if (item.rarity === 'Legendary') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10;
         PlayerData.inventory.splice(index, 1); PlayerData.shards += reward;
-        UI.renderInventory(); UI.updateCurrencies(); UI.notify(`Discarded ${item.name} (+${reward} 💎)`);
+        UI.renderInventory(); UI.updateCurrencies(); UI.notify(`Discarded ${item.name} (+${FormatNumber(reward)} 💎)`);
         REFS.itemDetailPanel.style.display = 'none'; saveGame();
     },
 
@@ -348,8 +393,7 @@ const UI = {
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
         let html = '';
         
-        let cpLine = lines.find(l => l.label === 'cp'); // We don't want it in the loop
-        // Filter it out of the main list so it doesn't show as a bullet point
+        let cpLine = lines.find(l => l.label === 'cp'); 
         let statLines = lines.filter(l => l.label !== 'cp');
         
         let cpOld = lines.find(l => l.label === 'cp')?.oldVal || 0;
@@ -359,33 +403,28 @@ const UI = {
             <div class="level-badge" style="background:${badgeColor}">${badgeText}</div> 
             ${title}
             <div style="color:#4caf50; font-size: 0.9rem; margin-top: 5px; text-transform: uppercase;">
-                Combat Power: ${cpNew.toFixed(2)}
+                Combat Power: ${FormatNumber(cpNew)}
             </div>
         `;
         
         statLines.forEach(line => {
-            // 1. Identify if lower is better (only for Attack Speed/Cooldown)
             const isLowerBetter = line.label === 'Atk Spd';
             const improved = isLowerBetter ? line.diff < 0 : line.diff > 0;
             
-            // 2. Dynamic precision: show 2 decimals for small values so progress is visible
-            const valPrec = (line.oldVal < 5) ? 2 : 1; 
-            const diffPrec = Math.abs(line.diff) < 0.1 ? 2 : 1;
-            
-            let diffStr = line.diff.toFixed(diffPrec);
             let cColor = improved ? '#4caf50' : '#ff5252';
-            let symb = line.diff > 0 ? '+' : '';
-        
+            let diffValStr = FormatNumber(Math.abs(line.diff));
+            let symb = line.diff > 0 ? '+' : (line.diff < 0 ? '-' : '');
+            
             html += `
                 <div class="delta-row">
                     <span class="delta-icon">${iconMap[line.label] || '✨'}</span>
                     <span class="delta-label">${line.label}</span>
                     <span class="delta-values">
-                        <span style="color:#ff5252">${line.oldVal.toFixed(valPrec)}</span> 
+                        <span style="color:#ff5252">${FormatNumber(line.oldVal)}</span> 
                         <span style="color:#aaa; margin: 0 4px;">➔</span> 
-                        <span style="color:#4caf50">${line.newVal.toFixed(valPrec)}</span>
+                        <span style="color:#4caf50">${FormatNumber(line.newVal)}</span>
                     </span>
-                    <span class="delta-change" style="color:${cColor}">${symb}${diffStr}</span>
+                    <span class="delta-change" style="color:${cColor}">${symb}${diffValStr}</span>
                 </div>`;
         });
 
@@ -393,7 +432,6 @@ const UI = {
         REFS.deltaPopup.style.display = 'block';
         setTimeout(() => { 
             REFS.deltaPopup.style.opacity = 1; 
-            // CHANGE THIS LINE: Remove the vertical translation so it stays at the bottom
             REFS.deltaPopup.style.transform = "translate(-50%, 0) scale(1)"; 
         }, 10);
         
@@ -709,7 +747,7 @@ function loop(timestamp) {
         if (portal) {
             let dist = Math.hypot(player.x - portal.x, player.y - portal.y), cost = GameState.level * 250;
             if (dist < 50) {
-                REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${cost} Gold`;
+                REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${FormatNumber(cost)} Gold`;
                 REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need Gold!"); };
             } else REFS.portalUI.style.display = 'none';
         }
