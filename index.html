@@ -81,10 +81,20 @@
         .gold-text { color: var(--gold); }
         .shard-text { color: var(--shard); }
 
-        #hotbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto;}
-        .slot { width: 50px; height: 50px; border: 2px solid #555; background: rgba(0,0,0,0.6); border-radius: 8px; display: flex; justify-content: center; align-items: center; position: relative; }
-        .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0,0,0,0.7); transition: height 0.1s linear;}
-        .slot-key { position: absolute; top: -10px; right: -5px; background: var(--primary); color: #000; font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; font-weight: bold;}
+        /* --- DYNAMIC HOTBAR --- */
+        #hotbar { 
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); 
+            display: flex; gap: 8px; pointer-events: auto; justify-content: center; 
+            flex-wrap: wrap; width: 95vw; max-width: 600px;
+        }
+        .slot { 
+            width: 45px; height: 45px; border: 2px solid #555; background: rgba(0,0,0,0.6); 
+            border-radius: 8px; display: flex; justify-content: center; align-items: center; 
+            position: relative; font-size: 1.3rem; overflow: hidden;
+        }
+        .ext-slot { border-color: var(--primary); background: rgba(187, 134, 252, 0.15); box-shadow: 0 0 8px rgba(187, 134, 252, 0.4); }
+        .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0,0,0,0.75); transition: height 0.1s linear;}
+        .slot-key { position: absolute; top: -8px; right: -5px; background: var(--primary); color: #000; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; z-index: 2;}
 
         /* --- MODALS --- */
         #inventory-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
@@ -338,12 +348,9 @@
             <div id="delta-content"></div>
         </div>
 
-        <!-- Hotbar -->
+        <!-- Dynamic Hotbar -->
         <div id="hotbar">
-            <div class="slot"><div class="slot-key">Pot</div><span>💚</span><div class="cooldown-overlay" id="cd-0"></div></div>
-            <div class="slot"><div class="slot-key">Atk</div><span>⚔️</span><div class="cooldown-overlay" id="cd-1"></div></div>
-            <div class="slot"><div class="slot-key">Aura</div><span>🔥</span><div class="cooldown-overlay" id="cd-2"></div></div>
-            <div class="slot"><div class="slot-key">Dash</div><span>⚡</span><div class="cooldown-overlay" id="cd-3"></div></div>
+            <!-- Injected by JavaScript -->
         </div>
 
         <!-- Invisible Joystick -->
@@ -525,7 +532,6 @@
                 const pathLines = new Set();
                 let currentNode = targetNode;
 
-                // Trace back prerequisites until a root skill (prereq 0) or an already learned skill is reached
                 while (currentNode && !player.hasSkill(parseInt(currentNode.dataset.skillId))) {
                     pathNodes.add(currentNode);
                     const prereqId = parseInt(currentNode.dataset.prereq);
@@ -534,7 +540,6 @@
                     const prereqNode = skillNodes.find(n => parseInt(n.dataset.skillId) === prereqId);
                     if (!prereqNode) break; 
 
-                    // Find the line connecting prereqNode to currentNode
                     const line = skillConnectionsSvg.querySelector(`[data-from-skill="${prereqId}"][data-to-skill="${parseInt(currentNode.dataset.skillId)}"]`);
                     if (line) {
                         pathLines.add(line);
@@ -542,7 +547,6 @@
                     currentNode = prereqNode;
                 }
 
-                // Apply highlight classes
                 pathNodes.forEach(node => node.classList.add('highlighted'));
                 pathLines.forEach(line => line.classList.add('highlighted'));
             }
@@ -552,14 +556,12 @@
                 skillConnectionsSvg.querySelectorAll('.skill-connection-line.highlighted').forEach(line => line.classList.remove('highlighted'));
             }
 
-            // Update skill points display initially
             if (typeof player !== 'undefined' && player) {
                 skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
                 updateSkillTreeLockStates();
                 drawSkillConnections(); 
             }
 
-            // Event listener for clicking on skill nodes
             skillsTreePanel.addEventListener('click', (event) => {
                 let targetNode = event.target.closest('.skill-node');
                 if (!targetNode) return;
@@ -573,7 +575,6 @@
                     return;
                 }
 
-                // Check if the skill can be learned
                 if (!player.canLearnSkill(skillId, skillCost, prereqId)) {
                     if (player.hasSkill(skillId)) {
                         showNotification("Skill already learned!", "info");
@@ -585,7 +586,6 @@
                     return;
                 }
 
-                // Attempt to learn the skill
                 if (player.learnSkill(skillId, skillCost, prereqId)) {
                     targetNode.classList.remove('locked');
                     targetNode.classList.add('unlocked');
