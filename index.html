@@ -369,50 +369,44 @@
                 <h3>Skills & Talents (<span id="skill-points-available">0</span> SP Available)</h3>
                 <div id="skills-tree-panel" class="skills-grid">
                     <svg id="skill-connections-svg"></svg> 
-                    <div class="skill-node locked" data-skill-id="1" data-cost="1" data-prereq="0">
-                        <div class="skill-icon">💪</div>
-                        <div class="skill-name">Strength Training</div>
-                        <div class="skill-cost">1 SP</div>
-                        <div class="skill-tooltip">
-                            <h4>Strength Training</h4>
-                            <p>Increases your base Strength by 5.</p>
-                            <p>Unlocks: Heavy Blow</p>
-                            <p class="cost-info">Cost: 1 Skill Point</p>
-                        </div>
-                    </div>
-                    <div class="skill-node locked" data-skill-id="2" data-cost="1" data-prereq="1">
-                        <div class="skill-icon">🔨</div>
-                        <div class="skill-name">Heavy Blow</div>
-                        <div class="skill-cost">1 SP</div>
-                        <div class="skill-tooltip">
-                            <h4>Heavy Blow</h4>
-                            <p>Your basic attacks deal 10% bonus damage.</p>
-                            <p>Requires: Strength Training</p>
-                            <p class="cost-info">Cost: 1 Skill Point</p>
-                        </div>
-                    </div>
-                    <div class="skill-node locked" data-skill-id="3" data-cost="1" data-prereq="0">
-                        <div class="skill-icon">🏃</div>
-                        <div class="skill-name">Agile Footwork</div>
-                        <div class="skill-cost">1 SP</div>
-                        <div class="skill-tooltip">
-                            <h4>Agile Footwork</h4>
-                            <p>Increases your movement speed by 10%.</p>
-                            <p>Unlocks: Evasion Mastery</p>
-                            <p class="cost-info">Cost: 1 Skill Point</p>
-                        </div>
-                    </div>
-                    <div class="skill-node locked" data-skill-id="4" data-cost="1" data-prereq="3">
-                        <div class="skill-icon">💨</div>
-                        <div class="skill-name">Evasion Mastery</div>
-                        <div class="skill-cost">1 SP</div>
-                        <div class="skill-tooltip">
-                            <h4>Evasion Mastery</h4>
-                            <p>Increases your base Health Regen by 5.</p>
-                            <p>Requires: Agile Footwork</p>
-                            <p class="cost-info">Cost: 1 Skill Point</p>
-                        </div>
-                    </div>
+                    <!-- BRANCH 1: Melee & Fury -->
+                    <div class="skill-node locked" data-skill-id="1" data-cost="1" data-prereq="0"><div class="skill-icon">💪</div><div class="skill-name">Strength Training</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Strength Training</h4><p>Increases base Strength by 5.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="2" data-cost="1" data-prereq="1"><div class="skill-icon">🔨</div><div class="skill-name">Heavy Blow</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Heavy Blow</h4><p>Basic attacks deal 10% bonus damage.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="9" data-cost="2" data-prereq="2"><div class="skill-icon">💢</div><div class="skill-name">Rage</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Rage</h4><p>Glow bright red dealing explosive damage with massive crit. (Auto-cast, 6s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="13" data-cost="3" data-prereq="9"><div class="skill-icon">🧘</div><div class="skill-name">Zen</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Zen</h4><p>Attack speed increased by 500% & deal 10x damage for 5s. (Auto-cast, 12s CD)</p></div></div>
+
+                    <!-- BRANCH 2: Agility & Survival -->
+                    <div class="skill-node locked" data-skill-id="3" data-cost="1" data-prereq="0"><div class="skill-icon">🏃</div><div class="skill-name">Agile Footwork</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Agile Footwork</h4><p>Increases movement speed by 10%.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="4" data-cost="1" data-prereq="3"><div class="skill-icon">💨</div><div class="skill-name">Evasion Mastery</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Evasion Mastery</h4><p>Increases Health Regen by 5.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="8" data-cost="2" data-prereq="4"><div class="skill-icon">👁️‍🗨️</div><div class="skill-name">Blink</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Blink</h4><p>Teleport behind nearest enemy + 2s invincibility. (Auto-cast, 8s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="5" data-cost="2" data-prereq="8"><div class="skill-icon">🛡️</div><div class="skill-name">Invincibility</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Invincibility</h4><p>Enemies cannot damage player for 3 seconds. (Auto-cast, 14s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="14" data-cost="3" data-prereq="5"><div class="skill-icon">💣</div><div class="skill-name">Pipe Bomb</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Pipe Bomb</h4><p>Absorb all damage for 5s then explode it back outward. (Auto-cast, 20s CD)</p></div></div>
+
+                    <!-- BRANCH 3: Fire Magic -->
+                    <div class="skill-node locked" data-skill-id="7" data-cost="1" data-prereq="0"><div class="skill-icon">🌋</div><div class="skill-name">Heat Wave</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Heat Wave</h4><p>Pushes explosive 360 wave dealing massive damage. (Auto-cast, 17s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="6" data-cost="2" data-prereq="7"><div class="skill-icon">🔥</div><div class="skill-name">Scorch Trail</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Scorch Trail</h4><p>Leave a burning trail that damages enemies. (Auto-cast, 9s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="12" data-cost="3" data-prereq="6"><div class="skill-icon">☄️</div><div class="skill-name">Rain Fire</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Rain Fire</h4><p>Flaming projectiles drop from the sky dealing AOE damage. (Auto-cast, 10s CD)</p></div></div>
+
+                    <!-- BRANCH 4: Wind & Conjuration -->
+                    <div class="skill-node locked" data-skill-id="10" data-cost="1" data-prereq="0"><div class="skill-icon">🌪️</div><div class="skill-name">Twister</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Twister</h4><p>Spawns massive spiraling outward tornados (500% DMG). (Auto-cast, 12s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="11" data-cost="3" data-prereq="10"><div class="skill-icon">👥</div><div class="skill-name">Summon</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Summon</h4><p>Spawn a massive clone that tackles up to 5 enemies (900% DMG). (Auto-cast, 13s CD)</p></div></div>
+
+                    <!-- BRANCH 5: Passives & Utility -->
+                    <div class="skill-node locked" data-skill-id="15" data-cost="1" data-prereq="0"><div class="skill-icon">❤️</div><div class="skill-name">Vitality Surge</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Vitality Surge</h4><p>Increases Max HP by 50%.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="16" data-cost="1" data-prereq="15"><div class="skill-icon">🧱</div><div class="skill-name">Iron Skin</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Iron Skin</h4><p>Increases Defense by 50%.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="17" data-cost="2" data-prereq="16"><div class="skill-icon">🦇</div><div class="skill-name">Vampire Aura</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Vampire Aura</h4><p>Slowly siphon health from nearby enemies.</p></div></div>
+                    
+                    <div class="skill-node locked" data-skill-id="18" data-cost="1" data-prereq="0"><div class="skill-icon">🧲</div><div class="skill-name">Magnetic Field</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Magnetic Field</h4><p>Increases pickup radius drastically.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="19" data-cost="2" data-prereq="18"><div class="skill-icon">💰</div><div class="skill-name">Wealth Magnet</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Wealth Magnet</h4><p>Gain +50% Gold Multiplier.</p></div></div>
+                    <div class="skill-node locked" data-skill-id="20" data-cost="2" data-prereq="19"><div class="skill-icon">📜</div><div class="skill-name">Scholar's Insight</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Scholar's Insight</h4><p>Gain +50% XP Multiplier.</p></div></div>
+
+                    <!-- BRANCH 6: Frost & Execution -->
+                    <div class="skill-node locked" data-skill-id="22" data-cost="2" data-prereq="0"><div class="skill-icon">❄️</div><div class="skill-name">Frost Nova</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Frost Nova</h4><p>Freezes nearby enemies in place. (Auto-cast, 15s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="23" data-cost="2" data-prereq="22"><div class="skill-icon">🗡️</div><div class="skill-name">Dagger Shield</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Dagger Shield</h4><p>Spinning daggers orbit you dealing continuous damage. (Auto-cast, 10s CD)</p></div></div>
+                    <div class="skill-node locked" data-skill-id="24" data-cost="3" data-prereq="23"><div class="skill-icon">☠️</div><div class="skill-name">Executioner</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Executioner</h4><p>Instantly shatter nearby enemies below 15% HP.</p></div></div>
+
+                    <!-- ULTIMATE CAPSTONE -->
+                    <div class="skill-node locked" data-skill-id="25" data-cost="5" data-prereq="13"><div class="skill-icon">👑</div><div class="skill-name">Ascension</div><div class="skill-cost">5 SP</div><div class="skill-tooltip"><h4>Ascension</h4><p>Increases ALL Core Stats by 25%. Requires Zen.</p></div></div>
                 </div>
 
                 <!-- Item Inspection & Comparison Panel -->
