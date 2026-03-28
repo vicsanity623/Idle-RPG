@@ -69,14 +69,12 @@ const generateRandomGear = (level) => {
         }
     }
 
-    // --- FIX: Robust "Bad Luck Protection" ---
     const equipped = window.PlayerData.gear[item.slot];
     if (equipped) {
-        // Safely check both Starter Gear (root) and Dropped Gear (.stats)
         let eqStats = equipped.stats || equipped;
         for (let stat in item.stats) {
             if (eqStats[stat] && item.stats[stat] <= eqStats[stat]) {
-                let boostedVal = eqStats[stat] * 1.15; // 15% guaranteed boost
+                let boostedVal = eqStats[stat] * 1.15; 
                 if (stat === 'hp' || stat === 'atk' || stat === 'def') {
                     item.stats[stat] = Math.ceil(boostedVal);
                 } else {
@@ -95,25 +93,22 @@ class Enemy {
         this.x = x; this.y = y; this.radius = 15;
         this.id = Math.random();
         
-        // --- DIFFICULTY SCALING ---
         const depth = GameState.level;
-        const depthSpeedBonus = Math.min(1.15, 1 + (depth * 0.02)); // Max 15% increase
+        const depthSpeedBonus = Math.min(1.15, 1 + (depth * 0.02)); 
         this.baseSpeed = randomFloat(230, 280) * depthSpeedBonus;
         this.speed = this.baseSpeed;
         
         let hpMultiplier = Math.pow(1.3, depth);
         this.hp = 300 * hpMultiplier; 
         this.maxHp = this.hp; 
-        this.damage = (5 * hpMultiplier) * 0.6; // Slightly lowered base since they shoot now
+        this.damage = (5 * hpMultiplier) * 0.6; 
         
-        // --- SHOOTING SYSTEM ---
         const types = ['semi', 'burst', 'rapid'];
         this.fireType = types[Math.floor(Math.random() * types.length)];
         this.fireCooldown = randomFloat(1.0, 3.0);
         this.burstCount = 0;
         this.isFiring = false;
 
-        // --- RAGE SYSTEM ---
         this.rageTimer = 0;
         this.isRaged = false;
         this.attackCooldown = 0;
@@ -122,7 +117,7 @@ class Enemy {
     triggerRage() {
         if (this.isRaged) return;
         this.isRaged = true;
-        this.rageTimer = 5.0; // 5 Seconds of rage
+        this.rageTimer = 5.0; 
         this.speed = this.baseSpeed * 2.5;
         spawnFloatingText(this.x, this.y - 50, "ENRAGED!", '#ff0000');
     }
@@ -130,7 +125,6 @@ class Enemy {
     update(dt) {
         if (!player) return;
 
-        // Rage Management
         if (this.rageTimer > 0) {
             this.rageTimer -= dt;
             if (this.rageTimer <= 0) {
@@ -141,10 +135,8 @@ class Enemy {
 
         let dx = player.x - this.x, dy = player.y - this.y, dist = Math.hypot(dx, dy);
 
-        // Flanking and Movement Logic
         if (dist < 800) {
             let angleToPlayer = Math.atan2(dy, dx);
-            // Higher depth = smarter, tighter flanking
             let aggroFactor = Math.min(1.5, 1 + (GameState.level * 0.1));
             let flankOffset = ((this.id > 0.5 ? 1 : -1) * (Math.PI / 3) * HiveMind.flankWeight * aggroFactor);
             let targetAngle = angleToPlayer + flankOffset;
@@ -156,11 +148,9 @@ class Enemy {
             if (!isWall(nextX, this.y)) this.x = nextX; 
             if (!isWall(this.x, nextY)) this.y = nextY;
             
-            // Shooting logic
             this.handleShooting(dt, dist);
         }
 
-        // Melee logic if extremely close
         if (dist < player.radius + this.radius + 10) {
             this.attackCooldown -= dt;
             if (this.attackCooldown <= 0) {
@@ -179,16 +169,14 @@ class Enemy {
         const shootSpeed = this.isRaged ? 0.05 : 0.15;
 
         if (this.fireType === 'rapid') {
-            // Rapid: 16 rounds
             this.fireProjectile();
             this.burstCount++;
             this.fireCooldown = shootSpeed; 
             if (this.burstCount >= 16) {
                 this.burstCount = 0;
-                this.fireCooldown = 3.0; // Long reload
+                this.fireCooldown = 3.0; 
             }
         } else if (this.fireType === 'burst') {
-            // Burst: 3 rounds
             this.fireProjectile();
             this.burstCount++;
             this.fireCooldown = 0.1;
@@ -197,14 +185,12 @@ class Enemy {
                 this.fireCooldown = 1.5;
             }
         } else {
-            // Semi
             this.fireProjectile();
             this.fireCooldown = 1.2;
         }
     }
 
     fireProjectile() {
-        // Use the same helper from main.js, but flagged as isEnemy=true
         spawnProjectile(this.x, this.y, player, this.damage, false, true);
     }
 
@@ -213,12 +199,10 @@ class Enemy {
         let finalDamage = amt * fearMultiplier;
         this.hp -= finalDamage; 
         
-        // Rage trigger on damage (25% chance) or if HP low
         if (!this.isRaged && (Math.random() < 0.15 || this.hp < this.maxHp * 0.3)) {
             this.triggerRage();
         }
 
-        // Applied window.FormatNumber to damage popups
         spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${window.FormatNumber(finalDamage)}` : window.FormatNumber(finalDamage), isCrit ? '#ff0' : '#fff');
         if (this.hp <= 0) this.die();
     }
@@ -237,14 +221,13 @@ class Enemy {
         if (this.isRaged) {
             ctx.shadowBlur = 15;
             ctx.shadowColor = 'red';
-            ctx.fillStyle = '#ff0000'; // Pure red when raged
+            ctx.fillStyle = '#ff0000'; 
         } else {
             ctx.fillStyle = '#ff5252';
         }
 
         ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
         
-        // HP Bar
         ctx.fillStyle = '#000'; ctx.fillRect(this.x - 15, this.y - 25, 30, 4);
         ctx.fillStyle = this.isRaged ? '#ff0000' : '#ff5252'; 
         ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.hp/this.maxHp), 4);
@@ -269,7 +252,6 @@ class Loot {
             let baseAmt = randomInt(5, 15) * GameState.level;
             let finalAmt = Math.floor(baseAmt * player.getGoldMultiplier());
             PlayerData.gold += finalAmt; 
-            // Applied window.FormatNumber to Gold pickup popups
             spawnFloatingText(this.x, this.y, `+${window.FormatNumber(finalAmt)} Gold`, '#ffd700');
         } else if (this.type === 'shard') {
             PlayerData.shards += 1; spawnFloatingText(this.x, this.y, `+1 Shard`, '#00e5ff');
@@ -314,6 +296,30 @@ class Particle {
     }
     update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; if(this.life <= 0) { let idx = particles.indexOf(this); if(idx > -1) particles.splice(idx, 1); } }
     draw(ctx) { ctx.save(); ctx.fillStyle = this.color; ctx.globalAlpha = Math.max(0, this.life * 2); ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+}
+
+// SOTA SHOCKWAVE EXPANDING RING PHYSICS
+class ExpandingRing {
+    constructor(x, y, color, maxRadius, life) {
+        this.x = x; this.y = y; this.color = color;
+        this.maxRadius = maxRadius; this.lifeMax = life; this.life = life;
+        this.radius = 0;
+    }
+    update(dt) {
+        this.life -= dt;
+        this.radius = this.maxRadius * (1 - (this.life / this.lifeMax));
+        if (this.life <= 0) entities.splice(entities.indexOf(this), 1);
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 4 * (this.life / this.lifeMax);
+        ctx.globalAlpha = this.life / this.lifeMax;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.stroke();
+        ctx.restore();
+    }
 }
 
 // --- DOM BINDINGS ---
