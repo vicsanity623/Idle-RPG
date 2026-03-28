@@ -24,9 +24,11 @@ class Player {
         this.speed = 250; 
         this.color = '#bb86fc';
         
-        // --- 1. INITIALIZE ARRAYS & TIMERS FIRST ---
-        this.skillPoints = 0;
-        this.learnedSkills = [];
+        // --- 1. INITIALIZE ARRAYS & READ FROM SAVE DATA ---
+        // FIX: Grab saved skills so you don't lose them on page refresh!
+        this.skillPoints = window.PlayerData.skillPoints || 0;
+        this.learnedSkills = window.PlayerData.learnedSkills || [];
+        
         this.skills = [
             { id: 'heal', cdMax: 17,  current: 0 }, 
             { id: 'atk',  cdMax: 0.7, current: 0 },
@@ -44,7 +46,7 @@ class Player {
         this.pipeBombAbsorbed = 0;
         this.scorchActiveTimer = 0;
 
-        // --- 2. CALCULATE HP (Now safe because learnedSkills exists) ---
+        // --- 2. CALCULATE HP (Safe because learnedSkills now exists) ---
         this.hp = this.getMaxHp();
     }
 
