@@ -382,9 +382,9 @@ const UI = {
         let currentlyEquipped = PlayerData.gear[slot];
         if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped);
         PlayerData.gear[slot] = itemToEquip;
-        
+
+        player.hp = Math.min(player.hp, player.getMaxHp()); // Ensure HP is clamped before UI updates
         UI.renderInventory(); UI.updateStats();
-        player.hp = Math.min(player.hp, player.getMaxHp());
         saveGame();
 
         let newStats = { 
