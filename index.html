@@ -560,7 +560,7 @@
 
             // Update skill points display initially
             if (typeof player !== 'undefined' && player) {
-                skillPointsDisplay.textContent = player.skillPoints;
+                skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
                 updateSkillTreeLockStates();
                 drawSkillConnections(); 
             }
@@ -598,7 +598,7 @@
                     const skillCostElement = targetNode.querySelector('.skill-cost');
                     if (skillCostElement) skillCostElement.textContent = 'Learned';
 
-                    skillPointsDisplay.textContent = player.skillPoints;
+                    skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
                     showNotification(`Skill "${targetNode.querySelector('.skill-name').textContent}" unlocked!`, "success");
                     updateSkillTreeLockStates();
                 } else {
@@ -644,7 +644,7 @@
                         node.classList.remove('unlocked');
                         node.classList.add('locked'); 
                         const skillCostElement = node.querySelector('.skill-cost');
-                        if (skillCostElement) skillCostElement.textContent = `${skillCost} SP`;
+                        if (skillCostElement) skillCostElement.textContent = `${window.FormatNumber(skillCost)} SP`;
 
                         const prereqMet = (prereqId === 0 || player.hasSkill(prereqId));
 
@@ -668,7 +668,7 @@
 
             window.refreshSkillTreeUI = function() {
                 if (typeof player !== 'undefined' && player) {
-                    skillPointsDisplay.textContent = player.skillPoints;
+                    skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
                     updateSkillTreeLockStates();
                     drawSkillConnections(); 
                 }
