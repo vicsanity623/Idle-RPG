@@ -2,7 +2,7 @@ const CACHE_NAME = 'dungeons-of-fate-v11';
 
 const ASSETS_TO_CACHE = [
     './',
-    './index.html'
+    './index.html',
     './player.js',
     './entities.js',
     './main.js',
