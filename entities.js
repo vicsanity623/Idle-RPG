@@ -329,7 +329,7 @@ window.addEventListener('DOMContentLoaded', () => {
         close:  document.querySelector('#inventory-modal .close-btn') || document.querySelector('#inventory-modal .inv-header button'),
         claim:  document.getElementById('claim-daily-btn') || document.querySelector('#daily-login button')
     };
-    if (refs.avatar) refs.avatar.addEventListener('click', () => UI.toggleInventory?.());
-    if (refs.close)  refs.close.addEventListener('click', () => UI.toggleInventory?.());
-    if (refs.claim)  refs.claim.addEventListener('click', () => UI.claimDaily?.());
+    if (refs.avatar) refs.avatar.addEventListener('click', () => UI?.toggleInventory?.());
+    if (refs.close)  refs.close.addEventListener('click', () => UI?.toggleInventory?.());
+    if (refs.claim)  refs.claim.addEventListener('click', () => UI?.claimDaily?.());
 });
