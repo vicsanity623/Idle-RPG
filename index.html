@@ -628,40 +628,40 @@
                     node.style.filter = '';
                     node.classList.remove('locked', 'unlocked'); // Clear both classes for re-evaluation
 
+                    // Reset all dynamic styles and classes first
+                    node.classList.remove('locked', 'unlocked', 'highlighted');
+                    node.style.borderColor = '';
+                    node.style.filter = '';
+                    node.style.opacity = ''; // Reset opacity
+                    node.style.cursor = ''; // Reset cursor
+
+                    const skillCostElement = node.querySelector('.skill-cost');
+
                     if (player.hasSkill(skillId)) {
                         node.classList.add('unlocked');
-                        const skillCostElement = node.querySelector('.skill-cost');
                         if (skillCostElement) skillCostElement.textContent = 'Learned';
-                        node.style.borderColor = 'var(--xp-color)'; 
-                        node.style.filter = 'none';
+                        // CSS handles border-color, filter, opacity, cursor for 'unlocked'
                     } else {
-                        node.classList.remove('unlocked');
-                        node.classList.add('locked'); 
-                        const skillCostElement = node.querySelector('.skill-cost');
-                        if (skillCostElement) skillCostElement.textContent = `${window.FormatNumber(skillCost)} SP`;
-
                         const prereqMet = (prereqId === 0 || player.hasSkill(prereqId));
-
-const affordable = (player.skillPoints >= skillCost);
+                        const affordable = (player.skillPoints >= skillCost);
 
                         if (prereqMet && affordable) {
-                            // Ready to learn state - remove 'locked' class, apply specific styles
-                            node.classList.remove('locked');
+                            // Ready to learn state (not 'locked', but distinct visual)
                             node.style.borderColor = 'var(--primary)';
                             node.style.filter = 'none';
+                            node.style.opacity = '1'; // Fully visible
+                            node.style.cursor = 'pointer'; // Clickable
                         } else {
                             // Truly locked state (either prereq not met or unaffordable)
-                            node.classList.add('locked');
+                            node.classList.add('locked'); // Applies default locked styles (opacity, cursor, border, filter)
                             if (prereqMet && !affordable) {
-                                // Prereq met but unaffordable - use locked class, but specific border/filter
-                                node.style.borderColor = '#666';
-                                node.style.filter = 'grayscale(30%)';
-                            } else {
-                                // Prereq not met - use locked class, default locked border/filter
-                                node.style.borderColor = '#444';
-                                node.style.filter = 'grayscale(70%)';
+                                // Prereq met but unaffordable - override filter
+                                node.style.filter = 'grayscale(30%)'; // Less grayscale than default locked
+                                // border-color remains default .locked #666
                             }
+                            // If !prereqMet, .locked class styles apply directly (border-color: #666, filter: grayscale(70%))
                         }
+                        if (skillCostElement) skillCostElement.textContent = `${window.FormatNumber(skillCost)} SP`;
                     }
                 });
             }
