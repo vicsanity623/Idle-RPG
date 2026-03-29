@@ -558,8 +558,8 @@
 
             if (typeof player !== 'undefined' && player) {
                 skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
+                drawSkillConnections(); // Populate skillNodes first
                 updateSkillTreeLockStates();
-                drawSkillConnections(); 
             }
 
             skillsTreePanel.addEventListener('click', (event) => {
@@ -628,8 +628,8 @@
                     node.style.filter = '';
                     node.classList.remove('locked', 'unlocked'); // Clear both classes for re-evaluation
 
-                    // Reset all dynamic styles and classes first
-                    node.classList.remove('locked', 'unlocked', 'highlighted');
+                    // Reset all dynamic styles and classes first (excluding 'highlighted')
+                    node.classList.remove('locked', 'unlocked');
                     node.style.borderColor = '';
                     node.style.filter = '';
                     node.style.opacity = ''; // Reset opacity
@@ -675,8 +675,8 @@ window.refreshSkillTreeUI = function() {
             };
 
             if (typeof player !== 'undefined' && player) {
+                drawSkillConnections(); // Populate skillNodes first
                 updateSkillTreeLockStates();
-                drawSkillConnections(); 
             }
         }
 
