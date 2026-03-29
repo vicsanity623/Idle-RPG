@@ -275,7 +275,7 @@ class Player {
         
         // 11 Summon
         if (this.hasSkill(11) && this.skillCooldowns[11] <= 0) {
-            entities.push(new SummonCloneEntity(this.x, this.y, this.getAttackPower() * 9));
+            entities.push(new Entity(this.x, this.y, this.getAttackPower() * 9));
             this.skillCooldowns[11] = ACTIVE_SKILLS_CONFIG[11].cd;
             spawnSotaParticles(this.x, this.y, '#ff0000', 40, 300);
         }
@@ -463,14 +463,18 @@ class SummonCloneEntity {
         if (this.target) {
             let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
             if (dist < 40) {
-                this.target.takeDamage(this.damage, true); this.chain++; this.target = null;
-                spawnSotaParticles(this.target.x, this.target.y, '#ff0000', 15, 200); // Impact explosion
-            } else { this.x += (dx/dist) * 900 * dt; this.y += (dy/dist) * 900 * dt; }
+                this.target.takeDamage(this.damage, true); 
+                spawnSotaParticles(this.target.x, this.target.y, '#ff0000', 15, 200); 
+                this.chain++; 
+                this.target = null; 
+            } else { 
+                this.x += (dx/dist) * 900 * dt; 
+                this.y += (dy/dist) * 900 * dt; 
+            }
         }
     }
     draw(ctx) { ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(this.x, this.y, player.radius * 4, 0, Math.PI*2); ctx.fill(); }
 }
-
 class RainFireEntity {
     constructor(x, y, damage) { this.tx = x; this.ty = y; this.damage = damage; this.x = x - 200; this.y = y - 800; this.speed = 1500; }
     update(dt) {
