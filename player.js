@@ -488,12 +488,12 @@ class RainFireEntity {
 }
 
 class DaggerShieldEntity {
-    constructor(playerRef, damage) { this.p = playerRef; this.damage = damage; this.life = 4; this.angle = 0; this.x = 0; this.y = 0; }
+    constructor(playerRef, damage) { this.p = playerRef; this.damage = damage; this.life = 4; this.angle = 0; this.x = 0; this.y = 0; this.x2 = 0; this.y2 = 0; }
     update(dt) {
         this.life -= dt; this.angle += dt * 8;
         this.x = this.p.x + Math.cos(this.angle) * 80; this.y = this.p.y + Math.sin(this.angle) * 80;
-        let x2 = this.p.x - Math.cos(this.angle) * 80; // Calculate position for the second dagger
-        let y2 = this.p.y - Math.sin(this.angle) * 80; // Calculate position for the second dagger
+        this.x2 = this.p.x - Math.cos(this.angle) * 80; // Calculate position for the second dagger
+        this.y2 = this.p.y - Math.sin(this.angle) * 80; // Calculate position for the second dagger
         entities.forEach(e => { 
             if (e instanceof Enemy) {
                 if (Math.hypot(e.x - this.x, e.y - this.y) < 30) e.takeDamage(this.damage * dt * 5, false); 
