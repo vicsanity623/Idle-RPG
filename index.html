@@ -664,11 +664,11 @@ const affordable = (player.skillPoints >= skillCost);
                 });
             }
 
-            window.refreshSkillTreeUI = function() {
+window.refreshSkillTreeUI = function() {
                 if (typeof player !== 'undefined' && player) {
                     skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
+                    drawSkillConnections(); // Ensure skillNodes is populated first
                     updateSkillTreeLockStates();
-                    drawSkillConnections(); 
                 }
             };
 
