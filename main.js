@@ -78,7 +78,6 @@ window.Input = {
     dashPressed: false
 };
 
-// --- In main.js ---
 window.PlayerData = {
     gold: 750, shards: 100, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
@@ -162,11 +161,10 @@ const UI = {
         REFS.cShard.innerText = FormatNumber(PlayerData.shards);
     },
     
-    // BUILD THE HOTBAR DYNAMICALLY BASED ON LEARNED SKILLS
     buildHotbar: () => {
         let hb = document.getElementById('hotbar');
         if (!hb) return;
-        hb.innerHTML = ''; // Clear existing hardcoded or old slots
+        hb.innerHTML = ''; 
         
         let html = '';
         const baseSkills = [
@@ -176,12 +174,10 @@ const UI = {
             { id: 3, key: 'Dash', icon: '⚡' }
         ];
 
-        // 1. Inject Core 4 Base Skills
         baseSkills.forEach(s => {
             html += `<div class="slot"><div class="slot-key">${s.key}</div><span>${s.icon}</span><div class="cooldown-overlay" id="cd-base-${s.id}"></div></div>`;
         });
         
-        // 2. Dynamically Inject Unlocked Active Skills
         if (player && player.learnedSkills) {
             player.learnedSkills.forEach(id => {
                 if (ACTIVE_SKILLS_CONFIG[id]) {
@@ -192,17 +188,14 @@ const UI = {
         hb.innerHTML = html;
     },
 
-    // UPDATE HEIGHTS OF EVERY ACTIVE HOTBAR ITEM
     updateHotbar: () => {
         if (!player) return;
         
-        // 1. Update Core 4
         player.skills.forEach((s, i) => {
             let el = document.getElementById(`cd-base-${i}`);
             if (el) el.style.height = `${(s.current / s.cdMax) * 100}%`;
         });
         
-        // 2. Update Unlocked Expanded Skills
         player.learnedSkills.forEach(id => {
             let el = document.getElementById(`cd-ext-${id}`);
             if (el && ACTIVE_SKILLS_CONFIG[id]) {
@@ -251,20 +244,30 @@ const UI = {
         if (REFS.itemDetailPanel) REFS.itemDetailPanel.style.display = 'none';
 
         if (REFS.statsSheet && player) {
+            // FIX: Pull base stats instead of massive buffed numbers
+            let baseStats = typeof player.getUIStats === 'function' ? player.getUIStats() : {
+                hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(),
+                regen: player.getRegen(), cx: player.getCritMultiplier(), crit: player.getCritChance(),
+                sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
+                grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), 
+                fear: player.getFearValue(), cp: player.getCombatPower()
+            };
+
             let html = `
-                <div class="stat-line"><span>Max HP</span><span class="stat-val">${FormatNumber(player.getMaxHp())}</span></div>
-                <div class="stat-line"><span>Attack</span><span class="stat-val">${FormatNumber(player.getAttackPower())}</span></div>
-                <div class="stat-line"><span>Defense</span><span class="stat-val">${FormatNumber(player.getDefense())}</span></div>
-                <div class="stat-line"><span>Regen</span><span class="stat-val">${FormatNumber(player.getRegen())}/s</span></div>
-                <div class="stat-line"><span>Atk Spd</span><span class="stat-val">${FormatNumber(1 / player.getAttackSpeedFactor())}/s</span></div>
-                <div class="stat-line"><span>Crit %</span><span class="stat-val">${FormatNumber(player.getCritChance())}%</span></div>
-                <div class="stat-line"><span>Crit X</span><span class="stat-val">${FormatNumber(player.getCritMultiplier())}x</span></div>
+                <div class="stat-line"><span>Max HP</span><span class="stat-val">${FormatNumber(baseStats.hp)}</span></div>
+                <div class="stat-line"><span>Attack</span><span class="stat-val">${FormatNumber(baseStats.atk)}</span></div>
+                <div class="stat-line"><span>Defense</span><span class="stat-val">${FormatNumber(baseStats.def)}</span></div>
+                <div class="stat-line"><span>Regen</span><span class="stat-val">${FormatNumber(baseStats.regen)}/s</span></div>
+                <div class="stat-line"><span>Atk Spd</span><span class="stat-val">${FormatNumber(baseStats.sp)}/s</span></div>
+                <div class="stat-line"><span>Crit %</span><span class="stat-val">${FormatNumber(baseStats.crit)}%</span></div>
+                <div class="stat-line"><span>Crit X</span><span class="stat-val">${FormatNumber(baseStats.cx)}x</span></div>
             `;
-            let mag = player.getAffixValue('magnet'); if (mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${FormatNumber(mag)}px</span></div>`;
-            let grd = player.getAffixValue('greed'); if (grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${FormatNumber(grd)}%</span></div>`;
-            let wis = player.getAffixValue('wisdom'); if (wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${FormatNumber(wis)}%</span></div>`;
-            let fear = player.getFearValue(); if (fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${FormatNumber(fear)}% Enemy Def</span></div>`;
-            let cpValue = FormatNumber(player.getCombatPower());
+            if (baseStats.mag > 0) html += `<div class="stat-line"><span>Magnet</span><span class="stat-val">+${FormatNumber(baseStats.mag)}px</span></div>`;
+            if (baseStats.grd > 0) html += `<div class="stat-line"><span>Gold Farmer</span><span class="stat-val">+${FormatNumber(baseStats.grd)}%</span></div>`;
+            if (baseStats.wis > 0) html += `<div class="stat-line"><span>XP Fiend</span><span class="stat-val">+${FormatNumber(baseStats.wis)}%</span></div>`;
+            if (baseStats.fear > 0) html += `<div class="stat-line"><span>Fear Aura</span><span class="stat-val">-${FormatNumber(baseStats.fear)}% Enemy Def</span></div>`;
+            
+            let cpValue = FormatNumber(baseStats.cp);
             html += `
                 <div style="grid-column: 1 / -1; margin-top: 15px; border-top: 1px solid #444; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 1.5rem; font-weight: 900; color: #4caf50;">CP</span>
@@ -370,31 +373,18 @@ const UI = {
         if (!PlayerData.inventory[index]) return;
         let itemToEquip = PlayerData.inventory[index], slot = itemToEquip.slot;
         
-        let oldStats = { 
-            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
-            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
-            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
-            cp: player.getCombatPower()
-        };
+        let oldStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
         
         PlayerData.inventory.splice(index, 1);
         let currentlyEquipped = PlayerData.gear[slot];
         if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped);
         PlayerData.gear[slot] = itemToEquip;
 
-        player.hp = Math.min(player.hp, player.getMaxHp()); // Ensure HP is clamped before UI updates
+        player.hp = Math.min(player.hp, player.getMaxHp()); 
         UI.renderInventory(); UI.updateStats();
         saveGame();
 
-        let newStats = { 
-            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(), 
-            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(), 
-            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
-            cp: player.getCombatPower()
-        };
-
+        let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
         let deltas = [], keys = [
             {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
             {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
@@ -402,8 +392,10 @@ const UI = {
             {k:'cp',l:'cp'}
         ];
         keys.forEach(s => { 
-            let d = newStats[s.k]-oldStats[s.k]; 
-            if(Math.abs(d)>0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+            if(newStats[s.k] !== undefined && oldStats[s.k] !== undefined) {
+                let d = newStats[s.k] - oldStats[s.k]; 
+                if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+            }
         });
         if (deltas.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
     },
@@ -419,32 +411,19 @@ const UI = {
 
     unequipItem: (slot) => {
         let itemToUnequip = PlayerData.gear[slot];
-        if (!itemToUnequip) return; // Nothing to unequip
+        if (!itemToUnequip) return; 
 
-        let oldStats = {
-            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(),
-            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(),
-            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
-            cp: player.getCombatPower()
-        };
+        let oldStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
 
-        // Move item from gear slot to inventory
         PlayerData.inventory.push(itemToUnequip);
-        PlayerData.gear[slot] = null; // Set slot to null
+        PlayerData.gear[slot] = null; 
 
-        player.hp = Math.min(player.hp, player.getMaxHp()); // Clamp HP
+        player.hp = Math.min(player.hp, player.getMaxHp());
         UI.renderInventory();
         UI.updateStats();
         saveGame();
 
-        let newStats = {
-            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(),
-            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(),
-            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
-            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
-            cp: player.getCombatPower()
-        };
+        let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
 
         let deltas = [], keys = [
             {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
@@ -453,8 +432,10 @@ const UI = {
             {k:'cp',l:'cp'}
         ];
         keys.forEach(s => {
-            let d = newStats[s.k]-oldStats[s.k];
-            if(Math.abs(d)>0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d});
+            if(newStats[s.k] !== undefined && oldStats[s.k] !== undefined) {
+                let d = newStats[s.k] - oldStats[s.k]; 
+                if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+            }
         });
         if (deltas.length > 0) UI.showDelta(`Unequipped: ${itemToUnequip.name || slot}`, deltas);
     },
@@ -485,11 +466,9 @@ const UI = {
         REFS.deltaTitle.innerHTML = `<div class="level-badge" style="background:${badgeColor}">${badgeText}</div> ${title}`;
         let html = '';
         
-        let cpLine = lines.find(l => l.label === 'cp'); 
-        let statLines = lines.filter(l => l.label !== 'cp');
-        
         let cpOld = lines.find(l => l.label === 'cp')?.oldVal || 0;
         let cpNew = lines.find(l => l.label === 'cp')?.newVal || 0;
+        let statLines = lines.filter(l => l.label !== 'cp');
         
         REFS.deltaTitle.innerHTML = `
             <div class="level-badge" style="background:${badgeColor}">${badgeText}</div> 
@@ -500,13 +479,9 @@ const UI = {
         `;
         
         statLines.forEach(line => {
-            // For all current stats (Max HP, Attack, Defense, Regen, Crit %, Crit X, Atk Spd, Magnet, Gold Farmer, XP Fiend, Fear Aura, CP),
-            // a positive difference indicates an improvement.
-let improved = line.diff > 0;
-            // Special handling for Atk Spd where a lower displayed value (1/factor) is an improvement
-            if (line.label === 'Atk Spd') {
-                improved = line.diff < 0;
-            }
+            let improved = line.diff > 0;
+            if (line.label === 'Atk Spd') improved = line.diff < 0;
+            
             let cColor = improved ? '#4caf50' : '#ff5252';
             let diffValStr = FormatNumber(Math.abs(line.diff));
             let symb = line.diff > 0 ? '+' : (line.diff < 0 ? '-' : '');
@@ -568,21 +543,28 @@ function isWall(x, y) {
     return mapGrid[row][col] === 1;
 }
 
-// --- 6. ENGINE FUNCTIONS ---
+// --- 6. ENGINE FUNCTIONS (SAFE ENTITY MANAGEMENT) ---
 function spawnFloatingText(x, y, text, color) { floatingTexts.push(new FloatingText(x, y, text, color)); }
 function spawnLoot(x, y, type) { entities.push(new Loot(x, y, type)); }
 
+// FIX: Memory Leak. Projectile now tags itself for safe deletion
 class Projectile {
     constructor(x, y, target, speed, damage, isCrit, isEnemy = false) {
         this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; 
         this.isCrit = isCrit; this.isEnemy = isEnemy;
         this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc'); 
-        this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; this.isAlive = true; 
+        this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; 
+        this.markedForDeletion = false; 
     }
     update(dt) {
-        if (!this.isAlive) return;
+        if (this.markedForDeletion) return;
         this.currentLifetime += dt;
-        if (this.currentLifetime >= this.lifetime) { this.isAlive = false; return; }
+        
+        // FIX: Remove from physics engine entirely instead of floating invisibly forever
+        if (this.currentLifetime >= this.lifetime) { 
+            this.markedForDeletion = true; 
+            return; 
+        }
         
         if (this.target && this.target.hp > 0) {
             let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
@@ -592,13 +574,15 @@ class Projectile {
             
             if (dist < this.radius + this.target.radius) { 
                 this.target.takeDamage(this.damage, this.isCrit); 
-                this.isAlive = false; 
+                this.markedForDeletion = true; 
                 spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
             }
-        } else { this.isAlive = false; }
+        } else { 
+            this.markedForDeletion = true; 
+        }
     }
     draw(ctx) {
-        if (!this.isAlive) return;
+        if (this.markedForDeletion) return;
         ctx.save(); 
         if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
         ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); 
@@ -613,7 +597,6 @@ function spawnProjectile(x1, y1, target, damage, isCrit, isEnemy = false) {
 
 function spawnAura(x, y, color = '#ff9800') { for(let i=0; i<20; i++) particles.push(new Particle(x, y, color)); }
 
-// SOTA DYNAMIC PARTICLE ENGINE FOR SKILL EFFECTS
 function spawnSotaParticles(x, y, color, count, speed) {
     for(let i=0; i<count; i++) {
         let p = new Particle(x, y, color);
@@ -631,12 +614,8 @@ function gainXp(amt) {
     if (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
         
-        let oldStats = { 
-            hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
-            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
-            mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue(),
-            cp: player.getCombatPower()
-        }, oldLevel = PlayerData.level;
+        let oldStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
+        let oldLevel = PlayerData.level;
 
         PlayerData.level++; 
         player.skillPoints++; 
@@ -646,12 +625,7 @@ function gainXp(amt) {
         
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
         
-        let newStats = { 
-            hp:player.getMaxHp(), atk:player.getAttackPower(), def:player.getDefense(), regen:player.getRegen(), 
-            crit:player.getCritChance(), cx:player.getCritMultiplier(), sp:player.getAttackSpeedFactor(),
-            mag:player.getAffixValue('magnet'), grd:player.getAffixValue('greed'), wis:player.getAffixValue('wisdom'), fear:player.getFearValue(),
-            cp: player.getCombatPower()
-        };
+        let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
 
         let deltas = [], keys = [
             {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
@@ -661,17 +635,16 @@ function gainXp(amt) {
         ];
 
         keys.forEach(s => { 
-            let d = newStats[s.k] - oldStats[s.k]; 
-            if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+            if(newStats[s.k] !== undefined && oldStats[s.k] !== undefined) {
+                let d = newStats[s.k] - oldStats[s.k]; 
+                if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); 
+            }
         });
 
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
 
-        if (typeof refreshSkillTreeUI === 'function') {
-            refreshSkillTreeUI();
-        }
+        if (typeof refreshSkillTreeUI === 'function') refreshSkillTreeUI();
     }
-
     UI.updateStats();
     saveGame();
 }
@@ -680,15 +653,9 @@ function die() {
     GameState.state = 'DEAD'; 
     PlayerData.gold = Math.floor(PlayerData.gold / 2); 
     PlayerData.shards = Math.floor(PlayerData.shards / 2);
-    
     UI.notify("YOU DIED. Wealth halved."); 
-    
     saveGame();
-    
-    setTimeout(() => { 
-        initLevel(); 
-        GameState.state = 'PLAYING'; 
-    }, 2000);
+    setTimeout(() => { initLevel(); GameState.state = 'PLAYING'; }, 2000);
 }
 
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
@@ -714,29 +681,21 @@ function initLevel() {
     let startX = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2, 
         startY = Math.floor(MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     
-    if(!player) {
-        player = new Player(startX, startY); 
-    } else { 
-        player.x = startX; 
-        player.y = startY; 
-        player.hp = player.getMaxHp(); 
-    }
+    if(!player) player = new Player(startX, startY); 
+    else { player.x = startX; player.y = startY; player.hp = player.getMaxHp(); }
     
-    if (typeof initializeSkillTree === 'function') {
-        initializeSkillTree();
-    }
+    if (typeof initializeSkillTree === 'function') initializeSkillTree();
     
     entities.push(player); 
     spawnEnemies(); 
     REFS.depthLevel.innerText = GameState.level; 
     UI.updateMinimap();
     
-    // BUILD DYNAMIC HOTBAR ON BOOT/REVIVE
     UI.buildHotbar();
     UI.updateStats();
 }
 
-// --- 7. INPUT & SAVE (BULLETPROOF MERGE) ---
+// --- 7. INPUT & SAVE ---
 let jZoneRef = document.getElementById('joystick-zone');
 if (jZoneRef) {
     jZoneRef.addEventListener('touchstart', (e) => {
@@ -770,7 +729,6 @@ function loadGame() {
         try {
             let d = JSON.parse(save);
             
-            // Safe Deep Merge
             PlayerData.gold = d.gold ?? PlayerData.gold;
             PlayerData.shards = d.shards ?? PlayerData.shards;
             PlayerData.level = d.level ?? PlayerData.level;
@@ -810,20 +768,36 @@ function draw() {
         camY = Math.max(0, Math.min(player.y - REFS.canvas.height / 2, MAP_SIZE * TILE_SIZE - REFS.canvas.height));
     ctx.save(); drawMap(camX, camY); ctx.translate(-camX, -camY);
     if (portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) { ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill(); }
-    entities.sort((a, b) => a.y - b.y).forEach(e => e.draw?.(ctx));
+    
+    // SAFE RENDER: Only draw things that aren't pending deletion
+    entities.filter(e => !e.markedForDeletion).sort((a, b) => a.y - b.y).forEach(e => e.draw?.(ctx));
     particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); ctx.restore();
+    
     if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width/2, REFS.canvas.height/2); }
 }
 
-// --- 9. MAIN LOOP ---
+// --- 9. MAIN LOOP (SAFE MARK-AND-SWEEP PHYSICS ENGINE) ---
 function loop(timestamp) {
     let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); GameState.lastTime = timestamp;
     if (GameState.state === 'PLAYING') {
         if (GameState.pendingLevelUp) { GameState.level++; UI.notify(`Depth ${GameState.level}`); initLevel(); GameState.pendingLevelUp = false; saveGame(); }
         HiveMind.update();
-        for (let i = entities.length - 1; i >= 0; i--) entities[i].update(dt);
+        
+        // 1. UPDATE PHASE: Iterate and update all entities
+        for (let i = entities.length - 1; i >= 0; i--) {
+            if (entities[i] && entities[i].update) entities[i].update(dt);
+        }
+        
+        // 2. SWEEP PHASE: Safely remove all dead entities/projectiles (Prevents Array Shift Crashes!)
+        for (let i = entities.length - 1; i >= 0; i--) {
+            if (entities[i] && entities[i].markedForDeletion) {
+                entities.splice(i, 1);
+            }
+        }
+        
         for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt);
         for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
+        
         if (GameState.frame % 10 === 0) UI.updateStats();
         if (GameState.frame % 120 === 0) { 
             let ec = 0; 
@@ -879,28 +853,15 @@ REFS.playBtn.addEventListener('click', () => {
 const bindUIButton = (element, callback) => {
     if (!element) return;
     let fired = false;
-    
-    // Instantly fires on mobile tap, prevents Apple's 300ms delay
     element.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Stop double-firing with click
-        if (!fired) { 
-            fired = true; 
-            callback(); 
-            setTimeout(() => fired = false, 400); 
-        }
+        e.preventDefault(); 
+        if (!fired) { fired = true; callback(); setTimeout(() => fired = false, 400); }
     }, { passive: false });
-    
-    // Fallback for PC / Mouse clicks
     element.addEventListener('click', (e) => {
-        if (!fired) { 
-            fired = true; 
-            callback(); 
-            setTimeout(() => fired = false, 400); 
-        }
+        if (!fired) { fired = true; callback(); setTimeout(() => fired = false, 400); }
     });
 };
 
-// Bind the buttons safely once the page loads
 window.addEventListener('DOMContentLoaded', () => {
     bindUIButton(document.getElementById('claim-daily-btn'), () => UI.claimDaily());
     bindUIButton(document.getElementById('avatar-btn'), () => UI.toggleInventory());
