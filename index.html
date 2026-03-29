@@ -642,16 +642,23 @@
 
                         const prereqMet = (prereqId === 0 || player.hasSkill(prereqId));
 
-                        if (prereqMet) {
-                            node.classList.remove('locked'); 
-                            if (player.skillPoints >= skillCost) {
-                                node.style.borderColor = 'var(--primary)'; 
-                                node.style.filter = 'none';
-                            } else {
+const affordable = (player.skillPoints >= skillCost);
+
+                        if (prereqMet && affordable) {
+                            node.classList.remove('locked'); // Ready to learn
+                            node.style.borderColor = 'var(--primary)';
+                            node.style.filter = 'none';
+                        } else { // Not ready to learn (either prereq not met OR not affordable)
+                            node.classList.add('locked'); // Keep/add 'locked' class
+                            if (prereqMet && !affordable) {
+                                // Prereq met but unaffordable
                                 node.style.borderColor = '#666';
                                 node.style.filter = 'grayscale(30%)';
+                            } else { // Prereq not met
+                                node.style.borderColor = '#444';
+                                node.style.filter = 'grayscale(70%)';
                             }
-                        } else {
+                        }
                             node.classList.add('locked');
                             node.style.borderColor = '#444';
                             node.style.filter = 'grayscale(70%)';
