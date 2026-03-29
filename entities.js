@@ -324,7 +324,7 @@ class ExpandingRing {
 
 // --- DOM BINDINGS ---
 window.addEventListener('DOMContentLoaded', () => {
-    let refs = {
+    const refs = {
         avatar: document.getElementById('avatar-btn'),
         close:  document.querySelector('#inventory-modal .close-btn') || document.querySelector('#inventory-modal .inv-header button'),
         claim:  document.getElementById('claim-daily-btn') || document.querySelector('#daily-login button')
