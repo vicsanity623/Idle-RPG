@@ -87,6 +87,17 @@ const generateRandomGear = (level) => {
     return item;
 };
 
+// Helper function for UI to determine stat comparison color based on whether higher is better
+// Placed here as a utility related to gear stats, which are defined and generated in this file.
+function getStatDeltaColor(currentValue, equippedValue, isBetterHigher) {
+    if (currentValue === equippedValue) return 'var(--color-neutral, #fff)'; // No change
+    if (isBetterHigher) { // e.g., Atk, Def, HP, CritChance, CritMult, Regen
+        return currentValue > equippedValue ? 'var(--color-green, #0f0)' : 'var(--color-red, #f00)';
+    } else { // e.g., Atk Spd (lower is better)
+        return currentValue < equippedValue ? 'var(--color-green, #0f0)' : 'var(--color-red, #f00)';
+    }
+}
+
 // --- ENEMY CLASS ---
 class Enemy {
     constructor(x, y) {
