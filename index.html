@@ -626,9 +626,9 @@
 
                     node.style.borderColor = '';
                     node.style.filter = '';
+                    node.classList.remove('locked', 'unlocked'); // Clear both classes for re-evaluation
 
                     if (player.hasSkill(skillId)) {
-                        node.classList.remove('locked');
                         node.classList.add('unlocked');
                         const skillCostElement = node.querySelector('.skill-cost');
                         if (skillCostElement) skillCostElement.textContent = 'Learned';
