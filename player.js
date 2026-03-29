@@ -504,6 +504,6 @@ class DaggerShieldEntity {
     }
     draw(ctx) {
         ctx.fillStyle = '#aaa'; ctx.beginPath(); ctx.arc(this.x, this.y, 10, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(this.p.x - Math.cos(this.angle)*80, this.p.y - Math.sin(this.angle)*80, 10, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x2, this.y2, 10, 0, Math.PI*2); ctx.fill();
     }
 }
