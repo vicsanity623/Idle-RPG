@@ -645,21 +645,23 @@
 const affordable = (player.skillPoints >= skillCost);
 
                         if (prereqMet && affordable) {
-                            node.classList.remove('locked'); // Ready to learn
+                            // Ready to learn state - remove 'locked' class, apply specific styles
+                            node.classList.remove('locked');
                             node.style.borderColor = 'var(--primary)';
                             node.style.filter = 'none';
-                        } else { // Not ready to learn (either prereq not met OR not affordable)
-                            node.classList.add('locked'); // Keep/add 'locked' class
+                        } else {
+                            // Truly locked state (either prereq not met or unaffordable)
+                            node.classList.add('locked');
                             if (prereqMet && !affordable) {
-                                // Prereq met but unaffordable
+                                // Prereq met but unaffordable - use locked class, but specific border/filter
                                 node.style.borderColor = '#666';
                                 node.style.filter = 'grayscale(30%)';
-                            } else { // Prereq not met
+                            } else {
+                                // Prereq not met - use locked class, default locked border/filter
                                 node.style.borderColor = '#444';
                                 node.style.filter = 'grayscale(70%)';
                             }
                         }
-                            }
                     }
                 });
             }
