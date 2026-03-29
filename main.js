@@ -417,6 +417,48 @@ const UI = {
         REFS.itemDetailPanel.style.display = 'none'; saveGame();
     },
 
+    unequipItem: (slot) => {
+        let itemToUnequip = PlayerData.gear[slot];
+        if (!itemToUnequip) return; // Nothing to unequip
+
+        let oldStats = {
+            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(),
+            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(),
+            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
+            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
+            cp: player.getCombatPower()
+        };
+
+        // Move item from gear slot to inventory
+        PlayerData.inventory.push(itemToUnequip);
+        PlayerData.gear[slot] = null; // Set slot to null
+
+        player.hp = Math.min(player.hp, player.getMaxHp()); // Clamp HP
+        UI.renderInventory();
+        UI.updateStats();
+        saveGame();
+
+        let newStats = {
+            hp: player.getMaxHp(), atk: player.getAttackPower(), def: player.getDefense(),
+            regen: player.getRegen(), crit: player.getCritChance(), cx: player.getCritMultiplier(),
+            sp: 1 / player.getAttackSpeedFactor(), mag: player.getAffixValue('magnet'),
+            grd: player.getAffixValue('greed'), wis: player.getAffixValue('wisdom'), fear: player.getFearValue(),
+            cp: player.getCombatPower()
+        };
+
+        let deltas = [], keys = [
+            {k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},
+            {k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},
+            {k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'},
+            {k:'cp',l:'cp'}
+        ];
+        keys.forEach(s => {
+            let d = newStats[s.k]-oldStats[s.k];
+            if(Math.abs(d)>0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d});
+        });
+        if (deltas.length > 0) UI.showDelta(`Unequipped: ${itemToUnequip.name || slot}`, deltas);
+    },
+
     upgradeGear: (type) => {
         let gear = PlayerData.gear[type]; if (!gear) return;
         let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 20;
