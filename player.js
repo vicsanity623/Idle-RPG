@@ -455,16 +455,49 @@ class TwisterEntity {
 }
 
 class SummonCloneEntity {
-    constructor(x, y, damage) { this.x = x; this.y = y; this.damage = damage; this.life = 6; this.chain = 0; this.target = null; }
+    constructor(x, y, damage) { 
+        this.x = x; 
+        this.y = y; 
+        this.damage = damage; 
+        this.life = 6; 
+        this.chain = 0; 
+        this.target = null; 
+    }
+    
     update(dt) {
         this.life -= dt;
-        if (this.chain >= 5 || this.life <= 0) { entities.splice(entities.indexOf(this), 1); return; }
-        if (!this.target || this.target.hp <= 0) this.target = player.getNearestEnemy(1000);
+        
+        // Safe removal
+        if (this.chain >= 5 || this.life <= 0) { 
+            let idx = entities.indexOf(this);
+            if (idx > -1) entities.splice(idx, 1); 
+            return; 
+        }
+        
+        // Find new target if we don't have one
+        if (!this.target || this.target.hp <= 0) {
+            this.target = player.getNearestEnemy(1000);
+        }
+        
         if (this.target) {
-            let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
+            let dx = this.target.x - this.x;
+            let dy = this.target.y - this.y;
+            let dist = Math.hypot(dx, dy);
+            
             if (dist < 40) {
+                // 1. CACHE COORDINATES FIRST (Before the enemy potentially dies/vanishes)
+                let impactX = this.target.x;
+                let impactY = this.target.y;
+                
+                // 2. Deal Damage
                 this.target.takeDamage(this.damage, true); 
-                spawnSotaParticles(this.target.x, this.target.y, '#ff0000', 15, 200); 
+                
+                // 3. Spawn Particles safely using the cached raw numbers
+                if (typeof spawnSotaParticles === 'function') {
+                    spawnSotaParticles(impactX, impactY, '#ff0000', 15, 200); 
+                }
+                
+                // 4. Move to next chain
                 this.chain++; 
                 this.target = null; 
             } else { 
@@ -473,8 +506,15 @@ class SummonCloneEntity {
             }
         }
     }
-    draw(ctx) { ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(this.x, this.y, player.radius * 4, 0, Math.PI*2); ctx.fill(); }
+    
+    draw(ctx) { 
+        ctx.fillStyle = '#ff0000'; 
+        ctx.beginPath(); 
+        ctx.arc(this.x, this.y, player.radius * 4, 0, Math.PI*2); 
+        ctx.fill(); 
+    }
 }
+
 class RainFireEntity {
     constructor(x, y, damage) { this.tx = x; this.ty = y; this.damage = damage; this.x = x - 200; this.y = y - 800; this.speed = 1500; }
     update(dt) {
