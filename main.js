@@ -764,14 +764,33 @@ function drawMap(camX, camY) {
 function draw() {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height);
     if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') return;
-    let camX = Math.max(0, Math.min(player.x - REFS.canvas.width / 2, MAP_SIZE * TILE_SIZE - REFS.canvas.width)),
-        camY = Math.max(0, Math.min(player.y - REFS.canvas.height / 2, MAP_SIZE * TILE_SIZE - REFS.canvas.height));
-    ctx.save(); drawMap(camX, camY); ctx.translate(-camX, -camY);
+    
+    let targetCamX = Math.max(0, Math.min(player.x - REFS.canvas.width / 2, MAP_SIZE * TILE_SIZE - REFS.canvas.width));
+    let targetCamY = Math.max(0, Math.min(player.y - REFS.canvas.height / 2, MAP_SIZE * TILE_SIZE - REFS.canvas.height));
+    
+    // Initialize camera on first load so it doesn't swoop from top-left
+    if (GameState.camera.x === 0 && GameState.camera.y === 0) {
+        GameState.camera.x = targetCamX; 
+        GameState.camera.y = targetCamY;
+    }
+
+    // --- CAMERA LERPING (Linear Interpolation) ---
+    // If player is blinking, slow the camera drag to 1.5% so it practically freezes and watches the fight.
+    // Otherwise, drag smoothly at 10% to catch up to the player.
+    let lerpSpeed = player.isBlinking ? 0.015 : 0.1;
+    GameState.camera.x += (targetCamX - GameState.camera.x) * lerpSpeed;
+    GameState.camera.y += (targetCamY - GameState.camera.y) * lerpSpeed;
+
+    ctx.save(); 
+    drawMap(GameState.camera.x, GameState.camera.y); 
+    ctx.translate(-GameState.camera.x, -GameState.camera.y);
+    
     if (portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) { ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill(); }
     
-    // SAFE RENDER: Only draw things that aren't pending deletion
     entities.filter(e => !e.markedForDeletion).sort((a, b) => a.y - b.y).forEach(e => e.draw?.(ctx));
-    particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); ctx.restore();
+    particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); 
+    
+    ctx.restore();
     
     if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width/2, REFS.canvas.height/2); }
 }
