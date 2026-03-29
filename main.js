@@ -874,3 +874,35 @@ REFS.playBtn.addEventListener('click', () => {
     initLevel(); UI.updateCurrencies(); UI.checkDailyLogin();
     GameState.state = 'PLAYING'; GameState.lastTime = performance.now(); requestAnimationFrame(loop);
 });
+
+// --- 11. MOBILE-OPTIMIZED UI BINDINGS ---
+const bindUIButton = (element, callback) => {
+    if (!element) return;
+    let fired = false;
+    
+    // Instantly fires on mobile tap, prevents Apple's 300ms delay
+    element.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Stop double-firing with click
+        if (!fired) { 
+            fired = true; 
+            callback(); 
+            setTimeout(() => fired = false, 400); 
+        }
+    }, { passive: false });
+    
+    // Fallback for PC / Mouse clicks
+    element.addEventListener('click', (e) => {
+        if (!fired) { 
+            fired = true; 
+            callback(); 
+            setTimeout(() => fired = false, 400); 
+        }
+    });
+};
+
+// Bind the buttons safely once the page loads
+window.addEventListener('DOMContentLoaded', () => {
+    bindUIButton(document.getElementById('claim-daily-btn'), () => UI.claimDaily());
+    bindUIButton(document.getElementById('avatar-btn'), () => UI.toggleInventory());
+    bindUIButton(document.querySelector('.close-btn'), () => UI.toggleInventory());
+});

@@ -332,13 +332,3 @@ class ExpandingRing {
         ctx.restore();
     }
 }
-
-// --- DOM BINDINGS ---
-window.addEventListener('DOMContentLoaded', () => {
-    const refs = {
-        avatar: document.getElementById('avatar-btn'),
-        close:  document.querySelector('#inventory-modal .close-btn') || document.querySelector('#inventory-modal .inv-header button'),
-        claim:  document.getElementById('claim-daily-btn') || document.querySelector('#daily-login button')
-    };
-    
-});
