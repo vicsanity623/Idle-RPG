@@ -79,7 +79,7 @@ window.Input = {
 };
 
 window.PlayerData = {
-    gold: 750, shards: 100, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
+    gold: 750, shards: 100, level: 5, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
         'Weapon':   { level: 1, atk: 25, critMult: 0.20, rarity: 'Common' },
         'Armor':    { level: 1, hp: 60, def: 15, rarity: 'Common' },
