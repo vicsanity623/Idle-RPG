@@ -492,7 +492,14 @@ class DaggerShieldEntity {
     update(dt) {
         this.life -= dt; this.angle += dt * 8;
         this.x = this.p.x + Math.cos(this.angle) * 80; this.y = this.p.y + Math.sin(this.angle) * 80;
-        entities.forEach(e => { if (e instanceof Enemy && Math.hypot(e.x - this.x, e.y - this.y) < 30) e.takeDamage(this.damage * dt * 5, false); });
+        let x2 = this.p.x - Math.cos(this.angle) * 80; // Calculate position for the second dagger
+        let y2 = this.p.y - Math.sin(this.angle) * 80; // Calculate position for the second dagger
+        entities.forEach(e => { 
+            if (e instanceof Enemy) {
+                if (Math.hypot(e.x - this.x, e.y - this.y) < 30) e.takeDamage(this.damage * dt * 5, false); 
+                if (Math.hypot(e.x - x2, e.y - y2) < 30) e.takeDamage(this.damage * dt * 5, false); // Damage check for the second dagger
+            }
+        });
         if (this.life <= 0) entities.splice(entities.indexOf(this), 1);
     }
     draw(ctx) {
