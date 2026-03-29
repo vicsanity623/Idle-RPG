@@ -460,8 +460,11 @@ const UI = {
         statLines.forEach(line => {
             // For all current stats (Max HP, Attack, Defense, Regen, Crit %, Crit X, Atk Spd, Magnet, Gold Farmer, XP Fiend, Fear Aura, CP),
             // a positive difference indicates an improvement.
-            const improved = line.diff > 0;
-
+let improved = line.diff > 0;
+            // Special handling for Atk Spd where a lower displayed value (1/factor) is an improvement
+            if (line.label === 'Atk Spd') {
+                improved = line.diff < 0;
+            }
             let cColor = improved ? '#4caf50' : '#ff5252';
             let diffValStr = FormatNumber(Math.abs(line.diff));
             let symb = line.diff > 0 ? '+' : (line.diff < 0 ? '-' : '');
