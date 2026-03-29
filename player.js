@@ -6,13 +6,7 @@
 // --- HERO-SPECIFIC CONSTANTS ---
 const PLAYER_ATTACK_RANGE = 280,
       DASH_DISTANCE = 550,
-      LEVEL_SCALING = {
-          hp:    0.05, 
-          atk:   0.04, 
-          def:   0.03, 
-          regen: 0.02, 
-          crit:  0.01  
-      };
+      LEVEL_SCALING = { hp: 0.05, atk: 0.04, def: 0.03, regen: 0.02, crit: 0.01 };
 
 class Player {
     constructor(x, y) {
@@ -24,7 +18,6 @@ class Player {
         this.speed = 250; 
         this.color = '#bb86fc';
         
-        // --- 1. INITIALIZE ARRAYS & READ FROM SAVE DATA ---
         this.skillPoints = window.PlayerData.skillPoints || 0;
         this.learnedSkills = window.PlayerData.learnedSkills || [];
         
@@ -36,7 +29,6 @@ class Player {
         ];
         this.lastMoveAngle = 0; 
         
-        // Expanded Skill Timers & Trackers
         this.skillCooldowns = Array(30).fill(0); 
         this.invincibleTimer = 0;
         this.rageTimer = 0;
@@ -45,7 +37,11 @@ class Player {
         this.pipeBombAbsorbed = 0;
         this.scorchActiveTimer = 0;
 
-        // --- 2. CALCULATE HP ---
+        // --- NEW: BLINK MULTI-STRIKE STATE ---
+        this.isBlinking = false;
+        this.blinkCount = 0;
+        this.blinkTimer = 0;
+
         this.hp = this.getMaxHp();
     }
 
@@ -65,12 +61,11 @@ class Player {
         return stats[statName] || 0;
     }
 
-    // --- CHARACTER STAT FORMULAS (Updated w/ Passives) ---
     getMaxHp() { 
         let base = 100 + this.getGearStat('Armor', 'hp') + this.getGearStat('Head', 'hp') + this.getGearStat('Legs', 'hp') + this.getGearStat('Robe', 'hp') + this.getGearStat('Necklace', 'hp');
         let final = Math.floor(base * (1 + (LEVEL_SCALING.hp * (PlayerData.level - 1)))); 
-        if (this.hasSkill(15)) final = Math.floor(final * 1.50); // Vitality Surge
-        if (this.hasSkill(25)) final = Math.floor(final * 1.25); // Ascension
+        if (this.hasSkill(15)) final = Math.floor(final * 1.50); 
+        if (this.hasSkill(25)) final = Math.floor(final * 1.25); 
         return final;
     }
 
@@ -84,25 +79,25 @@ class Player {
         let final = Math.floor(scaledAtk * mightBonus); 
         if (this.rageTimer > 0) final *= 2; 
         if (this.zenTimer > 0) final *= 10;
-        if (this.hasSkill(25)) final = Math.floor(final * 1.25); // Ascension
+        if (this.hasSkill(25)) final = Math.floor(final * 1.25); 
         return final;
     }
 
     getPickupRadius() {
         let base = 80 + this.getAffixValue('magnet');
-        if (this.hasSkill(18)) base += 200; // Magnetic Field
+        if (this.hasSkill(18)) base += 200; 
         return base;
     }
 
     getGoldMultiplier() {
         let base = 1 + (this.getAffixValue('greed') / 100);
-        if (this.hasSkill(19)) base += 0.5; // Wealth Magnet
+        if (this.hasSkill(19)) base += 0.5; 
         return base;
     }
 
     getXpMultiplier() {
         let base = 1 + (this.getAffixValue('wisdom') / 100);
-        if (this.hasSkill(20)) base += 0.5; // Scholar's Insight
+        if (this.hasSkill(20)) base += 0.5; 
         return base;
     }
 
@@ -111,8 +106,8 @@ class Player {
     getDefense() { 
         let base = this.getGearStat('Armor', 'def') + this.getGearStat('Head', 'def') + this.getGearStat('Legs', 'def') + this.getGearStat('Boots', 'def');
         let final = Math.floor(base * (1 + (LEVEL_SCALING.def * (PlayerData.level - 1)))); 
-        if (this.hasSkill(16)) final = Math.floor(final * 1.50); // Iron Skin
-        if (this.hasSkill(25)) final = Math.floor(final * 1.25); // Ascension
+        if (this.hasSkill(16)) final = Math.floor(final * 1.50); 
+        if (this.hasSkill(25)) final = Math.floor(final * 1.25); 
         return final;
     }
 
@@ -120,12 +115,12 @@ class Player {
         let base = this.getGearStat('Robe', 'regen') + this.getGearStat('Necklace', 'regen') + this.getGearStat('Earrings', 'regen');
         if (this.hasSkill(4)) base += 5;
         let final = base * (1 + (LEVEL_SCALING.regen * (PlayerData.level - 1))); 
-        if (this.hasSkill(25)) final *= 1.25; // Ascension
+        if (this.hasSkill(25)) final *= 1.25; 
         return final;
     }
 
     getCritChance() { 
-        if (this.rageTimer > 0) return 100; // Rage forces 100% crit
+        if (this.rageTimer > 0) return 100; 
         let base = 5 + this.getGearStat('Fists', 'critChance') + this.getGearStat('Ring', 'critChance');
         let total = base * (1 + (LEVEL_SCALING.crit * (PlayerData.level - 1)));
         if (this.hasSkill(25)) total *= 1.25; 
@@ -135,7 +130,7 @@ class Player {
     getCritMultiplier() { 
         let levelBonus = (PlayerData.level - 1) * 0.01;
         let base = 1.5 + levelBonus + this.getGearStat('Weapon', 'critMult') + this.getGearStat('Earrings', 'critMult'); 
-        if (this.rageTimer > 0) base += 5.0; // Rage adds massive crit damage
+        if (this.rageTimer > 0) base += 5.0; 
         if (this.hasSkill(25)) base *= 1.25; 
         return base;
     }
@@ -143,7 +138,7 @@ class Player {
     getAttackSpeedFactor() {
         let levelBonus = (PlayerData.level - 1) * 0.005; 
         let base = Math.max(0.3, 1.0 - levelBonus - this.getGearStat('Boots', 'atkSpeed'));
-        if (this.zenTimer > 0) base = base / 5; // Zen 500% speed
+        if (this.zenTimer > 0) base = base / 5; 
         return base;
     }
     
@@ -152,11 +147,16 @@ class Player {
         return baseSum * (1 / this.getAttackSpeedFactor());
     }
 
-    // --- PLAYER SYSTEMS ---
-
     update(dt) {
         if (this.hp < this.getMaxHp()) this.hp = Math.min(this.getMaxHp(), this.hp + this.getRegen() * dt);
         
+        // --- BLINK OVERRIDE ---
+        // If blinking, do NOT allow normal walking or other skills
+        if (this.isBlinking) {
+            this.handleBlinkSequence(dt);
+            return; 
+        }
+
         if (Input.joystick.active) {
             this.vx = Math.cos(Input.joystick.angle) * this.speed;
             this.vy = Math.sin(Input.joystick.angle) * this.speed;
@@ -180,8 +180,58 @@ class Player {
         }
     }
 
+    // --- NEW: BLINK LOGIC SEQUENCE ---
+    handleBlinkSequence(dt) {
+        this.blinkTimer -= dt;
+        if (this.blinkTimer <= 0) {
+            if (this.blinkCount > 0) {
+                // Find next target for chain
+                let nearest = this.getNearestEnemy(800);
+                if (nearest) {
+                    // 1. Leave Ghost at current position
+                    entities.push(new BlinkGhostEntity(this.x, this.y, this.color));
+
+                    // 2. Calculate SAFE landing coordinate behind enemy
+                    let angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+                    let landX = nearest.x - Math.cos(angle) * 40;
+                    let landY = nearest.y - Math.sin(angle) * 40;
+                    
+                    // SAFE WALL CHECK: If landing spot is inside a wall, just spawn ON the enemy
+                    if (isWall(landX, landY)) {
+                        landX = nearest.x;
+                        landY = nearest.y;
+                    }
+                    
+                    this.x = landX;
+                    this.y = landY;
+
+                    // 3. Cyberpunk Glitch Effects (Cyan & Magenta)
+                    if (typeof spawnSotaParticles === 'function') {
+                        spawnSotaParticles(this.x, this.y, '#00ffff', 15, 300); 
+                        spawnSotaParticles(this.x, this.y, '#ff00ff', 15, 300); 
+                    }
+                    
+                    entities.push(new ExpandingRing(this.x, this.y, '#00ffff', 100, 0.2));
+
+                    // 4. Deal Massive Damage (400% Auto-Crit)
+                    spawnFloatingText(this.x, this.y - 30, "OMNISLASH!", '#ff00ff');
+                    nearest.takeDamage(this.getAttackPower() * 4, true);
+
+                    // 5. Setup next strike
+                    this.blinkCount--;
+                    this.blinkTimer = 0.25; // 250ms freeze frame before next teleport
+                } else {
+                    // No enemies left to chain to, end blink early
+                    this.isBlinking = false;
+                }
+            } else {
+                // Out of strikes, end blink
+                this.isBlinking = false;
+            }
+        }
+    }
+
     handleSkills(dt) {
-        // Core 4 Hotbar Skills
         this.skills.forEach(s => { if(s.current > 0) s.current -= dt; });
         if (this.skills[1].current <= 0) {
             let target = this.getNearestEnemy(PLAYER_ATTACK_RANGE);
@@ -209,21 +259,18 @@ class Player {
             Input.dashPressed = false; 
         }
         
-        UI.updateHotbar(); // Dynamically updates all cooldown overlays
+        UI.updateHotbar(); 
 
-        // --- EXPANDED SKILLS PROCESSING WITH SOTA EFFECTS ---
         for(let i=0; i<this.skillCooldowns.length; i++) {
             if (this.skillCooldowns[i] > 0) this.skillCooldowns[i] -= dt;
         }
 
-        // 5 Invincibility
         if (this.hasSkill(5) && this.skillCooldowns[5] <= 0) {
             this.invincibleTimer = 3; this.skillCooldowns[5] = ACTIVE_SKILLS_CONFIG[5].cd;
             spawnFloatingText(this.x, this.y, "INVINCIBLE", '#fff');
             entities.push(new ExpandingRing(this.x, this.y, '#ffd700', 100, 0.4));
         }
         
-        // 6 Scorch Trail
         if (this.hasSkill(6) && this.skillCooldowns[6] <= 0) {
             this.scorchActiveTimer = 5; this.skillCooldowns[6] = ACTIVE_SKILLS_CONFIG[6].cd;
         }
@@ -232,7 +279,6 @@ class Player {
             if (Math.random() < 0.25) entities.push(new ScorchTrailEntity(this.x, this.y, this.getAttackPower() * 0.5));
         }
         
-        // 7 Heat Wave
         if (this.hasSkill(7) && this.skillCooldowns[7] <= 0) {
             spawnFloatingText(this.x, this.y, "HEAT WAVE", '#ff5500');
             spawnSotaParticles(this.x, this.y, '#ff5500', 50, 400);
@@ -247,41 +293,36 @@ class Player {
             this.skillCooldowns[7] = ACTIVE_SKILLS_CONFIG[7].cd;
         }
         
-        // 8 Blink
-        if (this.hasSkill(8) && this.skillCooldowns[8] <= 0) {
-            let nearest = this.getNearestEnemy(600);
+        // --- 8 BLINK TRIGGER (UPDATED) ---
+        if (this.hasSkill(8) && this.skillCooldowns[8] <= 0 && !this.isBlinking) {
+            let nearest = this.getNearestEnemy(800);
             if (nearest) {
-                spawnSotaParticles(this.x, this.y, '#bb86fc', 30, 200); // Particles at old spot
-                this.x = nearest.x + 40; this.y = nearest.y + 40;
-                spawnSotaParticles(this.x, this.y, '#bb86fc', 30, 200); // Particles at new spot
-                this.invincibleTimer = 2; this.skillCooldowns[8] = ACTIVE_SKILLS_CONFIG[8].cd;
-                spawnFloatingText(this.x, this.y, "BLINK", '#bb86fc');
+                this.isBlinking = true;     // Lock player controls
+                this.blinkCount = 3;        // Strike 3 times
+                this.blinkTimer = 0;        // Strike immediately
+                this.invincibleTimer = 2.0; // Invincible during the entire sequence
+                this.skillCooldowns[8] = ACTIVE_SKILLS_CONFIG[8].cd;
             }
         }
         
-        // 9 Rage
         if (this.hasSkill(9) && this.skillCooldowns[9] <= 0) {
             this.rageTimer = 3; this.skillCooldowns[9] = ACTIVE_SKILLS_CONFIG[9].cd;
             spawnFloatingText(this.x, this.y, "RAGE", '#ff0000');
             entities.push(new ExpandingRing(this.x, this.y, '#ff0000', 150, 0.3));
         }
         
-        // 10 Twister
         if (this.hasSkill(10) && this.skillCooldowns[10] <= 0) {
             entities.push(new TwisterEntity(this.x, this.y, this.getAttackPower() * 5, 0));
             entities.push(new TwisterEntity(this.x, this.y, this.getAttackPower() * 5, Math.PI));
             this.skillCooldowns[10] = ACTIVE_SKILLS_CONFIG[10].cd;
         }
         
-        // 11 Summon
         if (this.hasSkill(11) && this.skillCooldowns[11] <= 0) {
-            // FIX: Uses correct class name!
             entities.push(new SummonCloneEntity(this.x, this.y, this.getAttackPower() * 9));
             this.skillCooldowns[11] = ACTIVE_SKILLS_CONFIG[11].cd;
             spawnSotaParticles(this.x, this.y, '#ff0000', 40, 300);
         }
         
-        // 12 Rain Fire
         if (this.hasSkill(12) && this.skillCooldowns[12] <= 0) {
             for(let i=0; i<6; i++) {
                 let tx = this.x + (Math.random() - 0.5)*500;
@@ -291,18 +332,16 @@ class Player {
             this.skillCooldowns[12] = ACTIVE_SKILLS_CONFIG[12].cd;
         }
         
-        // 13 Zen
         if (this.hasSkill(13) && this.skillCooldowns[13] <= 0) {
             this.zenTimer = 5; this.skillCooldowns[13] = ACTIVE_SKILLS_CONFIG[13].cd;
             spawnFloatingText(this.x, this.y, "ZEN", '#fff');
             entities.push(new ExpandingRing(this.x, this.y, '#ffffff', 200, 0.5));
         }
         
-        // 14 Pipe Bomb
         if (this.hasSkill(14) && this.skillCooldowns[14] <= 0) {
             this.pipeBombTimer = 5; this.pipeBombAbsorbed = 0; this.skillCooldowns[14] = ACTIVE_SKILLS_CONFIG[14].cd;
             spawnFloatingText(this.x, this.y, "ABSORBING", '#ff0');
-            entities.push(new ExpandingRing(this.x, this.y, '#ffff00', 150, 5.0)); // Slow pulse ring
+            entities.push(new ExpandingRing(this.x, this.y, '#ffff00', 150, 5.0)); 
         }
 
         if (this.pipeBombTimer > 0) {
@@ -319,14 +358,12 @@ class Player {
             }
         }
 
-        // 17 Vampire Aura
         if (this.hasSkill(17)) {
             let nearby = 0;
             entities.forEach(e => { if (e instanceof Enemy && Math.hypot(this.x-e.x, this.y-e.y) < 200) nearby++; });
             if (nearby > 0) this.hp = Math.min(this.getMaxHp(), this.hp + (nearby * 5 * dt));
         }
 
-        // 22 Frost Nova
         if (this.hasSkill(22) && this.skillCooldowns[22] <= 0) {
             spawnFloatingText(this.x, this.y, "FROST NOVA", '#00ffff');
             spawnSotaParticles(this.x, this.y, '#00ffff', 60, 300);
@@ -339,7 +376,6 @@ class Player {
             this.skillCooldowns[22] = ACTIVE_SKILLS_CONFIG[22].cd;
         }
 
-        // Global Enemy Unfreeze Helper
         entities.forEach(e => {
             if (e instanceof Enemy && e.frozen) {
                 e.freezeTimer -= dt;
@@ -347,13 +383,11 @@ class Player {
             }
         });
 
-        // 23 Dagger Shield
         if (this.hasSkill(23) && this.skillCooldowns[23] <= 0) {
             entities.push(new DaggerShieldEntity(this, this.getAttackPower()));
             this.skillCooldowns[23] = ACTIVE_SKILLS_CONFIG[23].cd;
         }
 
-        // 24 Executioner
         if (this.hasSkill(24)) {
             entities.forEach(e => {
                 if (e instanceof Enemy && e.hp < e.maxHp * 0.15 && Math.hypot(this.x-e.x, this.y-e.y) < 200) {
@@ -366,10 +400,13 @@ class Player {
 
         // Timers & Visuals
         if (this.invincibleTimer > 0) this.invincibleTimer -= dt;
-        if (this.rageTimer > 0) {
+        
+        if (this.isBlinking) {
+            this.color = '#00ffff'; // Flash cyan during teleport
+        } else if (this.rageTimer > 0) {
             this.rageTimer -= dt;
             this.color = '#ff0000';
-            if (Math.random() < 0.2) spawnSotaParticles(this.x, this.y, '#ff0000', 1, 100); // Trail
+            if (Math.random() < 0.2) spawnSotaParticles(this.x, this.y, '#ff0000', 1, 100); 
         } else if (this.zenTimer > 0) {
             this.zenTimer -= dt;
             this.color = '#ffffff';
@@ -392,7 +429,6 @@ class Player {
             this.learnedSkills.push(skillId);
             if (skillId === 3) this.speed *= 1.10;
             
-            // REBUILD UI HOTBAR IMMEDATELY WHEN SKILL IS BOUGHT
             if (typeof UI !== 'undefined' && UI.buildHotbar) UI.buildHotbar();
             return true;
         }
@@ -401,7 +437,7 @@ class Player {
 
     getNearestEnemy(range) {
         let nearest = null, minDist = range;
-        entities.forEach(e => { if (e instanceof Enemy && Math.hypot(this.x - e.x, this.y - e.y) < 120) { let d = Math.hypot(this.x - e.x, this.y - e.y); if (d < minDist) { minDist = d; nearest = e; } } });
+        entities.forEach(e => { if (e instanceof Enemy) { let d = Math.hypot(this.x - e.x, this.y - e.y); if (d < minDist) { minDist = d; nearest = e; } } });
         return nearest;
     }
 
@@ -424,8 +460,44 @@ class Player {
 
     draw(ctx) {
         ctx.save();
-        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        
+        // Glitch offset effect if blinking
+        let dx = this.isBlinking ? (Math.random()-0.5)*10 : 0;
+        let dy = this.isBlinking ? (Math.random()-0.5)*10 : 0;
+        
+        ctx.fillStyle = this.color; 
+        ctx.beginPath(); 
+        ctx.arc(this.x + dx, this.y + dy, this.radius, 0, Math.PI * 2); 
+        ctx.fill();
+        ctx.strokeStyle = '#fff'; 
+        ctx.lineWidth = 2; 
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+// --- NEW GHOST ENTITY ---
+class BlinkGhostEntity {
+    constructor(x, y, color) { 
+        this.x = x; 
+        this.y = y; 
+        this.color = color; 
+        this.life = 0.5; 
+        this.markedForDeletion = false; 
+    }
+    update(dt) { 
+        this.life -= dt; 
+        if (this.life <= 0) this.markedForDeletion = true; 
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life / 0.5);
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 15; 
+        ctx.shadowColor = '#00ffff';
+        ctx.beginPath(); 
+        ctx.arc(this.x, this.y, 18, 0, Math.PI * 2); 
+        ctx.fill();
         ctx.restore();
     }
 }
