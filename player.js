@@ -497,7 +497,7 @@ class DaggerShieldEntity {
         entities.forEach(e => { 
             if (e instanceof Enemy) {
                 if (Math.hypot(e.x - this.x, e.y - this.y) < 30) e.takeDamage(this.damage * dt * 5, false); 
-                if (Math.hypot(e.x - x2, e.y - y2) < 30) e.takeDamage(this.damage * dt * 5, false); // Damage check for the second dagger
+                if (Math.hypot(e.x - this.x2, e.y - this.y2) < 30) e.takeDamage(this.damage * dt * 5, false); // Damage check for the second dagger
             }
         });
         if (this.life <= 0) entities.splice(entities.indexOf(this), 1);
