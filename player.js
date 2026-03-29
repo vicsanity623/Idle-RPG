@@ -275,7 +275,8 @@ class Player {
         
         // 11 Summon
         if (this.hasSkill(11) && this.skillCooldowns[11] <= 0) {
-            entities.push(new Entity(this.x, this.y, this.getAttackPower() * 9));
+            // FIX: Uses correct class name!
+            entities.push(new SummonCloneEntity(this.x, this.y, this.getAttackPower() * 9));
             this.skillCooldowns[11] = ACTIVE_SKILLS_CONFIG[11].cd;
             spawnSotaParticles(this.x, this.y, '#ff0000', 40, 300);
         }
@@ -400,7 +401,7 @@ class Player {
 
     getNearestEnemy(range) {
         let nearest = null, minDist = range;
-        entities.forEach(e => { if (e instanceof Enemy) { let d = Math.hypot(this.x - e.x, this.y - e.y); if (d < minDist) { minDist = d; nearest = e; } } });
+        entities.forEach(e => { if (e instanceof Enemy && Math.hypot(this.x - e.x, this.y - e.y) < 120) { let d = Math.hypot(this.x - e.x, this.y - e.y); if (d < minDist) { minDist = d; nearest = e; } } });
         return nearest;
     }
 
@@ -429,13 +430,14 @@ class Player {
     }
 }
 
-// --- AUTO-CAST ENTITY CLASSES ---
+// --- AUTO-CAST ENTITY CLASSES (FIXED FOR MARK-AND-SWEEP) ---
 class ScorchTrailEntity {
-    constructor(x, y, damage) { this.x = x; this.y = y; this.damage = damage; this.life = 5; }
+    constructor(x, y, damage) { this.x = x; this.y = y; this.damage = damage; this.life = 5; this.markedForDeletion = false; }
     update(dt) {
+        if (this.markedForDeletion) return;
         this.life -= dt;
         entities.forEach(e => { if (e instanceof Enemy && Math.hypot(e.x - this.x, e.y - this.y) < 25) e.takeDamage(this.damage * dt, false); });
-        if (this.life <= 0) entities.splice(entities.indexOf(this), 1);
+        if (this.life <= 0) this.markedForDeletion = true;
     }
     draw(ctx) { ctx.fillStyle = `rgba(255, 69, 0, ${this.life/5})`; ctx.beginPath(); ctx.arc(this.x, this.y, 20, 0, Math.PI*2); ctx.fill(); }
 }
@@ -443,13 +445,14 @@ class ScorchTrailEntity {
 class TwisterEntity {
     constructor(x, y, damage, angleOffset) {
         this.damage = damage; this.angle = angleOffset; this.radius = 0; this.life = 5; this.cx = x; this.cy = y;
-        this.x = x; this.y = y;
+        this.x = x; this.y = y; this.markedForDeletion = false;
     }
     update(dt) {
+        if (this.markedForDeletion) return;
         this.life -= dt; this.angle += dt * 8; this.radius += dt * 60;
         this.x = this.cx + Math.cos(this.angle) * this.radius; this.y = this.cy + Math.sin(this.angle) * this.radius;
         entities.forEach(e => { if (e instanceof Enemy && Math.hypot(e.x - this.x, e.y - this.y) < 40) e.takeDamage(this.damage * dt, false); });
-        if (this.life <= 0) entities.splice(entities.indexOf(this), 1);
+        if (this.life <= 0) this.markedForDeletion = true;
     }
     draw(ctx) { ctx.fillStyle = 'rgba(200, 200, 255, 0.5)'; ctx.beginPath(); ctx.arc(this.x, this.y, 35, 0, Math.PI*2); ctx.fill(); }
 }
@@ -462,19 +465,18 @@ class SummonCloneEntity {
         this.life = 6; 
         this.chain = 0; 
         this.target = null; 
+        this.markedForDeletion = false; 
     }
     
     update(dt) {
+        if (this.markedForDeletion) return;
         this.life -= dt;
         
-        // Safe removal
         if (this.chain >= 5 || this.life <= 0) { 
-            let idx = entities.indexOf(this);
-            if (idx > -1) entities.splice(idx, 1); 
+            this.markedForDeletion = true; 
             return; 
         }
         
-        // Find new target if we don't have one
         if (!this.target || this.target.hp <= 0) {
             this.target = player.getNearestEnemy(1000);
         }
@@ -485,19 +487,15 @@ class SummonCloneEntity {
             let dist = Math.hypot(dx, dy);
             
             if (dist < 40) {
-                // 1. CACHE COORDINATES FIRST (Before the enemy potentially dies/vanishes)
                 let impactX = this.target.x;
                 let impactY = this.target.y;
                 
-                // 2. Deal Damage
                 this.target.takeDamage(this.damage, true); 
                 
-                // 3. Spawn Particles safely using the cached raw numbers
                 if (typeof spawnSotaParticles === 'function') {
                     spawnSotaParticles(impactX, impactY, '#ff0000', 15, 200); 
                 }
                 
-                // 4. Move to next chain
                 this.chain++; 
                 this.target = null; 
             } else { 
@@ -516,35 +514,44 @@ class SummonCloneEntity {
 }
 
 class RainFireEntity {
-    constructor(x, y, damage) { this.tx = x; this.ty = y; this.damage = damage; this.x = x - 200; this.y = y - 800; this.speed = 1500; }
+    constructor(x, y, damage) { 
+        this.tx = x; this.ty = y; this.damage = damage; 
+        this.x = x - 200; this.y = y - 800; this.speed = 1500; 
+        this.markedForDeletion = false; 
+    }
     update(dt) {
+        if (this.markedForDeletion) return;
         let dx = this.tx - this.x, dy = this.ty - this.y, dist = Math.hypot(dx, dy);
         if (dist < 50) {
-            // SOTA Massive Explosion on Meteor Impact
-            spawnSotaParticles(this.tx, this.ty, '#ff5500', 30, 300);
+            if (typeof spawnSotaParticles === 'function') spawnSotaParticles(this.tx, this.ty, '#ff5500', 30, 300);
             entities.push(new ExpandingRing(this.tx, this.ty, '#ff5500', 150, 0.3));
             
             entities.forEach(e => { if (e instanceof Enemy && Math.hypot(e.x - this.tx, e.y - this.ty) < 150) e.takeDamage(this.damage, false); });
-            entities.splice(entities.indexOf(this), 1);
+            this.markedForDeletion = true;
         } else { this.x += (dx/dist) * this.speed * dt; this.y += (dy/dist) * this.speed * dt; }
     }
     draw(ctx) { ctx.fillStyle = '#ff5500'; ctx.beginPath(); ctx.arc(this.x, this.y, 25, 0, Math.PI*2); ctx.fill(); }
 }
 
 class DaggerShieldEntity {
-    constructor(playerRef, damage) { this.p = playerRef; this.damage = damage; this.life = 4; this.angle = 0; this.x = 0; this.y = 0; this.x2 = 0; this.y2 = 0; }
+    constructor(playerRef, damage) { 
+        this.p = playerRef; this.damage = damage; this.life = 4; 
+        this.angle = 0; this.x = 0; this.y = 0; this.x2 = 0; this.y2 = 0; 
+        this.markedForDeletion = false; 
+    }
     update(dt) {
+        if (this.markedForDeletion) return;
         this.life -= dt; this.angle += dt * 8;
         this.x = this.p.x + Math.cos(this.angle) * 80; this.y = this.p.y + Math.sin(this.angle) * 80;
-        this.x2 = this.p.x - Math.cos(this.angle) * 80; // Calculate position for the second dagger
-        this.y2 = this.p.y - Math.sin(this.angle) * 80; // Calculate position for the second dagger
+        this.x2 = this.p.x - Math.cos(this.angle) * 80; 
+        this.y2 = this.p.y - Math.sin(this.angle) * 80; 
         entities.forEach(e => { 
             if (e instanceof Enemy) {
                 if (Math.hypot(e.x - this.x, e.y - this.y) < 30) e.takeDamage(this.damage * dt * 5, false); 
-                if (Math.hypot(e.x - this.x2, e.y - this.y2) < 30) e.takeDamage(this.damage * dt * 5, false); // Damage check for the second dagger
+                if (Math.hypot(e.x - this.x2, e.y - this.y2) < 30) e.takeDamage(this.damage * dt * 5, false); 
             }
         });
-        if (this.life <= 0) entities.splice(entities.indexOf(this), 1);
+        if (this.life <= 0) this.markedForDeletion = true;
     }
     draw(ctx) {
         ctx.fillStyle = '#aaa'; ctx.beginPath(); ctx.arc(this.x, this.y, 10, 0, Math.PI*2); ctx.fill();
