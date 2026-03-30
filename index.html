@@ -160,7 +160,14 @@
             box-shadow: 0 0 15px var(--gold);
         }
         #notification { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2rem; color: var(--gold); text-shadow: 0 0 5px #000; opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 1000; }
-        #daily-login { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--panel-bg); border: 2px solid var(--gold); padding: 30px; border-radius: 12px; text-align: center; display: none; z-index: 120; pointer-events: auto; backdrop-filter: blur(10px); }
+        
+        #daily-login { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            background: var(--panel-bg); border: 2px solid var(--gold); padding: 25px; 
+            border-radius: 12px; text-align: center; display: none; z-index: 120; 
+            pointer-events: auto; backdrop-filter: blur(10px); width: 320px;
+        }
+
         #joystick-zone { position: absolute; bottom: 0; left: 0; width: 50vw; height: 50vh; pointer-events: auto; }
         .joystick-base { position: absolute; width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; display: none; transform: translate(-50%, -50%); pointer-events: none;}
         .joystick-stick { position: absolute; width: 40px; height: 40px; background: rgba(187, 134, 252, 0.5); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;}
@@ -325,7 +332,7 @@
     <!-- UI LAYER -->
     <div id="ui-layer" class="hidden">
         
-        <!-- Interaction Button (Appears when near NPCs) -->
+        <!-- Interaction Button -->
         <div id="interact-btn">INTERACT</div>
 
         <!-- Player Stats -->
@@ -387,62 +394,39 @@
                 <h3>Skills & Talents (<span id="skill-points-available">0</span> SP Available)</h3>
                 <div id="skills-tree-panel" class="skills-grid">
                     <svg id="skill-connections-svg"></svg> 
-                    <!-- BRANCH 1: Melee & Fury -->
                     <div class="skill-node locked" data-skill-id="1" data-cost="1" data-prereq="0"><div class="skill-icon">💪</div><div class="skill-name">Strength Training</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Strength Training</h4><p>Increases base Strength by 5.</p></div></div>
                     <div class="skill-node locked" data-skill-id="2" data-cost="1" data-prereq="1"><div class="skill-icon">🔨</div><div class="skill-name">Heavy Blow</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Heavy Blow</h4><p>Basic attacks deal 10% bonus damage.</p></div></div>
                     <div class="skill-node locked" data-skill-id="9" data-cost="2" data-prereq="2"><div class="skill-icon">💢</div><div class="skill-name">Rage</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Rage</h4><p>Glow bright red dealing explosive damage with massive crit. (Auto-cast, 6s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="13" data-cost="3" data-prereq="9"><div class="skill-icon">🧘</div><div class="skill-name">Zen</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Zen</h4><p>Attack speed increased by 500% & deal 10x damage for 5s. (Auto-cast, 12s CD)</p></div></div>
-
-                    <!-- BRANCH 2: Agility & Survival -->
                     <div class="skill-node locked" data-skill-id="3" data-cost="1" data-prereq="0"><div class="skill-icon">🏃</div><div class="skill-name">Agile Footwork</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Agile Footwork</h4><p>Increases movement speed by 10%.</p></div></div>
                     <div class="skill-node locked" data-skill-id="4" data-cost="1" data-prereq="3"><div class="skill-icon">💨</div><div class="skill-name">Evasion Mastery</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Evasion Mastery</h4><p>Increases Health Regen by 5.</p></div></div>
                     <div class="skill-node locked" data-skill-id="8" data-cost="2" data-prereq="4"><div class="skill-icon">👁️‍🗨️</div><div class="skill-name">Blink</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Blink</h4><p>Teleport behind nearest enemy + 2s invincibility. (Auto-cast, 8s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="5" data-cost="2" data-prereq="8"><div class="skill-icon">🛡️</div><div class="skill-name">Invincibility</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Invincibility</h4><p>Enemies cannot damage player for 3 seconds. (Auto-cast, 14s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="14" data-cost="3" data-prereq="5"><div class="skill-icon">💣</div><div class="skill-name">Pipe Bomb</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Pipe Bomb</h4><p>Absorb all damage for 5s then explode it back outward. (Auto-cast, 20s CD)</p></div></div>
-
-                    <!-- BRANCH 3: Fire Magic -->
                     <div class="skill-node locked" data-skill-id="7" data-cost="1" data-prereq="0"><div class="skill-icon">🌋</div><div class="skill-name">Heat Wave</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Heat Wave</h4><p>Pushes explosive 360 wave dealing massive damage. (Auto-cast, 17s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="6" data-cost="2" data-prereq="7"><div class="skill-icon">🔥</div><div class="skill-name">Scorch Trail</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Scorch Trail</h4><p>Leave a burning trail that damages enemies. (Auto-cast, 9s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="12" data-cost="3" data-prereq="6"><div class="skill-icon">☄️</div><div class="skill-name">Rain Fire</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Rain Fire</h4><p>Flaming projectiles drop from the sky dealing AOE damage. (Auto-cast, 10s CD)</p></div></div>
-
-                    <!-- BRANCH 4: Wind & Conjuration -->
                     <div class="skill-node locked" data-skill-id="10" data-cost="1" data-prereq="0"><div class="skill-icon">🌪️</div><div class="skill-name">Twister</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Twister</h4><p>Spawns massive spiraling outward tornados (500% DMG). (Auto-cast, 12s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="11" data-cost="3" data-prereq="10"><div class="skill-icon">👥</div><div class="skill-name">Summon</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Summon</h4><p>Spawn a massive clone that tackles up to 5 enemies (900% DMG). (Auto-cast, 13s CD)</p></div></div>
-
-                    <!-- BRANCH 5: Passives & Utility -->
                     <div class="skill-node locked" data-skill-id="15" data-cost="1" data-prereq="0"><div class="skill-icon">❤️</div><div class="skill-name">Vitality Surge</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Vitality Surge</h4><p>Increases Max HP by 50%.</p></div></div>
                     <div class="skill-node locked" data-skill-id="16" data-cost="1" data-prereq="15"><div class="skill-icon">🧱</div><div class="skill-name">Iron Skin</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Iron Skin</h4><p>Increases Defense by 50%.</p></div></div>
                     <div class="skill-node locked" data-skill-id="17" data-cost="2" data-prereq="16"><div class="skill-icon">🦇</div><div class="skill-name">Vampire Aura</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Vampire Aura</h4><p>Slowly siphon health from nearby enemies.</p></div></div>
-                    
                     <div class="skill-node locked" data-skill-id="18" data-cost="1" data-prereq="0"><div class="skill-icon">🧲</div><div class="skill-name">Magnetic Field</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Magnetic Field</h4><p>Increases pickup radius drastically.</p></div></div>
                     <div class="skill-node locked" data-skill-id="19" data-cost="2" data-prereq="18"><div class="skill-icon">💰</div><div class="skill-name">Wealth Magnet</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Wealth Magnet</h4><p>Gain +50% Gold Multiplier.</p></div></div>
                     <div class="skill-node locked" data-skill-id="20" data-cost="2" data-prereq="19"><div class="skill-icon">📜</div><div class="skill-name">Scholar's Insight</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Scholar's Insight</h4><p>Gain +50% XP Multiplier.</p></div></div>
-
-                    <!-- BRANCH 6: Frost & Execution -->
                     <div class="skill-node locked" data-skill-id="22" data-cost="2" data-prereq="0"><div class="skill-icon">❄️</div><div class="skill-name">Frost Nova</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Frost Nova</h4><p>Freezes nearby enemies in place. (Auto-cast, 15s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="23" data-cost="2" data-prereq="22"><div class="skill-icon">🗡️</div><div class="skill-name">Dagger Shield</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Dagger Shield</h4><p>Spinning daggers orbit you dealing continuous damage. (Auto-cast, 10s CD)</p></div></div>
                     <div class="skill-node locked" data-skill-id="24" data-cost="3" data-prereq="23"><div class="skill-icon">☠️</div><div class="skill-name">Executioner</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Executioner</h4><p>Instantly shatter nearby enemies below 15% HP.</p></div></div>
-
-                    <!-- ULTIMATE CAPSTONE -->
                     <div class="skill-node locked" data-skill-id="25" data-cost="5" data-prereq="13"><div class="skill-icon">👑</div><div class="skill-name">Ascension</div><div class="skill-cost">5 SP</div><div class="skill-tooltip"><h4>Ascension</h4><p>Increases ALL Core Stats by 25%. Requires Zen.</p></div></div>
                 </div>
 
-                <!-- Item Inspection & Comparison Panel -->
                 <div id="item-detail-panel" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--primary); border-radius: 8px;">
                     <h3 id="detail-item-name" style="color: var(--primary); margin-bottom: 10px;">Item Name</h3>
                     <div id="detail-item-rarity" style="font-weight: bold; margin-bottom: 10px;">Rarity: <span id="detail-rarity-text">Common</span></div>
-
                     <div class="comparison-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div id="selected-item-display">
-                            <h4 style="color: #aaa;">Selected Item</h4>
-                            <div class="stat-list" id="selected-stats-list"></div>
-                        </div>
-                        <div id="equipped-item-display">
-                            <h4 style="color: #aaa;">Equipped Item</h4>
-                            <div class="stat-list" id="equipped-stats-list"></div>
-                        </div>
+                        <div id="selected-item-display"><h4 style="color: #aaa;">Selected Item</h4><div class="stat-list" id="selected-stats-list"></div></div>
+                        <div id="equipped-item-display"><h4 style="color: #aaa;">Equipped Item</h4><div class="stat-list" id="equipped-stats-list"></div></div>
                     </div>
-
                     <div class="item-actions" style="display: flex; gap: 10px; margin-top: 20px;">
                         <button id="equip-unequip-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--primary); color: #000; border: none;"></button>
                         <button id="discard-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--hp-color); color: #fff; border: none;">Discard</button>
@@ -451,47 +435,41 @@
             </div>
         </div>
 
-        <!-- WORKBENCH MODAL -->
         <div id="workbench-modal">
-            <div class="inv-header">
-                <h2>🛠️ Village Workbench</h2>
-                <button class="close-btn">X</button>
-            </div>
+            <div class="inv-header"><h2>🛠️ Village Workbench</h2><button class="close-btn">X</button></div>
             <div class="modal-body">
                 <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--shard); margin-bottom: 20px;">
                     <h3>One-Tap Maintenance</h3>
                     <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Automatically equips better gear and converts trash into Shards.</p>
                     <button id="auto-clean-btn" class="btn" style="width: 100%; font-size: 1.1rem;">CLEAN BAG & AUTO-EQUIP</button>
                 </div>
-
                 <h3>Skill Amplification</h3>
                 <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Infuse your skills with Shards to increase their efficiency.</p>
-                <div id="skill-amp-list" style="display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Procedurally generated in main.js -->
-                </div>
+                <div id="skill-amp-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
             </div>
         </div>
 
-        <!-- BOUNTY BOARD MODAL -->
         <div id="bounty-modal">
-            <div class="inv-header">
-                <h2>📜 Bounty Board</h2>
-                <button class="close-btn">X</button>
-            </div>
-            <div class="modal-body">
-                <h3>Active Tasks</h3>
-                <div id="bounty-list">
-                    <p style="text-align:center; color:#777; margin-top: 20px;">No bounties available. Reach Depth 10 to unlock!</p>
-                </div>
-            </div>
+            <div class="inv-header"><h2>📜 Bounty Board</h2><button class="close-btn">X</button></div>
+            <div class="modal-body"><h3>Active Tasks</h3><div id="bounty-list"></div></div>
         </div>
 
-        <!-- Daily Login -->
+        <!-- DAILY LOGIN & OFFLINE MODAL -->
         <div id="daily-login">
-            <h2>Daily Reward!</h2>
-            <p>Welcome back, hero.</p>
-            <p style="color:var(--gold); font-weight:bold; margin: 10px 0;">+500 Gold, +50 Shards</p>
-            <button class="btn" style="padding: 10px 20px; font-size: 1rem;" id="claim-daily-btn">Claim</button>
+            <h2 style="color:var(--gold); text-shadow: 0 0 10px var(--gold);">Welcome Back!</h2>
+            <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">Away time: <span id="off-time" style="color:white">0m</span></p>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--primary); margin: 15px 0;">
+                <h3 style="font-size: 0.9rem; color: var(--primary); margin-bottom: 10px; text-transform: uppercase;">Offline Activity</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; font-size: 0.85rem;">
+                    <div>💀 Kills: <span id="off-kills" style="color:var(--hp-color)">0</span></div>
+                    <div>🪙 Gold: <span id="off-gold" style="color:var(--gold)">0</span></div>
+                    <div>💎 Shards: <span id="off-shards" style="color:var(--shard)">0</span></div>
+                    <div>✨ XP: <span id="off-xp" style="color:var(--xp-color)">0</span></div>
+                </div>
+            </div>
+            <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">(Includes standard daily login bonus)</p>
+            <button class="btn" style="padding: 10px 20px; font-size: 1rem;" id="claim-daily-btn">CLAIM ALL</button>
         </div>
         
         <div id="portal-ui">
@@ -502,16 +480,7 @@
     </div>
 
     <script>
-        /* --- PWA BOOTSTRAP --- */
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered'))
-                    .catch(err => console.error('SW Failed'));
-            });
-        }
-        
-        /* --- iOS ROBUSTNESS GESTURE INTERCEPTORS --- */
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW Registered')).catch(err => console.error('SW Failed')); }); }
         document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
         document.addEventListener('gesturestart', (e) => e.preventDefault());
     </script>
@@ -519,263 +488,68 @@
     <script src="entities.js?v=2"></script>
     <script src="main.js?v=2"></script>
     <script>
-        /**
-         * Initializes the interactivity for the Skills & Talents panel.
-         * Attaches event listeners to skill nodes and manages their visual states.
-         */
         function initializeSkillTree() {
             const skillsTreePanel = document.getElementById('skills-tree-panel');
             const skillPointsDisplay = document.getElementById('skill-points-available');
-            const inventoryModal = document.getElementById('inventory-modal');
             const skillConnectionsSvg = document.getElementById('skill-connections-svg'); 
             let skillNodes = []; 
 
-            // Helper to get center coordinates of an element relative to the skillsTreePanel
-            function getElementCenter(element) {
-                const rect = element.getBoundingClientRect();
-                const panelRect = skillsTreePanel.getBoundingClientRect();
-                return {
-                    x: (rect.left + rect.right) / 2 - panelRect.left,
-                    y: (rect.top + rect.bottom) / 2 - panelRect.top
-                };
-            }
+            function getElementCenter(element) { const rect = element.getBoundingClientRect(); const panelRect = skillsTreePanel.getBoundingClientRect(); return { x: (rect.left + rect.right) / 2 - panelRect.left, y: (rect.top + rect.bottom) / 2 - panelRect.top }; }
+            function drawSkillConnections() { skillConnectionsSvg.innerHTML = ''; skillNodes = Array.from(skillsTreePanel.querySelectorAll('.skill-node')); const nodeMap = new Map(); skillNodes.forEach(node => { nodeMap.set(parseInt(node.dataset.skillId), node); }); skillNodes.forEach(node => { const skillId = parseInt(node.dataset.skillId); const prereqId = parseInt(node.dataset.prereq); if (prereqId !== 0 && nodeMap.has(prereqId)) { const prereqNode = nodeMap.get(prereqId); const start = getElementCenter(prereqNode); const end = getElementCenter(node); const line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); line.setAttribute('x1', start.x); line.setAttribute('y1', start.y); line.setAttribute('x2', end.x); line.setAttribute('y2', end.y); line.classList.add('skill-connection-line'); line.dataset.fromSkill = prereqId; line.dataset.toSkill = skillId; skillConnectionsSvg.appendChild(line); } }); }
+            function highlightSkillPath(targetNode) { clearSkillPathHighlight(); const pathNodes = new Set(); const pathLines = new Set(); let currentNode = targetNode; while (currentNode && !player.hasSkill(parseInt(currentNode.dataset.skillId))) { pathNodes.add(currentNode); const prereqId = parseInt(currentNode.dataset.prereq); if (prereqId === 0) break; const prereqNode = skillNodes.find(n => parseInt(n.dataset.skillId) === prereqId); if (!prereqNode) break; const line = skillConnectionsSvg.querySelector(`[data-from-skill="${prereqId}"][data-to-skill="${parseInt(currentNode.dataset.skillId)}"]`); if (line) pathLines.add(line); currentNode = prereqNode; } pathNodes.forEach(node => node.classList.add('highlighted')); pathLines.forEach(line => line.classList.add('highlighted')); }
+            function clearSkillPathHighlight() { skillsTreePanel.querySelectorAll('.skill-node.highlighted').forEach(node => node.classList.remove('highlighted')); skillConnectionsSvg.querySelectorAll('.skill-connection-line.highlighted').forEach(line => line.classList.remove('highlighted')); }
 
-            function drawSkillConnections() {
-                skillConnectionsSvg.innerHTML = ''; 
-                skillNodes = Array.from(skillsTreePanel.querySelectorAll('.skill-node')); 
-
-                const nodeMap = new Map();
-                skillNodes.forEach(node => {
-                    nodeMap.set(parseInt(node.dataset.skillId), node);
-                });
-
-                skillNodes.forEach(node => {
-                    const skillId = parseInt(node.dataset.skillId);
-                    const prereqId = parseInt(node.dataset.prereq);
-
-                    if (prereqId !== 0 && nodeMap.has(prereqId)) {
-                        const prereqNode = nodeMap.get(prereqId);
-                        const start = getElementCenter(prereqNode);
-                        const end = getElementCenter(node);
-
-                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        line.setAttribute('x1', start.x);
-                        line.setAttribute('y1', start.y);
-                        line.setAttribute('x2', end.x);
-                        line.setAttribute('y2', end.y);
-                        line.classList.add('skill-connection-line');
-                        line.dataset.fromSkill = prereqId;
-                        line.dataset.toSkill = skillId;
-                        skillConnectionsSvg.appendChild(line);
-                    }
-                });
-            }
-
-            function highlightSkillPath(targetNode) {
-                clearSkillPathHighlight(); 
-
-                const pathNodes = new Set();
-                const pathLines = new Set();
-                let currentNode = targetNode;
-
-                while (currentNode && !player.hasSkill(parseInt(currentNode.dataset.skillId))) {
-                    pathNodes.add(currentNode);
-                    const prereqId = parseInt(currentNode.dataset.prereq);
-                    if (prereqId === 0) break; 
-
-                    const prereqNode = skillNodes.find(n => parseInt(n.dataset.skillId) === prereqId);
-                    if (!prereqNode) break; 
-
-                    const line = skillConnectionsSvg.querySelector(`[data-from-skill="${prereqId}"][data-to-skill="${parseInt(currentNode.dataset.skillId)}"]`);
-                    if (line) {
-                        pathLines.add(line);
-                    }
-                    currentNode = prereqNode;
-                }
-
-                pathNodes.forEach(node => node.classList.add('highlighted'));
-                pathLines.forEach(line => line.classList.add('highlighted'));
-            }
-
-            function clearSkillPathHighlight() {
-                skillsTreePanel.querySelectorAll('.skill-node.highlighted').forEach(node => node.classList.remove('highlighted'));
-                skillConnectionsSvg.querySelectorAll('.skill-connection-line.highlighted').forEach(line => line.classList.remove('highlighted'));
-            }
-
-            if (typeof player !== 'undefined' && player) {
-                skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
-                drawSkillConnections(); // Populate skillNodes first
-                updateSkillTreeLockStates();
-            }
-
+            if (typeof player !== 'undefined' && player) { skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints); drawSkillConnections(); updateSkillTreeLockStates(); }
             skillsTreePanel.addEventListener('click', (event) => {
-                let targetNode = event.target.closest('.skill-node');
-                if (!targetNode) return;
-
-                const skillId = parseInt(targetNode.dataset.skillId);
-                const skillCost = parseInt(targetNode.dataset.cost);
-                const prereqId = parseInt(targetNode.dataset.prereq);
-
-                if (typeof player === 'undefined' || !player || !player.learnSkill || !player.canLearnSkill) {
-                    showNotification("Game not fully loaded. Cannot learn skills.", "error");
-                    return;
-                }
-
-                if (!player.canLearnSkill(skillId, skillCost, prereqId)) {
-                    if (player.hasSkill(skillId)) {
-                        showNotification("Skill already learned!", "info");
-                    } else if (player.skillPoints < skillCost) {
-                        showNotification("Not enough Skill Points!", "error");
-                    } else if (prereqId !== 0 && !player.hasSkill(prereqId)) {
-                        showNotification("Prerequisite skill not learned!", "error");
-                    }
-                    return;
-                }
-
-                if (player.learnSkill(skillId, skillCost, prereqId)) {
-                    targetNode.classList.remove('locked');
-                    targetNode.classList.add('unlocked');
-                    const skillCostElement = targetNode.querySelector('.skill-cost');
-                    if (skillCostElement) skillCostElement.textContent = 'Learned';
-
-                    skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
-                    showNotification(`Skill "${targetNode.querySelector('.skill-name').textContent}" unlocked!`, "success");
-                    updateSkillTreeLockStates();
-                } else {
-                    showNotification("Failed to learn skill. Check points and prerequisites.", "error");
-                }
+                let targetNode = event.target.closest('.skill-node'); if (!targetNode) return;
+                const skillId = parseInt(targetNode.dataset.skillId); const skillCost = parseInt(targetNode.dataset.cost); const prereqId = parseInt(targetNode.dataset.prereq);
+                if (typeof player === 'undefined' || !player || !player.learnSkill || !player.canLearnSkill) { showNotification("Game not fully loaded.", "error"); return; }
+                if (!player.canLearnSkill(skillId, skillCost, prereqId)) { if (player.hasSkill(skillId)) showNotification("Already learned!", "info"); else if (player.skillPoints < skillCost) showNotification("Need more SP!", "error"); else if (prereqId !== 0 && !player.hasSkill(prereqId)) showNotification("Need prerequisite!", "error"); return; }
+                if (player.learnSkill(skillId, skillCost, prereqId)) { targetNode.classList.remove('locked'); targetNode.classList.add('unlocked'); const skillCostElement = targetNode.querySelector('.skill-cost'); if (skillCostElement) skillCostElement.textContent = 'Learned'; skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints); showNotification("Skill unlocked!", "success"); updateSkillTreeLockStates(); }
             });
-
-            skillsTreePanel.addEventListener('mouseover', (event) => {
-                let targetNode = event.target.closest('.skill-node');
-                if (targetNode && !player.hasSkill(parseInt(targetNode.dataset.skillId))) {
-                    highlightSkillPath(targetNode);
-                }
-            });
-
-            skillsTreePanel.addEventListener('mouseout', (event) => {
-                let targetNode = event.target.closest('.skill-node');
-                if (targetNode) {
-                    clearSkillPathHighlight();
-                }
-            });
+            skillsTreePanel.addEventListener('mouseover', (event) => { let targetNode = event.target.closest('.skill-node'); if (targetNode && !player.hasSkill(parseInt(targetNode.dataset.skillId))) highlightSkillPath(targetNode); });
+            skillsTreePanel.addEventListener('mouseout', (event) => { if (event.target.closest('.skill-node')) clearSkillPathHighlight(); });
 
             function updateSkillTreeLockStates() {
-                if (typeof player === 'undefined' || !player || !player.hasSkill || !player.canLearnSkill) {
-                    return; 
-                }
-
+                if (typeof player === 'undefined' || !player || !player.hasSkill || !player.canLearnSkill) return;
                 skillNodes.forEach(node => { 
-                    const skillId = parseInt(node.dataset.skillId);
-                    const prereqId = parseInt(node.dataset.prereq);
-                    const skillCost = parseInt(node.dataset.cost);
-
-                    node.style.borderColor = '';
-                    node.style.filter = '';
-                    node.classList.remove('locked', 'unlocked'); // Clear both classes for re-evaluation
-
-                    // Reset all dynamic styles and classes first (excluding 'highlighted')
-                    node.classList.remove('locked', 'unlocked');
-                    node.style.borderColor = '';
-                    node.style.filter = '';
-                    node.style.opacity = ''; // Reset opacity
-                    node.style.cursor = ''; // Reset cursor
-
+                    const skillId = parseInt(node.dataset.skillId); const prereqId = parseInt(node.dataset.prereq); const skillCost = parseInt(node.dataset.cost);
                     const skillCostElement = node.querySelector('.skill-cost');
-
-                    if (player.hasSkill(skillId)) {
-                        node.classList.add('unlocked');
-                        if (skillCostElement) skillCostElement.textContent = 'Learned';
-                        // CSS handles border-color, filter, opacity, cursor for 'unlocked'
-                    } else {
-                        const prereqMet = (prereqId === 0 || player.hasSkill(prereqId));
-                        const affordable = (player.skillPoints >= skillCost);
-
-                        if (prereqMet && affordable) {
-                            // Ready to learn state (not 'locked', but distinct visual)
-                            node.style.borderColor = 'var(--primary)';
-                            node.style.filter = 'none';
-                            node.style.opacity = '1'; // Fully visible
-                            node.style.cursor = 'pointer'; // Clickable
-                        } else {
-                            // Truly locked state (either prereq not met or unaffordable)
-                            node.classList.add('locked'); // Applies default locked styles (opacity, cursor, border, filter)
-                            if (prereqMet && !affordable) {
-                                // Prereq met but unaffordable - override filter
-                                node.style.filter = 'grayscale(30%)'; // Less grayscale than default locked
-                                // border-color remains default .locked #666
-                            }
-                            // If !prereqMet, .locked class styles apply directly (border-color: #666, filter: grayscale(70%))
-                        }
+                    node.classList.remove('locked', 'unlocked'); node.style.borderColor = ''; node.style.filter = ''; node.style.opacity = ''; node.style.cursor = '';
+                    if (player.hasSkill(skillId)) { node.classList.add('unlocked'); if (skillCostElement) skillCostElement.textContent = 'Learned'; } 
+                    else {
+                        const prereqMet = (prereqId === 0 || player.hasSkill(prereqId)); const affordable = (player.skillPoints >= skillCost);
+                        if (prereqMet && affordable) { node.style.borderColor = 'var(--primary)'; node.style.filter = 'none'; node.style.opacity = '1'; node.style.cursor = 'pointer'; } 
+                        else { node.classList.add('locked'); if (prereqMet && !affordable) node.style.filter = 'grayscale(30%)'; }
                         if (skillCostElement) skillCostElement.textContent = `${window.FormatNumber(skillCost)} SP`;
                     }
                 });
             }
-
-window.refreshSkillTreeUI = function() {
-                if (typeof player !== 'undefined' && player) {
-                    skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints);
-                    drawSkillConnections(); // Ensure skillNodes is populated first
-                    updateSkillTreeLockStates();
-                }
-            };
-
-            if (typeof player !== 'undefined' && player) {
-                drawSkillConnections(); // Populate skillNodes first
-                updateSkillTreeLockStates();
-            }
+            window.refreshSkillTreeUI = function() { if (typeof player !== 'undefined' && player) { skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints); drawSkillConnections(); updateSkillTreeLockStates(); } };
         }
 
         function showNotification(message, type = "info") {
-            const notificationElement = document.getElementById('notification');
-            if (!notificationElement) return;
-
-            notificationElement.textContent = message;
-            notificationElement.style.opacity = 1;
-            notificationElement.style.color = type === "success" ? "var(--xp-color)" : (type === "error" ? "var(--hp-color)" : "var(--gold)");
-
-            clearTimeout(notificationElement._hideTimeout); 
-            notificationElement._hideTimeout = setTimeout(() => {
-                notificationElement.style.opacity = 0;
-            }, 3000);
+            const el = document.getElementById('notification'); if (!el) return;
+            el.textContent = message; el.style.opacity = 1; el.style.color = type === "success" ? "var(--xp-color)" : (type === "error" ? "var(--hp-color)" : "var(--gold)");
+            clearTimeout(el._hideTimeout); el._hideTimeout = setTimeout(() => { el.style.opacity = 0; }, 3000);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeSkillTree();
-            
-            // Interaction Button Logic
             const interactBtn = document.getElementById('interact-btn');
             setInterval(() => {
-                if (window.GameState && GameState.activeInteractable) {
-                    interactBtn.style.display = 'flex';
-                    interactBtn.innerText = `USE ${GameState.activeInteractable.name || GameState.activeInteractable.type}`;
-                } else {
-                    interactBtn.style.display = 'none';
-                }
+                if (window.GameState && GameState.activeInteractable) { interactBtn.style.display = 'flex'; interactBtn.innerText = `USE ${GameState.activeInteractable.name || GameState.activeInteractable.type}`; } 
+                else { interactBtn.style.display = 'none'; }
             }, 100);
 
-            // Binders for closing Phase 2 modals
-            const closeWorkbench = () => { document.getElementById('workbench-modal').style.display = 'none'; };
-            const closeBounty = () => { document.getElementById('bounty-modal').style.display = 'none'; };
-            
-            // Dynamic Binder for Interaction
             interactBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 if (GameState.activeInteractable) {
                     if (GameState.activeInteractable.type === 'WORKBENCH') UI.openWorkbench();
-                    
-                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') {
-                        document.getElementById('bounty-modal').style.display = 'flex';
-                        // TRIGGER THE RENDER SO THE BOARD SHOWS LIVE TASKS
-                        if (UI.renderBountyBoard) UI.renderBountyBoard(); 
-                    }
-                    
+                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') { document.getElementById('bounty-modal').style.display = 'flex'; UI.renderBountyBoard(); }
                     if (GameState.activeInteractable instanceof VillageNPC) showNotification(GameState.activeInteractable.message);
                 }
             });
-
-            document.getElementById('close-workbench-btn').addEventListener('click', closeWorkbench);
-            document.getElementById('close-bounty-btn').addEventListener('click', closeBounty);
         });
     </script>
 </body>

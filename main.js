@@ -104,7 +104,8 @@ window.PlayerData = {
     },
     skillAmps: {},
     questLog: { totalKills: 0 },
-    claimedBounties: []
+    claimedBounties: [],
+    lastPlayed: Date.now() // OFFLINE TRACKING
 };
 
 window.FormatNumber = function(value) {
@@ -271,7 +272,7 @@ const UI = {
     },
     discardItem: (index) => {
         if (!PlayerData.inventory[index]) return; let item = PlayerData.inventory[index], reward = 5;
-        if (item.rarity === 'Legendary') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10;
+        if (item.rarity === 'Legendary' || item.rarity === 'LEGENDARY RELIC') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10;
         PlayerData.inventory.splice(index, 1); PlayerData.shards += reward;
         UI.renderInventory(); UI.updateCurrencies(); UI.notify(`Discarded ${item.name} (+${FormatNumber(reward)} 💎)`); REFS.itemDetailPanel.style.display = 'none'; saveGame();
     },
@@ -308,260 +309,131 @@ const UI = {
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout); UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 2000);
     },
     notify: (msg) => { REFS.notification.innerText = msg; REFS.notification.style.opacity = 1; if (UI._notifTimeout) clearTimeout(UI._notifTimeout); UI._notifTimeout = setTimeout(() => REFS.notification.style.opacity = 0, 2000); },
-    checkDailyLogin: () => { if (localStorage.getItem('dof_lastLogin') !== new Date().toDateString()) REFS.dailyLogin.style.display = 'block'; },
-    claimDaily: () => { PlayerData.gold += 500; PlayerData.shards += 50; localStorage.setItem('dof_lastLogin', new Date().toDateString()); REFS.dailyLogin.style.display = 'none'; UI.updateCurrencies(); saveGame(); UI.notify("Daily Claimed!"); },
 
-    // --- PHASE 2 WORKBENCH & QOL LOGIC ---
-    openWorkbench: () => {
-        if (!REFS.workbenchModal) return;
-        REFS.workbenchModal.style.display = 'flex';
-        UI.renderWorkbench();
+    // --- PHASE 3: OFFLINE & DAILY LOGIN LOGIC ---
+    checkDailyLogin: () => {
+        let now = Date.now();
+        let lastPlayed = PlayerData.lastPlayed || now;
+        let elapsedSeconds = Math.floor((now - lastPlayed) / 1000);
+        
+        // Cap at 24 hours (86400 seconds)
+        let cappedSeconds = Math.min(elapsedSeconds, 86400);
+
+        // Standard Daily Bonus (If first time login of the day)
+        let isNewDay = localStorage.getItem('dof_lastLoginDay') !== new Date().toDateString();
+        let dailyGold = isNewDay ? 500 : 0;
+        let dailyShards = isNewDay ? 50 : 0;
+
+        if (cappedSeconds >= 60 || isNewDay) {
+            let kills = Math.floor(cappedSeconds / 2);
+            let offShards = Math.floor(cappedSeconds / 180) * 5; // 5 every 3 mins
+            let offGold = kills * (PlayerData.level * 5);
+            let offXp = kills * (PlayerData.level * 2);
+
+            UI._pendingOffline = { gold: offGold + dailyGold, shards: offShards + dailyShards, xp: offXp, kills: kills };
+
+            // Update the Modal Text
+            document.getElementById('off-time').innerText = Math.floor(cappedSeconds / 60) + "m";
+            document.getElementById('off-kills').innerText = FormatNumber(kills);
+            document.getElementById('off-gold').innerText = FormatNumber(UI._pendingOffline.gold);
+            document.getElementById('off-shards').innerText = FormatNumber(UI._pendingOffline.shards);
+            document.getElementById('off-xp').innerText = FormatNumber(offXp);
+
+            REFS.dailyLogin.style.display = 'block';
+            if (isNewDay) localStorage.setItem('dof_lastLoginDay', new Date().toDateString());
+        }
     },
+    claimDaily: () => {
+        if (UI._pendingOffline) {
+            PlayerData.gold += UI._pendingOffline.gold;
+            PlayerData.shards += UI._pendingOffline.shards;
+            if (!PlayerData.questLog) PlayerData.questLog = { totalKills: 0 };
+            PlayerData.questLog.totalKills += UI._pendingOffline.kills;
+            
+            // Safe multi-level XP gain
+            gainXp(UI._pendingOffline.xp);
+            UI._pendingOffline = null;
+        }
+        PlayerData.lastPlayed = Date.now();
+        REFS.dailyLogin.style.display = 'none';
+        UI.updateCurrencies(); UI.updateStats(); saveGame(); UI.notify("Rewards Claimed!");
+    },
+
+    openWorkbench: () => { if (!REFS.workbenchModal) return; REFS.workbenchModal.style.display = 'flex'; UI.renderWorkbench(); },
     renderWorkbench: () => {
-        if (!REFS.skillAmpList) return;
-        let html = '';
+        if (!REFS.skillAmpList) return; let html = '';
         player.learnedSkills.forEach(id => {
             if (ACTIVE_SKILLS_CONFIG[id]) {
-                let lvl = PlayerData.skillAmps[id] || 0;
-                let cost = (lvl + 1) * 250; // Simple linear cost scaling
-                let canAfford = PlayerData.shards >= cost;
-                html += `
-                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <span style="font-size: 1.2rem; margin-right: 10px;">${ACTIVE_SKILLS_CONFIG[id].icon}</span>
-                            <span style="font-weight: bold; color: var(--primary);">${ACTIVE_SKILLS_CONFIG[id].name}</span>
-                            <div style="font-size: 0.7rem; color: #aaa;">Amp Level: ${lvl}</div>
-                        </div>
-                        <button class="upgrade-btn" style="width: auto; padding: 5px 15px;" ${canAfford ? '' : 'disabled'} onclick="UI.amplifySkill(${id}, ${cost})">
-                            AMPLIFY (${cost}💎)
-                        </button>
-                    </div>
-                `;
+                let lvl = PlayerData.skillAmps[id] || 0; let cost = (lvl + 1) * 250; let canAfford = PlayerData.shards >= cost;
+                html += `<div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;"><div><span style="font-size: 1.2rem; margin-right: 10px;">${ACTIVE_SKILLS_CONFIG[id].icon}</span><span style="font-weight: bold; color: var(--primary);">${ACTIVE_SKILLS_CONFIG[id].name}</span><div style="font-size: 0.7rem; color: #aaa;">Amp Level: ${lvl}</div></div><button class="upgrade-btn" style="width: auto; padding: 5px 15px;" ${canAfford ? '' : 'disabled'} onclick="UI.amplifySkill(${id}, ${cost})">AMPLIFY (${cost}💎)</button></div>`;
             }
         });
         if (player.learnedSkills.length === 0) html = '<p style="text-align:center; color:#777;">Learn skills in your talent tree first!</p>';
         REFS.skillAmpList.innerHTML = html;
     },
-    amplifySkill: (id, cost) => {
-        if (PlayerData.shards >= cost) {
-            PlayerData.shards -= cost;
-            PlayerData.skillAmps[id] = (PlayerData.skillAmps[id] || 0) + 1;
-            UI.renderWorkbench();
-            UI.updateCurrencies();
-            UI.notify(`${ACTIVE_SKILLS_CONFIG[id].name} Amplified!`);
-            saveGame();
-        }
-    },
+    amplifySkill: (id, cost) => { if (PlayerData.shards >= cost) { PlayerData.shards -= cost; PlayerData.skillAmps[id] = (PlayerData.skillAmps[id] || 0) + 1; UI.renderWorkbench(); UI.updateCurrencies(); UI.notify(`${ACTIVE_SKILLS_CONFIG[id].name} Amplified!`); saveGame(); } },
     autoCleanBag: () => {
         if (!player || PlayerData.inventory.length === 0) { UI.notify("Bag is already empty!"); return; }
-        
-        let initialShards = PlayerData.shards;
-        let itemsSwapped = 0;
-
-        // 1. Group inventory items by slot
-        const slotGroups = {};
-        PlayerData.inventory.forEach(item => {
-            if (!slotGroups[item.slot]) slotGroups[item.slot] = [];
-            slotGroups[item.slot].push(item);
-        });
-
-        // 2. Equip best item in each slot found in inventory
+        let itemsSwapped = 0; const slotGroups = {}; PlayerData.inventory.forEach(item => { if (!slotGroups[item.slot]) slotGroups[item.slot] = []; slotGroups[item.slot].push(item); });
         for (let slot in slotGroups) {
-            slotGroups[slot].sort((a,b) => {
-                let sumA = Object.values(a.stats || a).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
-                let sumB = Object.values(b.stats || b).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
-                return sumB - sumA;
-            });
-
-            let bestInBag = slotGroups[slot][0];
-            let currentlyEquipped = PlayerData.gear[slot];
-            let currentSum = currentlyEquipped ? Object.values(currentlyEquipped.stats || currentlyEquipped).reduce((p,c) => typeof c === 'number' ? p+c : p, 0) : 0;
-            let bestSum = Object.values(bestInBag.stats || bestInBag).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
-
-            if (bestSum > currentSum) {
-                let idx = PlayerData.inventory.indexOf(bestInBag);
-                UI.equipItem(idx);
-                itemsSwapped++;
-            }
+            slotGroups[slot].sort((a,b) => { let sumA = Object.values(a.stats || a).reduce((p,c) => typeof c === 'number' ? p+c : p, 0); let sumB = Object.values(b.stats || b).reduce((p,c) => typeof c === 'number' ? p+c : p, 0); return sumB - sumA; });
+            let bestInBag = slotGroups[slot][0]; let currentlyEquipped = PlayerData.gear[slot]; let currentSum = currentlyEquipped ? Object.values(currentlyEquipped.stats || currentlyEquipped).reduce((p,c) => typeof c === 'number' ? p+c : p, 0) : 0; let bestSum = Object.values(bestInBag.stats || bestInBag).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
+            if (bestSum > currentSum) { let idx = PlayerData.inventory.indexOf(bestInBag); UI.equipItem(idx); itemsSwapped++; }
         }
-
-        // 3. Salvage all remaining items in bag
-        let rewardTotal = 0;
-        while (PlayerData.inventory.length > 0) {
-            let item = PlayerData.inventory[0];
-            let reward = 5;
-            if (item.rarity === 'Legendary' || item.rarity === 'LEGENDARY RELIC') reward = 50; 
-            else if (item.rarity === 'Epic') reward = 20; 
-            else if (item.rarity === 'Rare') reward = 10;
-            rewardTotal += reward;
-            PlayerData.inventory.splice(0, 1);
-        }
-        PlayerData.shards += rewardTotal;
-
-        UI.notify(`Bag Cleaned! Found ${itemsSwapped} upgrades. Salvaged others for +${rewardTotal} 💎`);
-        UI.updateCurrencies();
-        UI.renderInventory();
-        saveGame();
+        let rewardTotal = 0; while (PlayerData.inventory.length > 0) { let item = PlayerData.inventory[0]; let reward = 5; if (item.rarity === 'Legendary' || item.rarity === 'LEGENDARY RELIC') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10; rewardTotal += reward; PlayerData.inventory.splice(0, 1); }
+        PlayerData.shards += rewardTotal; UI.notify(`Bag Cleaned! Found ${itemsSwapped} upgrades. Salvaged others for +${rewardTotal} 💎`); UI.updateCurrencies(); UI.renderInventory(); saveGame();
     },
 
-    // --- PHASE 3: BOUNTY BOARD LOGIC ---
     renderBountyBoard: () => {
-        if (!REFS.bountyList) return;
-        if (!PlayerData.questLog) PlayerData.questLog = { totalKills: 0 };
-        if (!PlayerData.claimedBounties) PlayerData.claimedBounties = [];
-
-        let html = '';
-        BOUNTY_CONFIG.forEach(b => {
-            let current = b.type === 'kills' ? PlayerData.questLog.totalKills : GameState.level;
-            let progress = Math.min(100, (current / b.goal) * 100);
-            let isClaimed = PlayerData.claimedBounties.includes(b.id);
-            let canClaim = progress >= 100 && !isClaimed;
-
-            html += `
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid ${canClaim ? 'var(--gold)' : '#333'}; margin-bottom: 10px; position: relative; opacity: ${isClaimed ? '0.5' : '1'};">
-                    <h4 style="color: var(--gold);">${b.title}</h4>
-                    <p style="font-size: 0.8rem; color: #aaa;">Goal: ${b.goal} ${b.type === 'kills' ? 'Kills' : 'Depth reached'}</p>
-                    <div style="width: 100%; height: 6px; background: #222; border-radius: 3px; margin: 10px 0; overflow: hidden;">
-                        <div style="width: ${progress}%; height: 100%; background: var(--gold);"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                        <span style="font-size: 0.8rem; font-weight: bold; color: var(--shard);">${FormatNumber(current)} / ${FormatNumber(b.goal)}</span>
-                        <button class="upgrade-btn" style="width: auto; padding: 5px 15px; background: var(--gold); color: black;" ${canClaim ? '' : 'disabled'} onclick="UI.claimBounty('${b.id}')">
-                            ${isClaimed ? 'CLAIMED' : 'CLAIM REWARD'}
-                        </button>
-                    </div>
-                </div>
-            `;
+        if (!REFS.bountyList) return; if (!PlayerData.questLog) PlayerData.questLog = { totalKills: 0 }; if (!PlayerData.claimedBounties) PlayerData.claimedBounties = [];
+        let html = ''; BOUNTY_CONFIG.forEach(b => {
+            let current = b.type === 'kills' ? PlayerData.questLog.totalKills : GameState.level; let progress = Math.min(100, (current / b.goal) * 100); let isClaimed = PlayerData.claimedBounties.includes(b.id); let canClaim = progress >= 100 && !isClaimed;
+            html += `<div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid ${canClaim ? 'var(--gold)' : '#333'}; margin-bottom: 10px; position: relative; opacity: ${isClaimed ? '0.5' : '1'};"><h4 style="color: var(--gold);">${b.title}</h4><p style="font-size: 0.8rem; color: #aaa;">Goal: ${b.goal} ${b.type === 'kills' ? 'Kills' : 'Depth reached'}</p><div style="width: 100%; height: 6px; background: #222; border-radius: 3px; margin: 10px 0; overflow: hidden;"><div style="width: ${progress}%; height: 100%; background: var(--gold);"></div></div><div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;"><span style="font-size: 0.8rem; font-weight: bold; color: var(--shard);">${FormatNumber(current)} / ${FormatNumber(b.goal)}</span><button class="upgrade-btn" style="width: auto; padding: 5px 15px; background: var(--gold); color: black;" ${canClaim ? '' : 'disabled'} onclick="UI.claimBounty('${b.id}')">${isClaimed ? 'CLAIMED' : 'CLAIM REWARD'}</button></div></div>`;
         });
         REFS.bountyList.innerHTML = html;
     },
     claimBounty: (id) => {
-        let b = BOUNTY_CONFIG.find(x => x.id === id);
-        if (!b) return;
-
-        PlayerData.gold += b.rewardGold;
-        PlayerData.shards += b.rewardShards;
-        PlayerData.claimedBounties.push(id);
-
-        // Generate 50X God-Tier Items
-        if (b.rewardRelic) {
-            let godItem = generateRandomGear(GameState.level, true);
-            PlayerData.inventory.push(godItem);
-            UI.notify(`REWARD: 50X POWER ${godItem.name} FOUND!`);
-        }
-        if (b.rewardFullSet) {
-            GEAR_TYPES.forEach(slot => {
-                // Mock a template match to ensure full set generation
-                let godItem = generateRandomGear(GameState.level, true);
-                godItem.slot = slot;
-                godItem.name = `RELIC ${slot}`;
-                PlayerData.inventory.push(godItem);
-            });
-            UI.notify(`THE ASCENDED SET HAS BEEN GRANTED!`);
-        }
-
-        UI.updateCurrencies();
-        UI.renderBountyBoard();
-        UI.renderInventory();
-        saveGame();
+        let b = BOUNTY_CONFIG.find(x => x.id === id); if (!b) return;
+        PlayerData.gold += b.rewardGold; PlayerData.shards += b.rewardShards; PlayerData.claimedBounties.push(id);
+        if (b.rewardRelic) { let godItem = generateRandomGear(GameState.level, true); PlayerData.inventory.push(godItem); UI.notify(`REWARD: 50X POWER ${godItem.name} FOUND!`); }
+        if (b.rewardFullSet) { GEAR_TYPES.forEach(slot => { let godItem = generateRandomGear(GameState.level, true); godItem.slot = slot; godItem.name = `RELIC ${slot}`; PlayerData.inventory.push(godItem); }); UI.notify(`THE ASCENDED SET HAS BEEN GRANTED!`); }
+        UI.updateCurrencies(); UI.renderBountyBoard(); UI.renderInventory(); saveGame();
     }
 };
 
 // --- 5. MAP GENERATION ---
 let mapGrid = [], exploredGrid = [], entities = [], particles = [], floatingTexts = [], portal = null, player = null;
-
-function initEmptyMap() {
-    mapGrid = Array(window.MAP_SIZE).fill(0).map(() => Array(window.MAP_SIZE).fill(1));
-    exploredGrid = Array(window.MAP_SIZE).fill(0).map(() => Array(window.MAP_SIZE).fill(false));
-}
-
-function generateVillage() {
-    for (let r = window.VILLAGE_START; r < window.MAP_SIZE; r++) {
-        for (let c = 0; c < window.MAP_SIZE; c++) {
-            if (r === window.VILLAGE_START || r === window.MAP_SIZE - 1 || c === 0 || c === window.MAP_SIZE - 1) mapGrid[r][c] = 1;
-            else { mapGrid[r][c] = 0; exploredGrid[r][c] = true; }
-        }
-    }
-    let gateX = Math.floor(window.MAP_SIZE / 2);
-    mapGrid[window.VILLAGE_START][gateX] = 0; mapGrid[window.VILLAGE_START][gateX - 1] = 0; mapGrid[window.VILLAGE_START][gateX + 1] = 0;
-}
-
-function generateDungeon() {
-    for (let r = 0; r < window.VILLAGE_START; r++) { for (let c = 0; c < window.MAP_SIZE; c++) { mapGrid[r][c] = 1; exploredGrid[r][c] = false; } }
-    let startX = Math.floor(window.MAP_SIZE / 2); let startY = window.VILLAGE_START - 1; let x = startX, y = startY;
-    let floorCount = 0; let maxFloors = (window.MAP_SIZE * window.VILLAGE_START) * 0.45;
-    mapGrid[y][x] = 0;
-    while (floorCount < maxFloors) {
-        let dir = randomInt(0, 3);
-        if (dir === 0 && y > 2) y--; else if (dir === 1 && y < window.VILLAGE_START - 2) y++; else if (dir === 2 && x > 2) x--; else if (dir === 3 && x < window.MAP_SIZE - 3) x++;
-        if (mapGrid[y][x] === 1) { mapGrid[y][x] = 0; if(Math.random() > 0.5 && mapGrid[y+1]) mapGrid[y+1][x] = 0; floorCount++; }
-    }
-    portal = { x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, radius: 30 };
-}
-
-function isWall(x, y) {
-    let col = Math.floor(x / TILE_SIZE), row = Math.floor(y / TILE_SIZE);
-    if (row < 0 || row >= window.MAP_SIZE || col < 0 || col >= window.MAP_SIZE) return true;
-    return mapGrid[row][col] === 1;
-}
+function initEmptyMap() { mapGrid = Array(window.MAP_SIZE).fill(0).map(() => Array(window.MAP_SIZE).fill(1)); exploredGrid = Array(window.MAP_SIZE).fill(0).map(() => Array(window.MAP_SIZE).fill(false)); }
+function generateVillage() { for (let r = window.VILLAGE_START; r < window.MAP_SIZE; r++) { for (let c = 0; c < window.MAP_SIZE; c++) { if (r === window.VILLAGE_START || r === window.MAP_SIZE - 1 || c === 0 || c === window.MAP_SIZE - 1) mapGrid[r][c] = 1; else { mapGrid[r][c] = 0; exploredGrid[r][c] = true; } } } let gateX = Math.floor(window.MAP_SIZE / 2); mapGrid[window.VILLAGE_START][gateX] = 0; mapGrid[window.VILLAGE_START][gateX - 1] = 0; mapGrid[window.VILLAGE_START][gateX + 1] = 0; }
+function generateDungeon() { for (let r = 0; r < window.VILLAGE_START; r++) { for (let c = 0; c < window.MAP_SIZE; c++) { mapGrid[r][c] = 1; exploredGrid[r][c] = false; } } let startX = Math.floor(window.MAP_SIZE / 2); let startY = window.VILLAGE_START - 1; let x = startX, y = startY; let floorCount = 0; let maxFloors = (window.MAP_SIZE * window.VILLAGE_START) * 0.45; mapGrid[y][x] = 0; while (floorCount < maxFloors) { let dir = randomInt(0, 3); if (dir === 0 && y > 2) y--; else if (dir === 1 && y < window.VILLAGE_START - 2) y++; else if (dir === 2 && x > 2) x--; else if (dir === 3 && x < window.MAP_SIZE - 3) x++; if (mapGrid[y][x] === 1) { mapGrid[y][x] = 0; if(Math.random() > 0.5 && mapGrid[y+1]) mapGrid[y+1][x] = 0; floorCount++; } } portal = { x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, radius: 30 }; }
+function isWall(x, y) { let col = Math.floor(x / TILE_SIZE), row = Math.floor(y / TILE_SIZE); if (row < 0 || row >= window.MAP_SIZE || col < 0 || col >= window.MAP_SIZE) return true; return mapGrid[row][col] === 1; }
 
 // --- 6. ENGINE FUNCTIONS ---
 function spawnFloatingText(x, y, text, color) { floatingTexts.push(new FloatingText(x, y, text, color)); }
 function spawnLoot(x, y, type) { entities.push(new Loot(x, y, type)); }
-
-class Projectile {
-    constructor(x, y, target, speed, damage, isCrit, isEnemy = false) {
-        this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; 
-        this.isCrit = isCrit; this.isEnemy = isEnemy;
-        this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc'); 
-        this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; 
-        this.markedForDeletion = false; 
-    }
-    update(dt) {
-        if (this.markedForDeletion) return;
-        this.currentLifetime += dt;
-        if (this.currentLifetime >= this.lifetime) { this.markedForDeletion = true; return; }
-        if (this.target && this.target.hp > 0) {
-            let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
-            let angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed * dt; this.y += Math.sin(angle) * this.speed * dt;
-            if (dist < this.radius + this.target.radius) { 
-                this.target.takeDamage(this.damage, this.isCrit); this.markedForDeletion = true; 
-                spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
-            }
-        } else { this.markedForDeletion = true; }
-    }
-    draw(ctx) {
-        if (this.markedForDeletion) return;
-        ctx.save(); if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
-        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-    }
-}
-
-function spawnProjectile(x1, y1, target, damage, isCrit, isEnemy = false) {
-    if (!player) return;
-    entities.push(new Projectile(x1, y1, target, 600, damage, isCrit, isEnemy));
-}
-
+class Projectile { constructor(x, y, target, speed, damage, isCrit, isEnemy = false) { this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; this.isCrit = isCrit; this.isEnemy = isEnemy; this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc'); this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; this.markedForDeletion = false; } update(dt) { if (this.markedForDeletion) return; this.currentLifetime += dt; if (this.currentLifetime >= this.lifetime) { this.markedForDeletion = true; return; } if (this.target && this.target.hp > 0) { let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy); let angle = Math.atan2(dy, dx); this.x += Math.cos(angle) * this.speed * dt; this.y += Math.sin(angle) * this.speed * dt; if (dist < this.radius + this.target.radius) { this.target.takeDamage(this.damage, this.isCrit); this.markedForDeletion = true; spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); } } else { this.markedForDeletion = true; } } draw(ctx) { if (this.markedForDeletion) return; ctx.save(); if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; } ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
+function spawnProjectile(x1, y1, target, damage, isCrit, isEnemy = false) { if (!player) return; entities.push(new Projectile(x1, y1, target, 600, damage, isCrit, isEnemy)); }
 function spawnAura(x, y, color = '#ff9800') { for(let i=0; i<20; i++) particles.push(new Particle(x, y, color)); }
+function spawnSotaParticles(x, y, color, count, speed) { for(let i=0; i<count; i++) { let p = new Particle(x, y, color); p.vx = (Math.random() - 0.5) * speed; p.vy = (Math.random() - 0.5) * speed; p.size = randomFloat(2, 6); p.life = randomFloat(0.5, 1.2); particles.push(p); } }
 
-function spawnSotaParticles(x, y, color, count, speed) {
-    for(let i=0; i<count; i++) {
-        let p = new Particle(x, y, color);
-        p.vx = (Math.random() - 0.5) * speed; p.vy = (Math.random() - 0.5) * speed;
-        p.size = randomFloat(2, 6); p.life = randomFloat(0.5, 1.2);
-        particles.push(p);
-    }
-}
-
+// FIX: Overflow XP / Multi-Level Up Support
 function gainXp(amt) {
     PlayerData.xp += Math.floor(amt * player.getXpMultiplier());
-    if (PlayerData.xp >= PlayerData.maxXp) {
+    let oldStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
+    let oldLevel = PlayerData.level;
+    let didLevel = false;
+
+    while (PlayerData.xp >= PlayerData.maxXp) {
         PlayerData.xp -= PlayerData.maxXp;
-        let oldStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
-        let oldLevel = PlayerData.level;
-        PlayerData.level++; player.skillPoints++; PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
-        player.hp = player.getMaxHp(); spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
+        PlayerData.level++;
+        player.skillPoints++;
+        PlayerData.maxXp = Math.floor(PlayerData.maxXp * 1.5);
+        didLevel = true;
+    }
+
+    if (didLevel) {
+        player.hp = player.getMaxHp();
+        spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
         let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
         let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},{k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'},{k:'cp',l:'cp'}];
         keys.forEach(s => { if(newStats[s.k] !== undefined && oldStats[s.k] !== undefined) { let d = newStats[s.k] - oldStats[s.k]; if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); } });
@@ -571,192 +443,31 @@ function gainXp(amt) {
     UI.updateStats(); saveGame();
 }
 
-function die() {
-    GameState.state = 'DEAD'; PlayerData.gold = Math.floor(PlayerData.gold / 2); PlayerData.shards = Math.floor(PlayerData.shards / 2);
-    UI.notify("YOU DIED. Wealth halved."); saveGame();
-    setTimeout(() => { initLevel(false); GameState.state = 'PLAYING'; }, 2000);
-}
-
+function die() { GameState.state = 'DEAD'; PlayerData.gold = Math.floor(PlayerData.gold / 2); PlayerData.shards = Math.floor(PlayerData.shards / 2); UI.notify("YOU DIED. Wealth halved."); saveGame(); setTimeout(() => { initLevel(false); GameState.state = 'PLAYING'; }, 2000); }
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
-
-function spawnEnemies() {
-    let num = 10 + GameState.level; 
-    for(let i=0; i<num; i++) {
-        let ex, ey;
-        do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || (player && Math.hypot(ex - player.x, ey - player.y) < 400)); 
-        entities.push(new Enemy(ex, ey));
-    }
-}
-
-function initLevel(isFirstLoad = false) {
-    if (isFirstLoad) { initEmptyMap(); generateVillage(); }
-    generateDungeon(); 
-    let p = player; entities = []; particles = []; floatingTexts = [];
-    let spawnX = Math.floor(window.MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
-    let spawnY = (window.VILLAGE_START + 5) * TILE_SIZE + TILE_SIZE/2;
-    if(!p) player = new Player(spawnX, spawnY); else { player = p; player.x = spawnX; player.y = spawnY; player.hp = player.getMaxHp(); }
-    if (typeof initializeSkillTree === 'function') initializeSkillTree();
-    entities.push(player); 
-    entities.push(new VillageInteractable(spawnX + 150, spawnY - 100, 'WORKBENCH', '🛠️'));
-    entities.push(new VillageNPC(spawnX - 150, spawnY - 100, 'ELDER VIC', '🧙‍♂️', "Welcome back, Hero. Clean your bag at the Workbench!"));
-    entities.push(new VillageInteractable(spawnX, spawnY - 200, 'BOUNTY BOARD', '📜'));
-    spawnEnemies(); 
-    REFS.depthLevel.innerText = GameState.level; 
-    UI.updateMinimap(); UI.buildHotbar(); UI.updateStats();
-}
+function spawnEnemies() { let num = 10 + GameState.level; for(let i=0; i<num; i++) { let ex, ey; do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || (player && Math.hypot(ex - player.x, ey - player.y) < 400)); entities.push(new Enemy(ex, ey)); } }
+function initLevel(isFirstLoad = false) { if (isFirstLoad) { initEmptyMap(); generateVillage(); } generateDungeon(); let p = player; entities = []; particles = []; floatingTexts = []; let spawnX = Math.floor(window.MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2; let spawnY = (window.VILLAGE_START + 5) * TILE_SIZE + TILE_SIZE/2; if(!p) player = new Player(spawnX, spawnY); else { player = p; player.x = spawnX; player.y = spawnY; player.hp = player.getMaxHp(); } if (typeof initializeSkillTree === 'function') initializeSkillTree(); entities.push(player); entities.push(new VillageInteractable(spawnX + 150, spawnY - 100, 'WORKBENCH', '🛠️')); entities.push(new VillageNPC(spawnX - 150, spawnY - 100, 'ELDER VIC', '🧙‍♂️', "Welcome back, Hero. Clean your bag at the Workbench!")); entities.push(new VillageInteractable(spawnX, spawnY - 200, 'BOUNTY BOARD', '📜')); spawnEnemies(); REFS.depthLevel.innerText = GameState.level; UI.updateMinimap(); UI.buildHotbar(); UI.updateStats(); }
 
 // --- 7. INPUT & SAVE ---
 let jZoneRef = document.getElementById('joystick-zone');
-if (jZoneRef) {
-    jZoneRef.addEventListener('touchstart', (e) => {
-        if(GameState.state !== 'PLAYING') return;
-        let touch = e.changedTouches[0], jBase = document.getElementById('j-base');
-        Input.joystick.active = true; Input.joystick.x = touch.clientX; Input.joystick.y = touch.clientY;
-        if (jBase) { jBase.style.display = 'block'; jBase.style.left = touch.clientX + 'px'; jBase.style.top = touch.clientY + 'px'; }
-    });
-    jZoneRef.addEventListener('touchmove', (e) => {
-        if(!Input.joystick.active) return;
-        let touch = e.changedTouches[0], dx = touch.clientX - Input.joystick.x, dy = touch.clientY - Input.joystick.y;
-        Input.joystick.angle = Math.atan2(dy, dx);
-        let dist = Math.min(50, Math.hypot(dx, dy)), sx = Math.cos(Input.joystick.angle) * dist, sy = Math.sin(Input.joystick.angle) * dist, jStick = document.getElementById('j-stick');
-        if (jStick) jStick.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
-    });
-    jZoneRef.addEventListener('touchend', endJoystick);
-}
-
-function saveGame() { 
-    PlayerData.dungeonLevel = GameState.level; 
-    if (player) { PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; }
-    localStorage.setItem('dof_save', JSON.stringify(PlayerData));
-}
-
-function loadGame() {
-    let save = localStorage.getItem('dof_save');
-    if (save) {
-        try {
-            let d = JSON.parse(save);
-            PlayerData.gold = d.gold ?? PlayerData.gold; PlayerData.shards = d.shards ?? PlayerData.shards; PlayerData.level = d.level ?? PlayerData.level; PlayerData.dungeonLevel = d.dungeonLevel ?? PlayerData.dungeonLevel; PlayerData.xp = d.xp ?? PlayerData.xp; PlayerData.maxXp = d.maxXp ?? PlayerData.maxXp; PlayerData.skillPoints = d.skillPoints ?? PlayerData.skillPoints; PlayerData.learnedSkills = d.learnedSkills ?? PlayerData.learnedSkills;
-            PlayerData.questLog = d.questLog ?? { totalKills: 0 }; PlayerData.claimedBounties = d.claimedBounties ?? [];
-            if (d.inventory) PlayerData.inventory = d.inventory; if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
-            GameState.level = PlayerData.dungeonLevel;
-            if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
-        } catch(e) { console.error("Save Corrupt", e); }
-    }
-}
+if (jZoneRef) { jZoneRef.addEventListener('touchstart', (e) => { if(GameState.state !== 'PLAYING') return; let touch = e.changedTouches[0], jBase = document.getElementById('j-base'); Input.joystick.active = true; Input.joystick.x = touch.clientX; Input.joystick.y = touch.clientY; if (jBase) { jBase.style.display = 'block'; jBase.style.left = touch.clientX + 'px'; jBase.style.top = touch.clientY + 'px'; } }); jZoneRef.addEventListener('touchmove', (e) => { if(!Input.joystick.active) return; let touch = e.changedTouches[0], dx = touch.clientX - Input.joystick.x, dy = touch.clientY - Input.joystick.y; Input.joystick.angle = Math.atan2(dy, dx); let dist = Math.min(50, Math.hypot(dx, dy)), sx = Math.cos(Input.joystick.angle) * dist, sy = Math.sin(Input.joystick.angle) * dist, jStick = document.getElementById('j-stick'); if (jStick) jStick.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`; }); jZoneRef.addEventListener('touchend', endJoystick); }
+function saveGame() { PlayerData.dungeonLevel = GameState.level; if (player) { PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; } PlayerData.lastPlayed = Date.now(); localStorage.setItem('dof_save', JSON.stringify(PlayerData)); }
+function loadGame() { let save = localStorage.getItem('dof_save'); if (save) { try { let d = JSON.parse(save); PlayerData.gold = d.gold ?? PlayerData.gold; PlayerData.shards = d.shards ?? PlayerData.shards; PlayerData.level = d.level ?? PlayerData.level; PlayerData.dungeonLevel = d.dungeonLevel ?? PlayerData.dungeonLevel; PlayerData.xp = d.xp ?? PlayerData.xp; PlayerData.maxXp = d.maxXp ?? PlayerData.maxXp; PlayerData.skillPoints = d.skillPoints ?? PlayerData.skillPoints; PlayerData.learnedSkills = d.learnedSkills ?? PlayerData.learnedSkills; PlayerData.questLog = d.questLog ?? { totalKills: 0 }; PlayerData.claimedBounties = d.claimedBounties ?? []; PlayerData.lastPlayed = d.lastPlayed ?? Date.now(); if (d.inventory) PlayerData.inventory = d.inventory; if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear }; GameState.level = PlayerData.dungeonLevel; if (window.refreshSkillTreeUI) window.refreshSkillTreeUI(); } catch(e) { console.error("Save Corrupt", e); } } }
 
 // --- 8. RENDERER ---
-function drawMap(camX, camY) {
-    let sCol = Math.max(0, Math.floor(camX / TILE_SIZE)), eCol = Math.min(window.MAP_SIZE - 1, sCol + Math.ceil(REFS.canvas.width / TILE_SIZE) + 1),
-        sRow = Math.max(0, Math.floor(camY / TILE_SIZE)), eRow = Math.min(window.MAP_SIZE - 1, sRow + Math.ceil(REFS.canvas.height / TILE_SIZE) + 1);
-    for (let r = sRow; r <= eRow; r++) {
-        for (let c = sCol; c <= eCol; c++) {
-            if (!exploredGrid[r][c]) { ctx.fillStyle = '#000'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); continue; }
-            if (r >= window.VILLAGE_START) ctx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50'; 
-            else ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616'; 
-            ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
-        }
-    }
-}
-
-function draw() {
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height);
-    if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') return;
-    let targetCamX = Math.max(0, Math.min(player.x - REFS.canvas.width / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.width));
-    let targetCamY = Math.max(0, Math.min(player.y - REFS.canvas.height / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.height));
-    if (GameState.camera.x === 0 && GameState.camera.y === 0) { GameState.camera.x = targetCamX; GameState.camera.y = targetCamY; }
-    let lerpSpeed = player.isBlinking ? 0.015 : 0.1;
-    GameState.camera.x += (targetCamX - GameState.camera.x) * lerpSpeed; GameState.camera.y += (targetCamY - GameState.camera.y) * lerpSpeed;
-    ctx.save(); drawMap(GameState.camera.x, GameState.camera.y); ctx.translate(-GameState.camera.x, -GameState.camera.y);
-    if (portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) { ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill(); }
-    entities.filter(e => !e.markedForDeletion).sort((a, b) => a.y - b.y).forEach(e => e.draw?.(ctx));
-    particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); ctx.restore();
-    if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width/2, REFS.canvas.height/2); }
-}
+function drawMap(camX, camY) { let sCol = Math.max(0, Math.floor(camX / TILE_SIZE)), eCol = Math.min(window.MAP_SIZE - 1, sCol + Math.ceil(REFS.canvas.width / TILE_SIZE) + 1), sRow = Math.max(0, Math.floor(camY / TILE_SIZE)), eRow = Math.min(window.MAP_SIZE - 1, sRow + Math.ceil(REFS.canvas.height / TILE_SIZE) + 1); for (let r = sRow; r <= eRow; r++) { for (let c = sCol; c <= eCol; c++) { if (!exploredGrid[r][c]) { ctx.fillStyle = '#000'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); continue; } if (r >= window.VILLAGE_START) ctx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50'; else ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); } } }
+function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') return; let targetCamX = Math.max(0, Math.min(player.x - REFS.canvas.width / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.width)); let targetCamY = Math.max(0, Math.min(player.y - REFS.canvas.height / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.height)); if (GameState.camera.x === 0 && GameState.camera.y === 0) { GameState.camera.x = targetCamX; GameState.camera.y = targetCamY; } let lerpSpeed = player.isBlinking ? 0.015 : 0.1; GameState.camera.x += (targetCamX - GameState.camera.x) * lerpSpeed; GameState.camera.y += (targetCamY - GameState.camera.y) * lerpSpeed; ctx.save(); drawMap(GameState.camera.x, GameState.camera.y); ctx.translate(-GameState.camera.x, -GameState.camera.y); if (portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) { ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill(); } entities.filter(e => !e.markedForDeletion).sort((a, b) => a.y - b.y).forEach(e => e.draw?.(ctx)); particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); ctx.restore(); if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width/2, REFS.canvas.height/2); } }
 
 // --- 9. MAIN LOOP ---
-function loop(timestamp) {
-    let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); GameState.lastTime = timestamp;
-    if (GameState.state === 'PLAYING') {
-        if (GameState.pendingLevelUp) { GameState.level++; UI.notify(`Depth ${GameState.level}`); initLevel(false); GameState.pendingLevelUp = false; saveGame(); }
-        HiveMind.update();
-        for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].update) entities[i].update(dt);
-        for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].markedForDeletion) entities.splice(i, 1);
-        for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt);
-        for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
-        GameState.activeInteractable = null;
-        entities.forEach(e => { if ((e instanceof VillageNPC || e instanceof VillageInteractable) && Math.hypot(player.x - e.x, player.y - e.y) < 100) GameState.activeInteractable = e; });
-        if (GameState.frame % 10 === 0) UI.updateStats();
-        if (GameState.frame % 120 === 0) { 
-            let ec = 0; for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++;
-            let maxEnemies = 5 + GameState.level;
-            if (ec < maxEnemies) {
-                let toSpawn = Math.min(2, maxEnemies - ec);
-                for(let s=0; s < toSpawn; s++) {
-                    let ex, ey; do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
-                    entities.push(new Enemy(ex, ey));
-                }
-            }
-        }
-        if (GameState.frame % 30 === 0) UI.updateMinimap();
-        if (portal) {
-            let dist = Math.hypot(player.x - portal.x, player.y - portal.y), cost = GameState.level * 250;
-            if (dist < 50) {
-                REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${FormatNumber(cost)} Gold`;
-                REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need Gold!"); };
-            } else REFS.portalUI.style.display = 'none';
-        }
-    }
-    draw(); GameState.frame++; requestAnimationFrame(loop);
-}
+function loop(timestamp) { let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); GameState.lastTime = timestamp; if (GameState.state === 'PLAYING') { if (GameState.pendingLevelUp) { GameState.level++; UI.notify(`Depth ${GameState.level}`); initLevel(false); GameState.pendingLevelUp = false; saveGame(); } HiveMind.update(); for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].update) entities[i].update(dt); for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].markedForDeletion) entities.splice(i, 1); for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt); for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt); GameState.activeInteractable = null; entities.forEach(e => { if ((e instanceof VillageNPC || e instanceof VillageInteractable) && Math.hypot(player.x - e.x, player.y - e.y) < 100) GameState.activeInteractable = e; }); if (GameState.frame % 10 === 0) UI.updateStats(); if (GameState.frame % 120 === 0) { let ec = 0; for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++; let maxEnemies = 5 + GameState.level; if (ec < maxEnemies) { let toSpawn = Math.min(2, maxEnemies - ec); for(let s=0; s < toSpawn; s++) { let ex, ey; do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400); entities.push(new Enemy(ex, ey)); } } } if (GameState.frame % 30 === 0) UI.updateMinimap(); if (portal) { let dist = Math.hypot(player.x - portal.x, player.y - portal.y), cost = GameState.level * 250; if (dist < 50) { REFS.portalUI.style.display = 'block'; REFS.portalCost.innerText = `Unlock Cost: ${FormatNumber(cost)} Gold`; REFS.unlockBtn.onclick = () => { if (PlayerData.gold >= cost) { PlayerData.gold -= cost; levelUpDungeon(); REFS.portalUI.style.display = 'none'; } else UI.notify("Need Gold!"); }; } else REFS.portalUI.style.display = 'none'; } } draw(); GameState.frame++; requestAnimationFrame(loop); }
 
 // --- 10. BOOTSTRAP ---
 REFS.canvas.width = window.innerWidth; REFS.canvas.height = window.innerHeight;
 window.addEventListener('resize', () => { REFS.canvas.width = window.innerWidth; REFS.canvas.height = window.innerHeight; });
-window.onload = () => {
-    loadGame(); let progress = 0;
-    let bootInterval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 100) { progress = 100; clearInterval(bootInterval); setTimeout(() => { REFS.loadingScreen.classList.add('hidden'); REFS.mainMenu.classList.remove('hidden'); GameState.state = 'MENU'; }, 400); }
-        REFS.loadingFill.style.width = progress + '%';
-    }, 80);
-};
+window.onload = () => { loadGame(); let progress = 0; let bootInterval = setInterval(() => { progress += Math.random() * 15; if (progress >= 100) { progress = 100; clearInterval(bootInterval); setTimeout(() => { REFS.loadingScreen.classList.add('hidden'); REFS.mainMenu.classList.remove('hidden'); GameState.state = 'MENU'; }, 400); } REFS.loadingFill.style.width = progress + '%'; }, 80); };
 REFS.playBtn.addEventListener('click', () => { REFS.mainMenu.classList.add('hidden'); REFS.uiLayer.classList.remove('hidden'); initLevel(true); UI.updateCurrencies(); UI.checkDailyLogin(); GameState.state = 'PLAYING'; GameState.lastTime = performance.now(); requestAnimationFrame(loop); });
 
-const bindUIButton = (element, callback) => {
-    if (!element) return; let fired = false;
-    element.addEventListener('touchstart', (e) => { e.preventDefault(); if (!fired) { fired = true; callback(); setTimeout(() => fired = false, 400); } }, { passive: false });
-    element.addEventListener('click', (e) => { if (!fired) { fired = true; callback(); setTimeout(() => fired = false, 400); } });
-};
-
-window.addEventListener('DOMContentLoaded', () => {
-    bindUIButton(document.getElementById('claim-daily-btn'), () => UI.claimDaily());
-    bindUIButton(document.getElementById('avatar-btn'), () => UI.toggleInventory());
-    bindUIButton(document.getElementById('auto-clean-btn'), () => UI.autoCleanBag());
-
-    // Bind specific close buttons for each separate modal
-    bindUIButton(document.querySelector('#inventory-modal .close-btn'), () => REFS.invModal.style.display = 'none');
-    bindUIButton(document.querySelector('#workbench-modal .close-btn'), () => REFS.workbenchModal.style.display = 'none');
-    bindUIButton(document.querySelector('#bounty-modal .close-btn'), () => REFS.bountyModal.style.display = 'none');
-});
-
-// --- VILLAGE INTERACTABLES CLASSES ---
-class VillageNPC {
-    constructor(x, y, name, icon, message) { this.x = x; this.y = y; this.name = name; this.icon = icon; this.message = message; this.radius = 25; }
-    update(dt) {}
-    draw(ctx) {
-        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y);
-        ctx.font = "bold 14px Arial"; ctx.fillStyle = "white"; ctx.fillText(this.name, this.x, this.y + 20);
-        if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(187, 134, 252, 0.5)"; ctx.beginPath(); ctx.arc(this.x, this.y, 40, 0, Math.PI*2); ctx.fill(); }
-        ctx.restore();
-    }
-}
-class VillageInteractable {
-    constructor(x, y, type, icon) { this.x = x; this.y = y; this.type = type; this.icon = icon; this.radius = 25; }
-    update(dt) {}
-    draw(ctx) {
-        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y);
-        ctx.font = "bold 14px Arial"; ctx.fillStyle = "#ffd700"; ctx.fillText(this.type, this.x, this.y + 20);
-        if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y, 50, 0, Math.PI*2); ctx.fill(); }
-        ctx.restore();
-    }
-}
+const bindUIButton = (element, callback) => { if (!element) return; let fired = false; element.addEventListener('touchstart', (e) => { e.preventDefault(); if (!fired) { fired = true; callback(); setTimeout(() => fired = false, 400); } }, { passive: false }); element.addEventListener('click', (e) => { if (!fired) { fired = true; callback(); setTimeout(() => fired = false, 400); } }); };
+window.addEventListener('DOMContentLoaded', () => { bindUIButton(document.getElementById('claim-daily-btn'), () => UI.claimDaily()); bindUIButton(document.getElementById('avatar-btn'), () => UI.toggleInventory()); bindUIButton(document.querySelector('#inventory-modal .close-btn'), () => REFS.invModal.style.display = 'none'); bindUIButton(document.querySelector('#workbench-modal .close-btn'), () => REFS.workbenchModal.style.display = 'none'); bindUIButton(document.querySelector('#bounty-modal .close-btn'), () => REFS.bountyModal.style.display = 'none'); bindUIButton(document.getElementById('auto-clean-btn'), () => UI.autoCleanBag()); });
+class VillageNPC { constructor(x, y, name, icon, message) { this.x = x; this.y = y; this.name = name; this.icon = icon; this.message = message; this.radius = 25; } update(dt) {} draw(ctx) { ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y); ctx.font = "bold 14px Arial"; ctx.fillStyle = "white"; ctx.fillText(this.name, this.x, this.y + 20); if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(187, 134, 252, 0.5)"; ctx.beginPath(); ctx.arc(this.x, this.y, 40, 0, Math.PI*2); ctx.fill(); } ctx.restore(); } }
+class VillageInteractable { constructor(x, y, type, icon) { this.x = x; this.y = y; this.type = type; this.icon = icon; this.radius = 25; } update(dt) {} draw(ctx) { ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y); ctx.font = "bold 14px Arial"; ctx.fillStyle = "#ffd700"; ctx.fillText(this.type, this.x, this.y + 20); if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y, 50, 0, Math.PI*2); ctx.fill(); } ctx.restore(); } }
