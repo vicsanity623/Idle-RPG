@@ -452,7 +452,33 @@ function initLevel(isFirstLoad = false) { if (isFirstLoad) { initEmptyMap(); gen
 let jZoneRef = document.getElementById('joystick-zone');
 if (jZoneRef) { jZoneRef.addEventListener('touchstart', (e) => { if(GameState.state !== 'PLAYING') return; let touch = e.changedTouches[0], jBase = document.getElementById('j-base'); Input.joystick.active = true; Input.joystick.x = touch.clientX; Input.joystick.y = touch.clientY; if (jBase) { jBase.style.display = 'block'; jBase.style.left = touch.clientX + 'px'; jBase.style.top = touch.clientY + 'px'; } }); jZoneRef.addEventListener('touchmove', (e) => { if(!Input.joystick.active) return; let touch = e.changedTouches[0], dx = touch.clientX - Input.joystick.x, dy = touch.clientY - Input.joystick.y; Input.joystick.angle = Math.atan2(dy, dx); let dist = Math.min(50, Math.hypot(dx, dy)), sx = Math.cos(Input.joystick.angle) * dist, sy = Math.sin(Input.joystick.angle) * dist, jStick = document.getElementById('j-stick'); if (jStick) jStick.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`; }); jZoneRef.addEventListener('touchend', endJoystick); }
 function saveGame() { PlayerData.dungeonLevel = GameState.level; if (player) { PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; } PlayerData.lastPlayed = Date.now(); localStorage.setItem('dof_save', JSON.stringify(PlayerData)); }
-function loadGame() { let save = localStorage.getItem('dof_save'); if (save) { try { let d = JSON.parse(save); PlayerData.gold = d.gold ?? PlayerData.gold; PlayerData.shards = d.shards ?? PlayerData.shards; PlayerData.level = d.level ?? PlayerData.level; PlayerData.dungeonLevel = d.dungeonLevel ?? PlayerData.dungeonLevel; PlayerData.xp = d.xp ?? PlayerData.xp; PlayerData.maxXp = d.maxXp ?? PlayerData.maxXp; PlayerData.skillPoints = d.skillPoints ?? PlayerData.skillPoints; PlayerData.learnedSkills = d.learnedSkills ?? PlayerData.learnedSkills; PlayerData.questLog = d.questLog ?? { totalKills: 0 }; PlayerData.claimedBounties = d.claimedBounties ?? []; PlayerData.lastPlayed = d.lastPlayed ?? Date.now(); if (d.inventory) PlayerData.inventory = d.inventory; if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear }; GameState.level = PlayerData.dungeonLevel; if (window.refreshSkillTreeUI) window.refreshSkillTreeUI(); } catch(e) { console.error("Save Corrupt", e); } } }
+function loadGame() {
+    let save = localStorage.getItem('dof_save');
+    if (save) {
+        try {
+            let d = JSON.parse(save);
+            PlayerData.gold = d.gold ?? PlayerData.gold;
+            PlayerData.shards = d.shards ?? PlayerData.shards;
+            PlayerData.level = d.level ?? PlayerData.level;
+            PlayerData.dungeonLevel = d.dungeonLevel ?? PlayerData.dungeonLevel;
+            PlayerData.xp = d.xp ?? PlayerData.xp;
+            PlayerData.maxXp = d.maxXp ?? PlayerData.maxXp;
+            PlayerData.skillPoints = d.skillPoints ?? PlayerData.skillPoints;
+            PlayerData.learnedSkills = d.learnedSkills ?? PlayerData.learnedSkills;
+            
+            // --- FIX: This line ensures skill upgrades are loaded ---
+            PlayerData.skillAmps = d.skillAmps ?? {};
+            
+            PlayerData.questLog = d.questLog ?? { totalKills: 0 };
+            PlayerData.claimedBounties = d.claimedBounties ?? [];
+            PlayerData.lastPlayed = d.lastPlayed ?? Date.now();
+            if (d.inventory) PlayerData.inventory = d.inventory;
+            if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
+            GameState.level = PlayerData.dungeonLevel;
+            if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
+        } catch(e) { console.error("Save Corrupt", e); }
+    }
+}
 
 // --- 8. RENDERER ---
 function drawMap(camX, camY) { let sCol = Math.max(0, Math.floor(camX / TILE_SIZE)), eCol = Math.min(window.MAP_SIZE - 1, sCol + Math.ceil(REFS.canvas.width / TILE_SIZE) + 1), sRow = Math.max(0, Math.floor(camY / TILE_SIZE)), eRow = Math.min(window.MAP_SIZE - 1, sRow + Math.ceil(REFS.canvas.height / TILE_SIZE) + 1); for (let r = sRow; r <= eRow; r++) { for (let c = sCol; c <= eCol; c++) { if (!exploredGrid[r][c]) { ctx.fillStyle = '#000'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); continue; } if (r >= window.VILLAGE_START) ctx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50'; else ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); } } }
