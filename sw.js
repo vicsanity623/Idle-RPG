@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dungeons-of-fate-v15';
+const CACHE_NAME = 'dungeons-of-fate-v15.5';
 
 const ASSETS_TO_CACHE = [
     './',
