@@ -97,7 +97,7 @@
         .slot-key { position: absolute; top: -8px; right: -5px; background: var(--primary); color: #000; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; z-index: 2;}
 
         /* --- MODALS --- */
-        #inventory-modal, #workbench-modal, #bounty-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
+        #inventory-modal, #workbench-modal, #bounty-modal, #boss-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
         .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
         .modal-body { flex: 1; overflow-y: auto; padding-right: 8px; }
         .modal-body h3 { margin: 15px 0 10px 0; font-size: 1.1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
@@ -360,6 +360,11 @@
             <div class="shard-text">💎 <span id="c-shard">0</span></div>
         </div>
 
+        <!-- BOSS TIMER UI -->
+        <div id="boss-timer-ui" style="display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 2.5rem; font-weight: 900; color: #ff5252; text-shadow: 0 0 10px #000, 0 0 20px #ff0000; z-index: 100; pointer-events: none;">
+            <span id="boss-timer-text">75.0s</span>
+        </div>
+
         <!-- Notifications & Popups -->
         <div id="notification"></div>
         
@@ -375,6 +380,9 @@
         <div id="joystick-zone">
             <div id="j-base" class="joystick-base"><div id="j-stick" class="joystick-stick"></div></div>
         </div>
+
+        <!-- BOSS MODAL -->
+        <div id="boss-modal"></div>
 
         <!-- Inventory Modal -->
         <div id="inventory-modal">
@@ -546,8 +554,11 @@
                 e.preventDefault();
                 if (GameState.activeInteractable) {
                     if (GameState.activeInteractable.type === 'WORKBENCH') UI.openWorkbench();
-                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') { document.getElementById('bounty-modal').style.display = 'flex'; UI.renderBountyBoard(); }
-                    if (GameState.activeInteractable instanceof VillageNPC) showNotification(GameState.activeInteractable.message);
+                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') { document.getElementById('bounty-modal').style.display = 'flex'; if (typeof UI.renderBountyBoard === 'function') UI.renderBountyBoard(); }
+                    if (GameState.activeInteractable instanceof VillageNPC) {
+                        if (typeof UI.openBossMenu === 'function') UI.openBossMenu();
+                        else showNotification(GameState.activeInteractable.message);
+                    }
                 }
             });
         });
