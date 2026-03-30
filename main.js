@@ -636,20 +636,34 @@ class Projectile {
         if (this.markedForDeletion) return;
         this.currentLifetime += dt;
         if (this.currentLifetime >= this.lifetime) { this.markedForDeletion = true; return; }
+        
         if (this.target && this.target.hp > 0) {
             let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
             let angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed * dt; this.y += Math.sin(angle) * this.speed * dt;
+            this.x += Math.cos(angle) * this.speed * dt; 
+            this.y += Math.sin(angle) * this.speed * dt;
+            
             if (dist < this.radius + this.target.radius) { 
-                this.target.takeDamage(this.damage, this.isCrit); this.markedForDeletion = true; 
-                spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
+                
+                if (typeof this.target.takeDamage === 'function') {
+                    this.target.takeDamage(this.damage, this.isCrit); 
+                }
+                
+                this.markedForDeletion = true; 
+                if (typeof spawnAura === 'function') {
+                    spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
+                }
             }
-        } else { this.markedForDeletion = true; }
+        } else { 
+            this.markedForDeletion = true; 
+        }
     }
     draw(ctx) {
         if (this.markedForDeletion) return;
-        ctx.save(); if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
-        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        ctx.save(); 
+        if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
+        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); 
+        ctx.restore();
     }
 }
 
