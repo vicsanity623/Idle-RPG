@@ -210,6 +210,108 @@ class Enemy {
     }
 }
 
+// --- NEW: BOSS ENEMY CLASS ---
+class BossEnemy extends Enemy {
+    constructor(x, y, bossLevel) {
+        super(x, y);
+        this.radius = 45; // Massive size
+        this.bossLevel = bossLevel;
+        
+        // 25% compounding increase per level
+        let statMultiplier = Math.pow(1.25, bossLevel - 1);
+        
+        this.maxHp = 15000 * statMultiplier; 
+        this.hp = this.maxHp;
+        this.damage = 100 * statMultiplier; 
+        this.speed = 180 + (bossLevel * 5); // Slightly slower, but speeds up per level
+        
+        this.fireType = 'burst'; // Shoots massive bursts
+        this.fireCooldown = 2.0;
+        this.slamCooldown = 4.0; // AOE Ground Slam Timer
+    }
+
+    update(dt) {
+        if (!player) return;
+
+        let dx = player.x - this.x, dy = player.y - this.y, dist = Math.hypot(dx, dy);
+        
+        // Boss walks directly at the player without flanking
+        let angleToPlayer = Math.atan2(dy, dx);
+        let moveStep = this.speed * dt;
+        
+        if (dist > this.radius + player.radius) {
+            this.x += Math.cos(angleToPlayer) * moveStep;
+            this.y += Math.sin(angleToPlayer) * moveStep;
+        }
+
+        // Projectile Attacks
+        this.handleShooting(dt, dist);
+
+        // AOE Ground Slam
+        this.slamCooldown -= dt;
+        if (this.slamCooldown <= 0 && dist < 300) {
+            this.slamCooldown = 3.0; // Slam every 3 seconds
+            spawnFloatingText(this.x, this.y - 60, "SLAM!", '#ff00ff');
+            // SOTA Shockwave
+            entities.push(new ExpandingRing(this.x, this.y, '#ff00ff', 250, 0.5));
+            
+            // Check if player is caught in the blast
+            if (dist < 250) {
+                player.takeDamage(this.damage * 2); // Double damage slam
+            }
+        }
+    }
+
+    fireProjectile() {
+        // Boss shoots 3 spread projectiles
+        spawnProjectile(this.x, this.y, player, this.damage, false, true);
+        
+        // Faux spread by targeting a slightly offset ghost of the player
+        let offsetP1 = { x: player.x + 100, y: player.y + 100, hp: 1, radius: 18 };
+        let offsetP2 = { x: player.x - 100, y: player.y - 100, hp: 1, radius: 18 };
+        spawnProjectile(this.x, this.y, offsetP1, this.damage, false, true);
+        spawnProjectile(this.x, this.y, offsetP2, this.damage, false, true);
+    }
+
+    takeDamage(amt, isCrit) {
+        let fearMultiplier = 1 + (player.getFearValue() / 100);
+        let finalDamage = amt * fearMultiplier;
+        this.hp -= finalDamage; 
+        
+        spawnFloatingText(this.x, this.y, isCrit ? `CRIT ${window.FormatNumber(finalDamage)}` : window.FormatNumber(finalDamage), isCrit ? '#ff0' : '#fff');
+        
+        if (this.hp <= 0) {
+            this.markedForDeletion = true;
+            // TRIGGER THE VICTORY SCREEN
+            if (typeof window.winBossArena === 'function') window.winBossArena();
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff00ff'; // Boss glow
+        ctx.fillStyle = '#aa0000';   // Dark red boss body
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        
+        // Crown
+        ctx.fillStyle = '#ffd700';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('👑', this.x, this.y - 20);
+        
+        // Massive Boss HP Bar
+        ctx.fillStyle = '#000'; ctx.fillRect(this.x - 40, this.y - 60, 80, 8);
+        ctx.fillStyle = '#ff5252'; ctx.fillRect(this.x - 40, this.y - 60, 80 * (Math.max(0, this.hp)/this.maxHp), 8);
+        
+        // Boss Level Text
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px Arial';
+        ctx.fillText(`Lv.${this.bossLevel}`, this.x, this.y - 70);
+        ctx.restore();
+    }
+}
+
 // --- WORLD ENTITIES ---
 class Loot {
     constructor(x, y, type) { this.x = x; this.y = y; this.type = type; this.radius = 8; this.life = 15; this.floatY = 0; this.time = Math.random() * 10; this.markedForDeletion = false; }
