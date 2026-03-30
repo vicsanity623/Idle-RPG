@@ -174,7 +174,13 @@ class Enemy {
         }
     }
 
-    fireProjectile() { spawnProjectile(this.x, this.y, player, this.damage, false, true); }
+    fireProjectile() {
+        spawnProjectile(this.x, this.y, player, this.damage, false, true);
+        let offsetP1 = { x: player.x + 150, y: player.y + 150, hp: 1, radius: 18, takeDamage: () => {} };
+        let offsetP2 = { x: player.x - 150, y: player.y - 150, hp: 1, radius: 18, takeDamage: () => {} };
+        spawnProjectile(this.x, this.y, offsetP1, this.damage, false, true);
+        spawnProjectile(this.x, this.y, offsetP2, this.damage, false, true);
+    }
 
     takeDamage(amt, isCrit) {
         let fearMultiplier = 1 + (player.getFearValue() / 100);
