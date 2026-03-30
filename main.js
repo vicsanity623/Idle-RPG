@@ -710,9 +710,18 @@ function gainXp(amt) {
 }
 
 function die() {
+    Input.joystick.active = false;
+    let jBase = document.getElementById('j-base');
+    if (jBase) jBase.style.display = 'none';
+    player.vx = 0;
+    player.vy = 0;
+
     if (GameState.state === 'BOSS_ARENA') { failBossArena(); return; }
-    GameState.state = 'DEAD'; PlayerData.gold = Math.floor(PlayerData.gold / 2); PlayerData.shards = Math.floor(PlayerData.shards / 2);
-    UI.notify("YOU DIED. Wealth halved."); saveGame();
+    GameState.state = 'DEAD'; 
+    PlayerData.gold = Math.floor(PlayerData.gold / 2); 
+    PlayerData.shards = Math.floor(PlayerData.shards / 2);
+    UI.notify("YOU DIED. Wealth halved."); 
+    saveGame();
     setTimeout(() => { initLevel(false); GameState.state = 'PLAYING'; }, 2000);
 }
 
