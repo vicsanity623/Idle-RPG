@@ -5,8 +5,8 @@
 
 // --- 1. CORE CONFIGURATION ---
 const TILE_SIZE = 64;
-window.MAP_SIZE = 60;       
-window.VILLAGE_START = 45;  
+window.MAP_SIZE = 60;
+window.VILLAGE_START = 45;
 const GEAR_TYPES = ['Weapon', 'Armor', 'Legs', 'Fists', 'Head', 'Robe', 'Ring', 'Earrings', 'Necklace', 'Boots'];
 
 const ACTIVE_SKILLS_CONFIG = {
@@ -30,54 +30,54 @@ const BOUNTY_CONFIG = [
 ];
 
 const REFS = {
-    canvas:           document.getElementById('game-canvas'),
-    pLevel:           document.getElementById('p-level'),
-    hpFill:           document.getElementById('hp-fill'),
-    hpText:           document.getElementById('hp-text'),
-    xpFill:           document.getElementById('xp-fill'),
-    xpText:           document.getElementById('xp-text'),
-    cGold:            document.getElementById('c-gold'),
-    cShard:           document.getElementById('c-shard'),
-    invModal:         document.getElementById('inventory-modal'),
-    statsSheet:       document.getElementById('stats-sheet'),
-    gearGrid:         document.getElementById('gear-grid'),
-    bagGrid:          document.getElementById('bag-grid'),
-    notification:     document.getElementById('notification'),
-    dailyLogin:       document.getElementById('daily-login'),
-    deltaPopup:       document.getElementById('stat-delta-popup'),
-    deltaTitle:       document.getElementById('delta-title'),
-    deltaContent:     document.getElementById('delta-content'),
-    depthLevel:       document.getElementById('d-level'),
-    loadingFill:      document.getElementById('loading-fill'),
-    loadingScreen:    document.getElementById('loading-screen'),
-    mainMenu:         document.getElementById('main-menu'),
-    uiLayer:          document.getElementById('ui-layer'),
-    playBtn:          document.getElementById('play-btn'),
-    itemDetailPanel:  document.getElementById('item-detail-panel'),
-    detailName:       document.getElementById('detail-item-name'),
-    detailRarity:     document.getElementById('detail-rarity-text'),
-    selectedStats:    document.getElementById('selected-stats-list'),
-    equippedStats:    document.getElementById('equipped-stats-list'),
-    equipBtn:         document.getElementById('equip-unequip-btn'),
-    discardBtn:       document.getElementById('discard-btn'),
-    portalUI:         document.getElementById('portal-ui'),
-    portalCost:       document.getElementById('portal-cost-text'),
-    unlockBtn:        document.getElementById('unlock-portal-btn'),
-    workbenchModal:   document.getElementById('workbench-modal'),
-    bountyModal:      document.getElementById('bounty-modal'),
-    skillAmpList:     document.getElementById('skill-amp-list'),
-    bountyList:       document.getElementById('bounty-list'),
+    canvas: document.getElementById('game-canvas'),
+    pLevel: document.getElementById('p-level'),
+    hpFill: document.getElementById('hp-fill'),
+    hpText: document.getElementById('hp-text'),
+    xpFill: document.getElementById('xp-fill'),
+    xpText: document.getElementById('xp-text'),
+    cGold: document.getElementById('c-gold'),
+    cShard: document.getElementById('c-shard'),
+    invModal: document.getElementById('inventory-modal'),
+    statsSheet: document.getElementById('stats-sheet'),
+    gearGrid: document.getElementById('gear-grid'),
+    bagGrid: document.getElementById('bag-grid'),
+    notification: document.getElementById('notification'),
+    dailyLogin: document.getElementById('daily-login'),
+    deltaPopup: document.getElementById('stat-delta-popup'),
+    deltaTitle: document.getElementById('delta-title'),
+    deltaContent: document.getElementById('delta-content'),
+    depthLevel: document.getElementById('d-level'),
+    loadingFill: document.getElementById('loading-fill'),
+    loadingScreen: document.getElementById('loading-screen'),
+    mainMenu: document.getElementById('main-menu'),
+    uiLayer: document.getElementById('ui-layer'),
+    playBtn: document.getElementById('play-btn'),
+    itemDetailPanel: document.getElementById('item-detail-panel'),
+    detailName: document.getElementById('detail-item-name'),
+    detailRarity: document.getElementById('detail-rarity-text'),
+    selectedStats: document.getElementById('selected-stats-list'),
+    equippedStats: document.getElementById('equipped-stats-list'),
+    equipBtn: document.getElementById('equip-unequip-btn'),
+    discardBtn: document.getElementById('discard-btn'),
+    portalUI: document.getElementById('portal-ui'),
+    portalCost: document.getElementById('portal-cost-text'),
+    unlockBtn: document.getElementById('unlock-portal-btn'),
+    workbenchModal: document.getElementById('workbench-modal'),
+    bountyModal: document.getElementById('bounty-modal'),
+    skillAmpList: document.getElementById('skill-amp-list'),
+    bountyList: document.getElementById('bounty-list'),
     // Boss REFS (We will add these to HTML next)
-    bossModal:        document.getElementById('boss-modal'),
-    bossTimerUI:      document.getElementById('boss-timer-ui'),
-    bossTimerText:    document.getElementById('boss-timer-text'),
-    leaveBossBtn:     document.getElementById('leave-boss-btn')
+    bossModal: document.getElementById('boss-modal'),
+    bossTimerUI: document.getElementById('boss-timer-ui'),
+    bossTimerText: document.getElementById('boss-timer-text'),
+    leaveBossBtn: document.getElementById('leave-boss-btn')
 };
 
 const ctx = REFS.canvas ? REFS.canvas.getContext('2d') : null;
 
 window.GameState = {
-    state: 'BOOT', 
+    state: 'BOOT',
     level: 1,
     camera: { x: 0, y: 0 },
     lastTime: 0,
@@ -87,28 +87,28 @@ window.GameState = {
     bossTimer: 0 // New Boss Timer
 };
 
-window.Input = { joystick: { active: false, angle: 0, x:0, y:0 }, dashPressed: false };
+window.Input = { joystick: { active: false, angle: 0, x: 0, y: 0 }, dashPressed: false };
 
 window.PlayerData = {
     gold: 750, shards: 100, level: 1, dungeonLevel: 1, xp: 0, maxXp: 100, inventory: [],
     gear: {
-        'Weapon':   { level: 1, atk: 25, critMult: 0.20, rarity: 'Common' },
-        'Armor':    { level: 1, hp: 60, def: 15, rarity: 'Common' },
-        'Legs':     { level: 1, def: 12, hp: 40, rarity: 'Common' },
-        'Fists':    { level: 1, critChance: 5.0, atk: 15, rarity: 'Common' },
-        'Head':     { level: 1, hp: 30, def: 10, rarity: 'Common' },
-        'Robe':     { level: 1, regen: 1.5, hp: 20, rarity: 'Common' },
-        'Ring':     { level: 1, atk: 12, critChance: 4.5, rarity: 'Common' },
+        'Weapon': { level: 1, atk: 25, critMult: 0.20, rarity: 'Common' },
+        'Armor': { level: 1, hp: 60, def: 15, rarity: 'Common' },
+        'Legs': { level: 1, def: 12, hp: 40, rarity: 'Common' },
+        'Fists': { level: 1, critChance: 5.0, atk: 15, rarity: 'Common' },
+        'Head': { level: 1, hp: 30, def: 10, rarity: 'Common' },
+        'Robe': { level: 1, regen: 1.5, hp: 20, rarity: 'Common' },
+        'Ring': { level: 1, atk: 12, critChance: 4.5, rarity: 'Common' },
         'Earrings': { level: 1, critMult: 0.15, regen: 0.8, rarity: 'Common' },
         'Necklace': { level: 1, regen: 2.0, hp: 25, rarity: 'Common' },
-        'Boots':    { level: 1, def: 10, atkSpeed: 0.15, rarity: 'Common' } 
+        'Boots': { level: 1, def: 10, atkSpeed: 0.15, rarity: 'Common' }
     },
     skillAmps: {},
     questLog: { totalKills: 0 },
     claimedBounties: [],
     activeBounties: [], // INFINITE PROCEDURAL BOUNTIES
     bossLevel: 1,       // INFINITE BOSS PROGRESSION
-    lastPlayed: Date.now() 
+    lastPlayed: Date.now()
 };
 
 // --- INFINITE QUEST GENERATOR ---
@@ -116,7 +116,7 @@ function generateProceduralBounty() {
     let pLvl = Math.max(1, PlayerData.level);
     let types = ['kills', 'gold_collect'];
     let type = types[randomInt(0, 1)];
-    
+
     let goal, title, rewardG, rewardS;
     if (type === 'kills') {
         goal = randomInt(10, 50) * Math.ceil(pLvl / 2);
@@ -131,7 +131,7 @@ function generateProceduralBounty() {
     }
 
     return {
-        id: `proc_${Date.now()}_${randomInt(0,9999)}`,
+        id: `proc_${Date.now()}_${randomInt(0, 9999)}`,
         title: title,
         type: type,
         goal: goal,
@@ -142,7 +142,7 @@ function generateProceduralBounty() {
     };
 }
 
-window.FormatNumber = function(value) {
+window.FormatNumber = function (value) {
     if (value === 0 || value == null) return "0";
     if (Math.abs(value) < 1000) return (Math.floor(value * 100) / 100).toString();
     let isNegative = value < 0; value = Math.abs(value);
@@ -162,7 +162,7 @@ window.FormatNumber = function(value) {
         } else {
             let adjustedN = n - 475254; let subS = "";
             while (adjustedN >= 0) { subS = String.fromCharCode((adjustedN % 26) + 65) + subS; adjustedN = Math.floor(adjustedN / 26) - 1; }
-            suffix = "S" + subS; 
+            suffix = "S" + subS;
         }
     }
     return (isNegative ? "-" : "") + numStr + suffix;
@@ -209,19 +209,19 @@ const UI = {
     },
     updateMinimap: () => {
         let mmCanvas = document.getElementById('minimap'); if (!mmCanvas) return;
-        let mmCtx = mmCanvas.getContext('2d'); mmCtx.clearRect(0,0,100,100); let cellW = 100 / window.MAP_SIZE;
-        for(let r=0; r<window.MAP_SIZE; r++){
-            for(let c=0; c<window.MAP_SIZE; c++){
-                if(exploredGrid[r][c]) {
-                    if (r >= window.VILLAGE_START) mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50'; 
-                    else mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#333' : '#777'; 
-                    mmCtx.fillRect(c*cellW, r*cellW, cellW, cellW);
+        let mmCtx = mmCanvas.getContext('2d'); mmCtx.clearRect(0, 0, 100, 100); let cellW = 100 / window.MAP_SIZE;
+        for (let r = 0; r < window.MAP_SIZE; r++) {
+            for (let c = 0; c < window.MAP_SIZE; c++) {
+                if (exploredGrid[r][c]) {
+                    if (r >= window.VILLAGE_START) mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50';
+                    else mmCtx.fillStyle = mapGrid[r][c] === 1 ? '#333' : '#777';
+                    mmCtx.fillRect(c * cellW, r * cellW, cellW, cellW);
                 }
             }
         }
-        mmCtx.fillStyle = '#bb86fc'; mmCtx.fillRect((player.x/TILE_SIZE)*cellW, (player.y/TILE_SIZE)*cellW, cellW, cellW);
-        if(portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) {
-            mmCtx.fillStyle = '#00e5ff'; mmCtx.fillRect((portal.x/TILE_SIZE)*cellW, (portal.y/TILE_SIZE)*cellW, cellW, cellW);
+        mmCtx.fillStyle = '#bb86fc'; mmCtx.fillRect((player.x / TILE_SIZE) * cellW, (player.y / TILE_SIZE) * cellW, cellW, cellW);
+        if (portal && exploredGrid[Math.floor(portal.y / TILE_SIZE)][Math.floor(portal.x / TILE_SIZE)]) {
+            mmCtx.fillStyle = '#00e5ff'; mmCtx.fillRect((portal.x / TILE_SIZE) * cellW, (portal.y / TILE_SIZE) * cellW, cellW, cellW);
         }
     },
     toggleInventory: () => {
@@ -255,7 +255,7 @@ const UI = {
                 let gear = PlayerData.gear[type]; if (!gear) return;
                 let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 20;
                 let canAfford = PlayerData.shards >= sCost && PlayerData.gold >= gCost; let statLines = [];
-                let statMap = { atk:'Atk', hp:'HP', def:'Def', regen:'Reg', critChance:'Crit%', critMult:'CritX', atkSpeed:'Spd' };
+                let statMap = { atk: 'Atk', hp: 'HP', def: 'Def', regen: 'Reg', critChance: 'Crit%', critMult: 'CritX', atkSpeed: 'Spd' };
                 for (let [key, label] of Object.entries(statMap)) { if (stats[key]) statLines.push(`<span style="color:#03dac6">+${FormatNumber(stats[key])}${label}</span>`); }
                 if (gear.affix) statLines.push(`<span style="color:var(--rarity-legendary)">${gear.affix.label}</span>`);
                 let div = document.createElement('div'); div.className = 'gear-item';
@@ -298,8 +298,8 @@ const UI = {
         PlayerData.inventory.splice(index, 1); let currentlyEquipped = PlayerData.gear[slot]; if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped); PlayerData.gear[slot] = itemToEquip;
         player.hp = Math.min(player.hp, player.getMaxHp()); UI.renderInventory(); UI.updateStats(); saveGame();
         let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
-        let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},{k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'},{k:'cp',l:'cp'}];
-        keys.forEach(s => { if(newStats[s.k] !== undefined && oldStats[s.k] !== undefined) { let d = newStats[s.k] - oldStats[s.k]; if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); } });
+        let deltas = [], keys = [{ k: 'hp', l: 'Max HP' }, { k: 'atk', l: 'Attack' }, { k: 'def', l: 'Defense' }, { k: 'regen', l: 'Regen' }, { k: 'crit', l: 'Crit %' }, { k: 'cx', l: 'Crit X' }, { k: 'sp', l: 'Atk Spd' }, { k: 'mag', l: 'Magnet' }, { k: 'grd', l: 'Gold Farmer' }, { k: 'wis', l: 'XP Fiend' }, { k: 'fear', l: 'Fear Aura' }, { k: 'cp', l: 'cp' }];
+        keys.forEach(s => { if (newStats[s.k] !== undefined && oldStats[s.k] !== undefined) { let d = newStats[s.k] - oldStats[s.k]; if (Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({ label: s.l, oldVal: oldStats[s.k], newVal: newStats[s.k], diff: d }); } });
         if (deltas.length > 0) UI.showDelta(`Equipped: ${itemToEquip.name}`, deltas);
     },
     discardItem: (index) => {
@@ -309,13 +309,13 @@ const UI = {
         UI.renderInventory(); UI.updateCurrencies(); UI.notify(`Discarded ${item.name} (+${FormatNumber(reward)} 💎)`); REFS.itemDetailPanel.style.display = 'none'; saveGame();
     },
     unequipItem: (slot) => {
-        let itemToUnequip = PlayerData.gear[slot]; if (!itemToUnequip) return; 
+        let itemToUnequip = PlayerData.gear[slot]; if (!itemToUnequip) return;
         let oldStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
-        PlayerData.inventory.push(itemToUnequip); PlayerData.gear[slot] = null; 
+        PlayerData.inventory.push(itemToUnequip); PlayerData.gear[slot] = null;
         player.hp = Math.min(player.hp, player.getMaxHp()); UI.renderInventory(); UI.updateStats(); saveGame();
         let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
-        let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},{k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'},{k:'cp',l:'cp'}];
-        keys.forEach(s => { if(newStats[s.k] !== undefined && oldStats[s.k] !== undefined) { let d = newStats[s.k] - oldStats[s.k]; if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); } });
+        let deltas = [], keys = [{ k: 'hp', l: 'Max HP' }, { k: 'atk', l: 'Attack' }, { k: 'def', l: 'Defense' }, { k: 'regen', l: 'Regen' }, { k: 'crit', l: 'Crit %' }, { k: 'cx', l: 'Crit X' }, { k: 'sp', l: 'Atk Spd' }, { k: 'mag', l: 'Magnet' }, { k: 'grd', l: 'Gold Farmer' }, { k: 'wis', l: 'XP Fiend' }, { k: 'fear', l: 'Fear Aura' }, { k: 'cp', l: 'cp' }];
+        keys.forEach(s => { if (newStats[s.k] !== undefined && oldStats[s.k] !== undefined) { let d = newStats[s.k] - oldStats[s.k]; if (Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({ label: s.l, oldVal: oldStats[s.k], newVal: newStats[s.k], diff: d }); } });
         if (deltas.length > 0) UI.showDelta(`Unequipped: ${itemToUnequip.name || slot}`, deltas);
     },
     upgradeGear: (type) => {
@@ -323,7 +323,7 @@ const UI = {
         let stats = gear.stats || gear, lvl = gear.level || 1, sCost = lvl * 10, gCost = lvl * 20;
         if (PlayerData.shards >= sCost && PlayerData.gold >= gCost) {
             PlayerData.shards -= sCost; PlayerData.gold -= gCost; gear.level = lvl + 1;
-            if (stats.atk !== undefined) stats.atk += randomInt(3, 7); if (stats.hp !== undefined) stats.hp += randomInt(15, 30); if (stats.def !== undefined) stats.def += randomInt(2, 5); if (stats.regen !== undefined) stats.regen += 0.2; if (stats.critChance !== undefined) stats.critChance += 0.4; if (stats.critMult !== undefined) stats.critMult += 0.03; if (stats.atkSpeed !== undefined) stats.atkSpeed = Math.min(0.6, stats.atkSpeed + 0.01); 
+            if (stats.atk !== undefined) stats.atk += randomInt(3, 7); if (stats.hp !== undefined) stats.hp += randomInt(15, 30); if (stats.def !== undefined) stats.def += randomInt(2, 5); if (stats.regen !== undefined) stats.regen += 0.2; if (stats.critChance !== undefined) stats.critChance += 0.4; if (stats.critMult !== undefined) stats.critMult += 0.03; if (stats.atkSpeed !== undefined) stats.atkSpeed = Math.min(0.6, stats.atkSpeed + 0.01);
             UI.renderInventory(); UI.updateStats(); saveGame(); UI.notify(`${type} Specialized!`);
         } else UI.notify("Need more Gold or Shards!");
     },
@@ -341,7 +341,7 @@ const UI = {
         if (UI._deltaTimeout) clearTimeout(UI._deltaTimeout); UI._deltaTimeout = setTimeout(() => { REFS.deltaPopup.style.opacity = 0; }, 2000);
     },
     notify: (msg) => { REFS.notification.innerText = msg; REFS.notification.style.opacity = 1; if (UI._notifTimeout) clearTimeout(UI._notifTimeout); UI._notifTimeout = setTimeout(() => REFS.notification.style.opacity = 0, 2000); },
-    
+
     checkDailyLogin: () => {
         let now = Date.now();
         let lastPlayed = PlayerData.lastPlayed || now;
@@ -353,17 +353,17 @@ const UI = {
 
         if (cappedSeconds >= 60 || isNewDay) {
             let kills = Math.floor(cappedSeconds / 2);
-            let offShards = Math.floor(cappedSeconds / 180) * 5; 
+            let offShards = Math.floor(cappedSeconds / 180) * 5;
             let offGold = kills * (PlayerData.level * 5);
             let offXp = kills * (PlayerData.level * 2);
 
             UI._pendingOffline = { gold: offGold + dailyGold, shards: offShards + dailyShards, xp: offXp, kills: kills };
 
-            let offTimeRef = document.getElementById('off-time'); if(offTimeRef) offTimeRef.innerText = Math.floor(cappedSeconds / 60) + "m";
-            let offKillsRef = document.getElementById('off-kills'); if(offKillsRef) offKillsRef.innerText = FormatNumber(kills);
-            let offGoldRef = document.getElementById('off-gold'); if(offGoldRef) offGoldRef.innerText = FormatNumber(UI._pendingOffline.gold);
-            let offShardsRef = document.getElementById('off-shards'); if(offShardsRef) offShardsRef.innerText = FormatNumber(UI._pendingOffline.shards);
-            let offXpRef = document.getElementById('off-xp'); if(offXpRef) offXpRef.innerText = FormatNumber(offXp);
+            let offTimeRef = document.getElementById('off-time'); if (offTimeRef) offTimeRef.innerText = Math.floor(cappedSeconds / 60) + "m";
+            let offKillsRef = document.getElementById('off-kills'); if (offKillsRef) offKillsRef.innerText = FormatNumber(kills);
+            let offGoldRef = document.getElementById('off-gold'); if (offGoldRef) offGoldRef.innerText = FormatNumber(UI._pendingOffline.gold);
+            let offShardsRef = document.getElementById('off-shards'); if (offShardsRef) offShardsRef.innerText = FormatNumber(UI._pendingOffline.shards);
+            let offXpRef = document.getElementById('off-xp'); if (offXpRef) offXpRef.innerText = FormatNumber(offXp);
 
             REFS.dailyLogin.style.display = 'block';
             if (isNewDay) localStorage.setItem('dof_lastLoginDay', new Date().toDateString());
@@ -395,8 +395,8 @@ const UI = {
         if (!player || PlayerData.inventory.length === 0) { UI.notify("Bag is already empty!"); return; }
         let itemsSwapped = 0; const slotGroups = {}; PlayerData.inventory.forEach(item => { if (!slotGroups[item.slot]) slotGroups[item.slot] = []; slotGroups[item.slot].push(item); });
         for (let slot in slotGroups) {
-            slotGroups[slot].sort((a,b) => { let sumA = Object.values(a.stats || a).reduce((p,c) => typeof c === 'number' ? p+c : p, 0); let sumB = Object.values(b.stats || b).reduce((p,c) => typeof c === 'number' ? p+c : p, 0); return sumB - sumA; });
-            let bestInBag = slotGroups[slot][0]; let currentlyEquipped = PlayerData.gear[slot]; let currentSum = currentlyEquipped ? Object.values(currentlyEquipped.stats || currentlyEquipped).reduce((p,c) => typeof c === 'number' ? p+c : p, 0) : 0; let bestSum = Object.values(bestInBag.stats || bestInBag).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
+            slotGroups[slot].sort((a, b) => { let sumA = Object.values(a.stats || a).reduce((p, c) => typeof c === 'number' ? p + c : p, 0); let sumB = Object.values(b.stats || b).reduce((p, c) => typeof c === 'number' ? p + c : p, 0); return sumB - sumA; });
+            let bestInBag = slotGroups[slot][0]; let currentlyEquipped = PlayerData.gear[slot]; let currentSum = currentlyEquipped ? Object.values(currentlyEquipped.stats || currentlyEquipped).reduce((p, c) => typeof c === 'number' ? p + c : p, 0) : 0; let bestSum = Object.values(bestInBag.stats || bestInBag).reduce((p, c) => typeof c === 'number' ? p + c : p, 0);
             if (bestSum > currentSum) { let idx = PlayerData.inventory.indexOf(bestInBag); UI.equipItem(idx); itemsSwapped++; }
         }
         let rewardTotal = 0; while (PlayerData.inventory.length > 0) { let item = PlayerData.inventory[0]; let reward = 5; if (item.rarity === 'Legendary' || item.rarity === 'LEGENDARY RELIC') reward = 50; else if (item.rarity === 'Epic') reward = 20; else if (item.rarity === 'Rare') reward = 10; rewardTotal += reward; PlayerData.inventory.splice(0, 1); }
@@ -405,8 +405,8 @@ const UI = {
 
     // --- PHASE 3: INFINITE BOUNTY BOARD ---
     renderBountyBoard: () => {
-        if (!REFS.bountyList) return; 
-        if (!PlayerData.questLog) PlayerData.questLog = { totalKills: 0 }; 
+        if (!REFS.bountyList) return;
+        if (!PlayerData.questLog) PlayerData.questLog = { totalKills: 0 };
         if (!PlayerData.claimedBounties) PlayerData.claimedBounties = [];
         if (!PlayerData.activeBounties) PlayerData.activeBounties = [];
 
@@ -415,17 +415,17 @@ const UI = {
             PlayerData.activeBounties.push(generateProceduralBounty());
         }
 
-        let html = ''; 
-        
+        let html = '';
+
         // 1. Render Static Milestones
         BOUNTY_CONFIG.forEach(b => {
             let isClaimed = PlayerData.claimedBounties.includes(b.id);
             if (isClaimed) return; // Hide completed static milestones
-            
-            let current = b.type === 'kills' ? PlayerData.questLog.totalKills : GameState.level; 
-            let progress = Math.min(100, (current / b.goal) * 100); 
+
+            let current = b.type === 'kills' ? PlayerData.questLog.totalKills : GameState.level;
+            let progress = Math.min(100, (current / b.goal) * 100);
             let canClaim = progress >= 100;
-            
+
             html += `<div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid ${canClaim ? 'var(--gold)' : '#333'}; margin-bottom: 10px; position: relative;">
                 <h4 style="color: var(--gold);">${b.title} <span style="font-size:0.6rem; background:red; color:white; padding:2px 4px; border-radius:4px;">MILESTONE</span></h4>
                 <p style="font-size: 0.8rem; color: #aaa;">Goal: ${b.goal} ${b.type === 'kills' ? 'Kills' : 'Depth reached'}</p>
@@ -441,7 +441,7 @@ const UI = {
         PlayerData.activeBounties.forEach(b => {
             let current = b.type === 'kills' ? PlayerData.questLog.totalKills - b.progress : PlayerData.gold - b.progress;
             // Hack to make gold quests track total earned since accepting, not current bank balance
-            if (b.type === 'gold_collect' && b.progress === 0) b.progress = PlayerData.gold; 
+            if (b.type === 'gold_collect' && b.progress === 0) b.progress = PlayerData.gold;
             if (b.type === 'kills' && b.progress === 0) b.progress = PlayerData.questLog.totalKills;
 
             let trackedCurrent = b.type === 'kills' ? (PlayerData.questLog.totalKills - b.progress) : (PlayerData.gold - b.progress);
@@ -465,7 +465,7 @@ const UI = {
 
     claimBounty: (id) => {
         // 1. Check if it's a static milestone
-        let staticB = BOUNTY_CONFIG.find(x => x.id === id); 
+        let staticB = BOUNTY_CONFIG.find(x => x.id === id);
         if (staticB) {
             PlayerData.gold += staticB.rewardGold; PlayerData.shards += staticB.rewardShards; PlayerData.claimedBounties.push(id);
             if (staticB.rewardRelic) { let godItem = generateRandomGear(GameState.level, true); PlayerData.inventory.push(godItem); UI.notify(`REWARD: 50X POWER ${godItem.name} FOUND!`); }
@@ -527,9 +527,9 @@ function generateDungeon() {
     while (floorCount < maxFloors) {
         let dir = randomInt(0, 3);
         if (dir === 0 && y > 2) y--; else if (dir === 1 && y < window.VILLAGE_START - 2) y++; else if (dir === 2 && x > 2) x--; else if (dir === 3 && x < window.MAP_SIZE - 3) x++;
-        if (mapGrid[y][x] === 1) { mapGrid[y][x] = 0; if(Math.random() > 0.5 && mapGrid[y+1]) mapGrid[y+1][x] = 0; floorCount++; }
+        if (mapGrid[y][x] === 1) { mapGrid[y][x] = 0; if (Math.random() > 0.5 && mapGrid[y + 1]) mapGrid[y + 1][x] = 0; floorCount++; }
     }
-    portal = { x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, radius: 30 };
+    portal = { x: x * TILE_SIZE + TILE_SIZE / 2, y: y * TILE_SIZE + TILE_SIZE / 2, radius: 30 };
 }
 
 function isWall(x, y) {
@@ -539,7 +539,7 @@ function isWall(x, y) {
 }
 
 // --- BOSS STATE MACHINE ---
-window.startBossArena = function(cost) {
+window.startBossArena = function (cost) {
     if (PlayerData.gold < cost) { UI.notify("Not enough Gold!"); return; }
     PlayerData.gold -= cost; UI.updateCurrencies();
     if (REFS.bossModal) REFS.bossModal.style.display = 'none';
@@ -556,15 +556,15 @@ window.startBossArena = function(cost) {
     for (let r = 0; r < window.MAP_SIZE; r++) {
         for (let c = 0; c < window.MAP_SIZE; c++) {
             if (Math.hypot(c - cx, r - cy) < 12) {
-                mapGrid[r][c] = 0; 
+                mapGrid[r][c] = 0;
                 exploredGrid[r][c] = true;
             }
         }
     }
 
     entities = []; particles = []; floatingTexts = []; portal = null;
-    
-    player.x = cx * TILE_SIZE; 
+
+    player.x = cx * TILE_SIZE;
     player.y = (cy + 8) * TILE_SIZE;
     player.hp = player.getMaxHp();
     entities.push(player);
@@ -575,23 +575,23 @@ window.startBossArena = function(cost) {
     }
 };
 
-window.failBossArena = function() {
+window.failBossArena = function () {
     GameState.state = 'DEAD';
     if (REFS.bossTimerUI) REFS.bossTimerUI.style.display = 'none';
     UI.notify("TIME UP! YOU WERE DEFEATED.");
-    setTimeout(() => { initLevel(false); GameState.state = 'PLAYING'; }, 2000);
+    setTimeout(() => { initLevel(true); GameState.state = 'PLAYING'; }, 2000);
 };
 
-window.winBossArena = function() {
+window.winBossArena = function () {
     if (REFS.bossTimerUI) REFS.bossTimerUI.style.display = 'none';
     PlayerData.bossLevel = (PlayerData.bossLevel || 1) + 1;
-    
+
     // Massive Loot
     let goldReward = (PlayerData.bossLevel * 5000);
     let shardReward = (PlayerData.bossLevel * 100);
     PlayerData.gold += goldReward;
     PlayerData.shards += shardReward;
-    
+
     let bossLoot = generateRandomGear(GameState.level, true); // Force Legendary
     PlayerData.inventory.push(bossLoot);
     saveGame();
@@ -613,10 +613,10 @@ window.winBossArena = function() {
     }
 };
 
-window.leaveBossArena = function() {
+window.leaveBossArena = function () {
     if (REFS.bossModal) REFS.bossModal.style.display = 'none';
     if (REFS.bossTimerUI) REFS.bossTimerUI.style.display = 'none';
-    initLevel(false);
+    initLevel(true);
     GameState.state = 'PLAYING';
 };
 
@@ -626,43 +626,43 @@ function spawnLoot(x, y, type) { entities.push(new Loot(x, y, type)); }
 
 class Projectile {
     constructor(x, y, target, speed, damage, isCrit, isEnemy = false) {
-        this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage; 
+        this.x = x; this.y = y; this.target = target; this.speed = speed; this.damage = damage;
         this.isCrit = isCrit; this.isEnemy = isEnemy;
-        this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc'); 
-        this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0; 
-        this.markedForDeletion = false; 
+        this.color = isEnemy ? '#ff3300' : (isCrit ? '#ffeb3b' : '#bb86fc');
+        this.radius = isCrit ? 8 : 5; this.lifetime = 3.0; this.currentLifetime = 0;
+        this.markedForDeletion = false;
     }
     update(dt) {
         if (this.markedForDeletion) return;
         this.currentLifetime += dt;
         if (this.currentLifetime >= this.lifetime) { this.markedForDeletion = true; return; }
-        
+
         if (this.target && this.target.hp > 0) {
             let dx = this.target.x - this.x, dy = this.target.y - this.y, dist = Math.hypot(dx, dy);
             let angle = Math.atan2(dy, dx);
-            this.x += Math.cos(angle) * this.speed * dt; 
+            this.x += Math.cos(angle) * this.speed * dt;
             this.y += Math.sin(angle) * this.speed * dt;
-            
-            if (dist < this.radius + this.target.radius) { 
-                
+
+            if (dist < this.radius + this.target.radius) {
+
                 if (typeof this.target.takeDamage === 'function') {
-                    this.target.takeDamage(this.damage, this.isCrit); 
+                    this.target.takeDamage(this.damage, this.isCrit);
                 }
-                
-                this.markedForDeletion = true; 
+
+                this.markedForDeletion = true;
                 if (typeof spawnAura === 'function') {
-                    spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800'); 
+                    spawnAura(this.x, this.y, this.isEnemy ? '#ff3300' : '#ff9800');
                 }
             }
-        } else { 
-            this.markedForDeletion = true; 
+        } else {
+            this.markedForDeletion = true;
         }
     }
     draw(ctx) {
         if (this.markedForDeletion) return;
-        ctx.save(); 
+        ctx.save();
         if (this.isEnemy) { ctx.shadowBlur = 10; ctx.shadowColor = 'red'; }
-        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill(); 
+        ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
     }
 }
@@ -672,10 +672,10 @@ function spawnProjectile(x1, y1, target, damage, isCrit, isEnemy = false) {
     entities.push(new Projectile(x1, y1, target, 600, damage, isCrit, isEnemy));
 }
 
-function spawnAura(x, y, color = '#ff9800') { for(let i=0; i<20; i++) particles.push(new Particle(x, y, color)); }
+function spawnAura(x, y, color = '#ff9800') { for (let i = 0; i < 20; i++) particles.push(new Particle(x, y, color)); }
 
 function spawnSotaParticles(x, y, color, count, speed) {
-    for(let i=0; i<count; i++) {
+    for (let i = 0; i < count; i++) {
         let p = new Particle(x, y, color);
         p.vx = (Math.random() - 0.5) * speed; p.vy = (Math.random() - 0.5) * speed;
         p.size = randomFloat(2, 6); p.life = randomFloat(0.5, 1.2);
@@ -701,8 +701,8 @@ function gainXp(amt) {
         player.hp = player.getMaxHp();
         spawnFloatingText(player.x, player.y - 40, "LEVEL UP!", '#03dac6');
         let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
-        let deltas = [], keys = [{k:'hp',l:'Max HP'},{k:'atk',l:'Attack'},{k:'def',l:'Defense'},{k:'regen',l:'Regen'},{k:'crit',l:'Crit %'},{k:'cx',l:'Crit X'},{k:'sp',l:'Atk Spd'},{k:'mag',l:'Magnet'},{k:'grd',l:'Gold Farmer'},{k:'wis',l:'XP Fiend'},{k:'fear',l:'Fear Aura'},{k:'cp',l:'cp'}];
-        keys.forEach(s => { if(newStats[s.k] !== undefined && oldStats[s.k] !== undefined) { let d = newStats[s.k] - oldStats[s.k]; if(Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({label:s.l, oldVal:oldStats[s.k], newVal:newStats[s.k], diff:d}); } });
+        let deltas = [], keys = [{ k: 'hp', l: 'Max HP' }, { k: 'atk', l: 'Attack' }, { k: 'def', l: 'Defense' }, { k: 'regen', l: 'Regen' }, { k: 'crit', l: 'Crit %' }, { k: 'cx', l: 'Crit X' }, { k: 'sp', l: 'Atk Spd' }, { k: 'mag', l: 'Magnet' }, { k: 'grd', l: 'Gold Farmer' }, { k: 'wis', l: 'XP Fiend' }, { k: 'fear', l: 'Fear Aura' }, { k: 'cp', l: 'cp' }];
+        keys.forEach(s => { if (newStats[s.k] !== undefined && oldStats[s.k] !== undefined) { let d = newStats[s.k] - oldStats[s.k]; if (Math.abs(d) > 0.001 || s.k === 'cp') deltas.push({ label: s.l, oldVal: oldStats[s.k], newVal: newStats[s.k], diff: d }); } });
         UI.showDelta(`Level Up! (${oldLevel} ➔ ${PlayerData.level})`, deltas);
         if (typeof refreshSkillTreeUI === 'function') refreshSkillTreeUI();
     }
@@ -717,10 +717,10 @@ function die() {
     player.vy = 0;
 
     if (GameState.state === 'BOSS_ARENA') { failBossArena(); return; }
-    GameState.state = 'DEAD'; 
-    PlayerData.gold = Math.floor(PlayerData.gold / 2); 
+    GameState.state = 'DEAD';
+    PlayerData.gold = Math.floor(PlayerData.gold / 2);
     PlayerData.shards = Math.floor(PlayerData.shards / 2);
-    UI.notify("YOU DIED. Wealth halved."); 
+    UI.notify("YOU DIED. Wealth halved.");
     saveGame();
     setTimeout(() => { initLevel(false); GameState.state = 'PLAYING'; }, 2000);
 }
@@ -728,30 +728,30 @@ function die() {
 function levelUpDungeon() { GameState.pendingLevelUp = true; }
 
 function spawnEnemies() {
-    let num = 10 + GameState.level; 
-    for(let i=0; i<num; i++) {
+    let num = 10 + GameState.level;
+    for (let i = 0; i < num; i++) {
         let ex, ey;
-        do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || (player && Math.hypot(ex - player.x, ey - player.y) < 400)); 
+        do { ex = randomInt(2, window.MAP_SIZE - 3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || (player && Math.hypot(ex - player.x, ey - player.y) < 400));
         entities.push(new Enemy(ex, ey));
     }
 }
 
 function initLevel(isFirstLoad = false) {
     if (isFirstLoad) { initEmptyMap(); generateVillage(); }
-    generateDungeon(); 
+    generateDungeon();
     let p = player; entities = []; particles = []; floatingTexts = [];
-    let spawnX = Math.floor(window.MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
-    let spawnY = (window.VILLAGE_START + 5) * TILE_SIZE + TILE_SIZE/2;
-    if(!p) player = new Player(spawnX, spawnY); else { player = p; player.x = spawnX; player.y = spawnY; player.hp = player.getMaxHp(); }
+    let spawnX = Math.floor(window.MAP_SIZE / 2) * TILE_SIZE + TILE_SIZE / 2;
+    let spawnY = (window.VILLAGE_START + 5) * TILE_SIZE + TILE_SIZE / 2;
+    if (!p) player = new Player(spawnX, spawnY); else { player = p; player.x = spawnX; player.y = spawnY; player.hp = player.getMaxHp(); }
     if (typeof initializeSkillTree === 'function') initializeSkillTree();
-    entities.push(player); 
+    entities.push(player);
     entities.push(new VillageInteractable(spawnX + 150, spawnY - 100, 'WORKBENCH', '🛠️'));
     entities.push(new VillageNPC(spawnX - 150, spawnY - 100, 'ELDER VIC', '🧙‍♂️', "Face the Arena... if you dare."));
     entities.push(new VillageInteractable(spawnX, spawnY - 200, 'BOUNTY BOARD', '📜'));
-    spawnEnemies(); 
-    REFS.depthLevel.innerText = GameState.level; 
+    spawnEnemies();
+    REFS.depthLevel.innerText = GameState.level;
     UI.updateMinimap(); UI.buildHotbar(); UI.updateStats();
-    GameState.camera.x = 0; 
+    GameState.camera.x = 0;
     GameState.camera.y = 0;
 }
 
@@ -759,13 +759,13 @@ function initLevel(isFirstLoad = false) {
 let jZoneRef = document.getElementById('joystick-zone');
 if (jZoneRef) {
     jZoneRef.addEventListener('touchstart', (e) => {
-        if(GameState.state !== 'PLAYING' && GameState.state !== 'BOSS_ARENA') return;
+        if (GameState.state !== 'PLAYING' && GameState.state !== 'BOSS_ARENA') return;
         let touch = e.changedTouches[0], jBase = document.getElementById('j-base');
         Input.joystick.active = true; Input.joystick.x = touch.clientX; Input.joystick.y = touch.clientY;
         if (jBase) { jBase.style.display = 'block'; jBase.style.left = touch.clientX + 'px'; jBase.style.top = touch.clientY + 'px'; }
     });
     jZoneRef.addEventListener('touchmove', (e) => {
-        if(!Input.joystick.active) return;
+        if (!Input.joystick.active) return;
         let touch = e.changedTouches[0], dx = touch.clientX - Input.joystick.x, dy = touch.clientY - Input.joystick.y;
         Input.joystick.angle = Math.atan2(dy, dx);
         let dist = Math.min(50, Math.hypot(dx, dy)), sx = Math.cos(Input.joystick.angle) * dist, sy = Math.sin(Input.joystick.angle) * dist, jStick = document.getElementById('j-stick');
@@ -774,8 +774,8 @@ if (jZoneRef) {
     jZoneRef.addEventListener('touchend', endJoystick);
 }
 
-function saveGame() { 
-    PlayerData.dungeonLevel = GameState.level; 
+function saveGame() {
+    PlayerData.dungeonLevel = GameState.level;
     if (player) { PlayerData.skillPoints = player.skillPoints; PlayerData.learnedSkills = player.learnedSkills; }
     PlayerData.lastPlayed = Date.now();
     localStorage.setItem('dof_save', JSON.stringify(PlayerData));
@@ -793,7 +793,7 @@ function loadGame() {
             if (d.inventory) PlayerData.inventory = d.inventory; if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
             GameState.level = PlayerData.dungeonLevel;
             if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
-        } catch(e) { console.error("Save Corrupt", e); }
+        } catch (e) { console.error("Save Corrupt", e); }
     }
 }
 
@@ -804,13 +804,13 @@ function drawMap(camX, camY) {
     for (let r = sRow; r <= eRow; r++) {
         for (let c = sCol; c <= eCol; c++) {
             if (!exploredGrid[r][c]) { ctx.fillStyle = '#000'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); continue; }
-            
+
             // Arena Floor vs Village Floor
             if (GameState.state === 'BOSS_ARENA') {
                 ctx.fillStyle = mapGrid[r][c] === 1 ? '#000' : '#3d1c1c'; // Bloody red arena
             } else {
-                if (r >= window.VILLAGE_START) ctx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50'; 
-                else ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616'; 
+                if (r >= window.VILLAGE_START) ctx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50';
+                else ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616';
             }
             ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
         }
@@ -820,25 +820,25 @@ function drawMap(camX, camY) {
 function draw() {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height);
     if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD' && GameState.state !== 'BOSS_ARENA') return;
-    
+
     let targetCamX = Math.max(0, Math.min(player.x - REFS.canvas.width / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.width));
     let targetCamY = Math.max(0, Math.min(player.y - REFS.canvas.height / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.height));
     if (GameState.camera.x === 0 && GameState.camera.y === 0) { GameState.camera.x = targetCamX; GameState.camera.y = targetCamY; }
     let lerpSpeed = player.isBlinking ? 0.015 : 0.1;
     GameState.camera.x += (targetCamX - GameState.camera.x) * lerpSpeed; GameState.camera.y += (targetCamY - GameState.camera.y) * lerpSpeed;
-    
+
     ctx.save(); drawMap(GameState.camera.x, GameState.camera.y); ctx.translate(-GameState.camera.x, -GameState.camera.y);
-    if (portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)] && GameState.state !== 'BOSS_ARENA') { ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill(); }
+    if (portal && exploredGrid[Math.floor(portal.y / TILE_SIZE)][Math.floor(portal.x / TILE_SIZE)] && GameState.state !== 'BOSS_ARENA') { ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill(); }
     entities.filter(e => !e.markedForDeletion).sort((a, b) => a.y - b.y).forEach(e => e.draw?.(ctx));
     particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); ctx.restore();
-    if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width/2, REFS.canvas.height/2); }
+    if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width / 2, REFS.canvas.height / 2); }
 }
 
 // --- 9. MAIN LOOP ---
 function loop(timestamp) {
     let dt = Math.min(0.1, (timestamp - GameState.lastTime) / 1000); GameState.lastTime = timestamp;
     if (GameState.state === 'PLAYING' || GameState.state === 'BOSS_ARENA') {
-        
+
         // Handle Boss Timer
         if (GameState.state === 'BOSS_ARENA') {
             GameState.bossTimer -= dt;
@@ -852,21 +852,21 @@ function loop(timestamp) {
         for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].markedForDeletion) entities.splice(i, 1);
         for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt);
         for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
-        
+
         GameState.activeInteractable = null;
         if (GameState.state !== 'BOSS_ARENA') {
             entities.forEach(e => { if ((e instanceof VillageNPC || e instanceof VillageInteractable) && Math.hypot(player.x - e.x, player.y - e.y) < 100) GameState.activeInteractable = e; });
         }
 
         if (GameState.frame % 10 === 0) UI.updateStats();
-        
-        if (GameState.frame % 120 === 0 && GameState.state !== 'BOSS_ARENA') { 
-            let ec = 0; for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++;
+
+        if (GameState.frame % 120 === 0 && GameState.state !== 'BOSS_ARENA') {
+            let ec = 0; for (let i = 0; i < entities.length; i++) if (entities[i] instanceof Enemy) ec++;
             let maxEnemies = 5 + GameState.level;
             if (ec < maxEnemies) {
                 let toSpawn = Math.min(2, maxEnemies - ec);
-                for(let s=0; s < toSpawn; s++) {
-                    let ex, ey; do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
+                for (let s = 0; s < toSpawn; s++) {
+                    let ex, ey; do { ex = randomInt(2, window.MAP_SIZE - 3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
                     entities.push(new Enemy(ex, ey));
                 }
             }
@@ -910,5 +910,5 @@ window.addEventListener('DOMContentLoaded', () => {
     bindUIButton(document.getElementById('auto-clean-btn'), () => UI.autoCleanBag());
 });
 
-class VillageNPC { constructor(x, y, name, icon, message) { this.x = x; this.y = y; this.name = name; this.icon = icon; this.message = message; this.radius = 25; } update(dt) {} draw(ctx) { ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y); ctx.font = "bold 14px Arial"; ctx.fillStyle = "white"; ctx.fillText(this.name, this.x, this.y + 20); if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(187, 134, 252, 0.5)"; ctx.beginPath(); ctx.arc(this.x, this.y, 40, 0, Math.PI*2); ctx.fill(); } ctx.restore(); } }
-class VillageInteractable { constructor(x, y, type, icon) { this.x = x; this.y = y; this.type = type; this.icon = icon; this.radius = 25; } update(dt) {} draw(ctx) { ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y); ctx.font = "bold 14px Arial"; ctx.fillStyle = "#ffd700"; ctx.fillText(this.type, this.x, this.y + 20); if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y, 50, 0, Math.PI*2); ctx.fill(); } ctx.restore(); } }
+class VillageNPC { constructor(x, y, name, icon, message) { this.x = x; this.y = y; this.name = name; this.icon = icon; this.message = message; this.radius = 25; } update(dt) { } draw(ctx) { ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y); ctx.font = "bold 14px Arial"; ctx.fillStyle = "white"; ctx.fillText(this.name, this.x, this.y + 20); if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(187, 134, 252, 0.5)"; ctx.beginPath(); ctx.arc(this.x, this.y, 40, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); } }
+class VillageInteractable { constructor(x, y, type, icon) { this.x = x; this.y = y; this.type = type; this.icon = icon; this.radius = 25; } update(dt) { } draw(ctx) { ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y); ctx.font = "bold 14px Arial"; ctx.fillStyle = "#ffd700"; ctx.fillText(this.type, this.x, this.y + 20); if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y, 50, 0, Math.PI * 2); ctx.fill(); } ctx.restore(); } }
