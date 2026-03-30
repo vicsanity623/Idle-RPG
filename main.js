@@ -25,6 +25,12 @@ const ACTIVE_SKILLS_CONFIG = {
     23: { icon: '🗡️', cd: 10, name: 'Daggers' }
 };
 
+// --- PHASE 3: BOUNTY BOARD CONFIGURATION ---
+const BOUNTY_CONFIG = [
+    { id: 'slayer_1', title: 'The Great Purge', type: 'kills', goal: 300, rewardGold: 5000, rewardShards: 500, rewardRelic: 'Weapon' },
+    { id: 'depth_1', title: 'The Deepest Descents', type: 'depth', goal: 20, rewardGold: 25000, rewardShards: 2500, rewardFullSet: true }
+];
+
 // --- 2. THE REGISTRY ---
 const REFS = {
     canvas:           document.getElementById('game-canvas'),
@@ -62,7 +68,9 @@ const REFS = {
     unlockBtn:        document.getElementById('unlock-portal-btn'),
     // Phase 2 REFS
     workbenchModal:   document.getElementById('workbench-modal'),
-    bountyModal:      document.getElementById('bounty-modal')
+    bountyModal:      document.getElementById('bounty-modal'),
+    skillAmpList:     document.getElementById('skill-amp-list'),
+    bountyList:       document.getElementById('bounty-list')
 };
 
 // --- 3. ENGINE GLOBALS ---
@@ -94,7 +102,9 @@ window.PlayerData = {
         'Necklace': { level: 1, regen: 2.0, hp: 25, rarity: 'Common' },
         'Boots':    { level: 1, def: 10, atkSpeed: 0.15, rarity: 'Common' } 
     },
-    skillAmps: {} // Stores level of skill amplification
+    skillAmps: {},
+    questLog: { totalKills: 0 },
+    claimedBounties: []
 };
 
 window.FormatNumber = function(value) {
@@ -308,8 +318,39 @@ const UI = {
         UI.renderWorkbench();
     },
     renderWorkbench: () => {
-        // Logic for Skill Amplification list goes here
-        // We'll update index.html to have a container for this
+        if (!REFS.skillAmpList) return;
+        let html = '';
+        player.learnedSkills.forEach(id => {
+            if (ACTIVE_SKILLS_CONFIG[id]) {
+                let lvl = PlayerData.skillAmps[id] || 0;
+                let cost = (lvl + 1) * 250; // Simple linear cost scaling
+                let canAfford = PlayerData.shards >= cost;
+                html += `
+                    <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span style="font-size: 1.2rem; margin-right: 10px;">${ACTIVE_SKILLS_CONFIG[id].icon}</span>
+                            <span style="font-weight: bold; color: var(--primary);">${ACTIVE_SKILLS_CONFIG[id].name}</span>
+                            <div style="font-size: 0.7rem; color: #aaa;">Amp Level: ${lvl}</div>
+                        </div>
+                        <button class="upgrade-btn" style="width: auto; padding: 5px 15px;" ${canAfford ? '' : 'disabled'} onclick="UI.amplifySkill(${id}, ${cost})">
+                            AMPLIFY (${cost}💎)
+                        </button>
+                    </div>
+                `;
+            }
+        });
+        if (player.learnedSkills.length === 0) html = '<p style="text-align:center; color:#777;">Learn skills in your talent tree first!</p>';
+        REFS.skillAmpList.innerHTML = html;
+    },
+    amplifySkill: (id, cost) => {
+        if (PlayerData.shards >= cost) {
+            PlayerData.shards -= cost;
+            PlayerData.skillAmps[id] = (PlayerData.skillAmps[id] || 0) + 1;
+            UI.renderWorkbench();
+            UI.updateCurrencies();
+            UI.notify(`${ACTIVE_SKILLS_CONFIG[id].name} Amplified!`);
+            saveGame();
+        }
     },
     autoCleanBag: () => {
         if (!player || PlayerData.inventory.length === 0) { UI.notify("Bag is already empty!"); return; }
@@ -324,13 +365,8 @@ const UI = {
             slotGroups[item.slot].push(item);
         });
 
-        // 2. Identify the absolute best CP for each slot in inventory
+        // 2. Equip best item in each slot found in inventory
         for (let slot in slotGroups) {
-            let currentEquipped = PlayerData.gear[slot];
-            let currentCP = currentEquipped ? player.getCombatPower() : 0;
-            
-            // To find if an item in bag is better, we'd need to simulate the CP.
-            // Simplified logic: Sort bag items by their raw stat sum.
             slotGroups[slot].sort((a,b) => {
                 let sumA = Object.values(a.stats || a).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
                 let sumB = Object.values(b.stats || b).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
@@ -338,11 +374,15 @@ const UI = {
             });
 
             let bestInBag = slotGroups[slot][0];
-            // If we have an item and it's likely better (stat sum is higher), equip it.
-            // Note: UI.equipItem handles the actual logic and logic check.
-            let idx = PlayerData.inventory.indexOf(bestInBag);
-            UI.equipItem(idx);
-            itemsSwapped++;
+            let currentlyEquipped = PlayerData.gear[slot];
+            let currentSum = currentlyEquipped ? Object.values(currentlyEquipped.stats || currentlyEquipped).reduce((p,c) => typeof c === 'number' ? p+c : p, 0) : 0;
+            let bestSum = Object.values(bestInBag.stats || bestInBag).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
+
+            if (bestSum > currentSum) {
+                let idx = PlayerData.inventory.indexOf(bestInBag);
+                UI.equipItem(idx);
+                itemsSwapped++;
+            }
         }
 
         // 3. Salvage all remaining items in bag
@@ -350,7 +390,7 @@ const UI = {
         while (PlayerData.inventory.length > 0) {
             let item = PlayerData.inventory[0];
             let reward = 5;
-            if (item.rarity === 'Legendary') reward = 50; 
+            if (item.rarity === 'Legendary' || item.rarity === 'LEGENDARY RELIC') reward = 50; 
             else if (item.rarity === 'Epic') reward = 20; 
             else if (item.rarity === 'Rare') reward = 10;
             rewardTotal += reward;
@@ -360,6 +400,68 @@ const UI = {
 
         UI.notify(`Bag Cleaned! Found ${itemsSwapped} upgrades. Salvaged others for +${rewardTotal} 💎`);
         UI.updateCurrencies();
+        UI.renderInventory();
+        saveGame();
+    },
+
+    // --- PHASE 3: BOUNTY BOARD LOGIC ---
+    renderBountyBoard: () => {
+        if (!REFS.bountyList) return;
+        if (!PlayerData.questLog) PlayerData.questLog = { totalKills: 0 };
+        if (!PlayerData.claimedBounties) PlayerData.claimedBounties = [];
+
+        let html = '';
+        BOUNTY_CONFIG.forEach(b => {
+            let current = b.type === 'kills' ? PlayerData.questLog.totalKills : GameState.level;
+            let progress = Math.min(100, (current / b.goal) * 100);
+            let isClaimed = PlayerData.claimedBounties.includes(b.id);
+            let canClaim = progress >= 100 && !isClaimed;
+
+            html += `
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid ${canClaim ? 'var(--gold)' : '#333'}; margin-bottom: 10px; position: relative; opacity: ${isClaimed ? '0.5' : '1'};">
+                    <h4 style="color: var(--gold);">${b.title}</h4>
+                    <p style="font-size: 0.8rem; color: #aaa;">Goal: ${b.goal} ${b.type === 'kills' ? 'Kills' : 'Depth reached'}</p>
+                    <div style="width: 100%; height: 6px; background: #222; border-radius: 3px; margin: 10px 0; overflow: hidden;">
+                        <div style="width: ${progress}%; height: 100%; background: var(--gold);"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; color: var(--shard);">${FormatNumber(current)} / ${FormatNumber(b.goal)}</span>
+                        <button class="upgrade-btn" style="width: auto; padding: 5px 15px; background: var(--gold); color: black;" ${canClaim ? '' : 'disabled'} onclick="UI.claimBounty('${b.id}')">
+                            ${isClaimed ? 'CLAIMED' : 'CLAIM REWARD'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        REFS.bountyList.innerHTML = html;
+    },
+    claimBounty: (id) => {
+        let b = BOUNTY_CONFIG.find(x => x.id === id);
+        if (!b) return;
+
+        PlayerData.gold += b.rewardGold;
+        PlayerData.shards += b.rewardShards;
+        PlayerData.claimedBounties.push(id);
+
+        // Generate 50X God-Tier Items
+        if (b.rewardRelic) {
+            let godItem = generateRandomGear(GameState.level, true);
+            PlayerData.inventory.push(godItem);
+            UI.notify(`REWARD: 50X POWER ${godItem.name} FOUND!`);
+        }
+        if (b.rewardFullSet) {
+            GEAR_TYPES.forEach(slot => {
+                // Mock a template match to ensure full set generation
+                let godItem = generateRandomGear(GameState.level, true);
+                godItem.slot = slot;
+                godItem.name = `RELIC ${slot}`;
+                PlayerData.inventory.push(godItem);
+            });
+            UI.notify(`THE ASCENDED SET HAS BEEN GRANTED!`);
+        }
+
+        UI.updateCurrencies();
+        UI.renderBountyBoard();
         UI.renderInventory();
         saveGame();
     }
@@ -494,21 +596,13 @@ function initLevel(isFirstLoad = false) {
     let spawnY = (window.VILLAGE_START + 5) * TILE_SIZE + TILE_SIZE/2;
     if(!p) player = new Player(spawnX, spawnY); else { player = p; player.x = spawnX; player.y = spawnY; player.hp = player.getMaxHp(); }
     if (typeof initializeSkillTree === 'function') initializeSkillTree();
-    
     entities.push(player); 
-    
-    // --- PHASE 2: SPAWN VILLAGE ENTITIES ---
-    // Spawn Workbench
     entities.push(new VillageInteractable(spawnX + 150, spawnY - 100, 'WORKBENCH', '🛠️'));
-    // Spawn Master NPC
     entities.push(new VillageNPC(spawnX - 150, spawnY - 100, 'ELDER VIC', '🧙‍♂️', "Welcome back, Hero. Clean your bag at the Workbench!"));
-    // Spawn Bounty Board
     entities.push(new VillageInteractable(spawnX, spawnY - 200, 'BOUNTY BOARD', '📜'));
-
     spawnEnemies(); 
     REFS.depthLevel.innerText = GameState.level; 
-    UI.updateMinimap();
-    UI.buildHotbar(); UI.updateStats();
+    UI.updateMinimap(); UI.buildHotbar(); UI.updateStats();
 }
 
 // --- 7. INPUT & SAVE ---
@@ -542,6 +636,7 @@ function loadGame() {
         try {
             let d = JSON.parse(save);
             PlayerData.gold = d.gold ?? PlayerData.gold; PlayerData.shards = d.shards ?? PlayerData.shards; PlayerData.level = d.level ?? PlayerData.level; PlayerData.dungeonLevel = d.dungeonLevel ?? PlayerData.dungeonLevel; PlayerData.xp = d.xp ?? PlayerData.xp; PlayerData.maxXp = d.maxXp ?? PlayerData.maxXp; PlayerData.skillPoints = d.skillPoints ?? PlayerData.skillPoints; PlayerData.learnedSkills = d.learnedSkills ?? PlayerData.learnedSkills;
+            PlayerData.questLog = d.questLog ?? { totalKills: 0 }; PlayerData.claimedBounties = d.claimedBounties ?? [];
             if (d.inventory) PlayerData.inventory = d.inventory; if (d.gear) PlayerData.gear = { ...PlayerData.gear, ...d.gear };
             GameState.level = PlayerData.dungeonLevel;
             if (window.refreshSkillTreeUI) window.refreshSkillTreeUI();
@@ -588,15 +683,8 @@ function loop(timestamp) {
         for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].markedForDeletion) entities.splice(i, 1);
         for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt);
         for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
-        
-        // --- PHASE 2: INTERACTION CHECK ---
         GameState.activeInteractable = null;
-        entities.forEach(e => {
-            if ((e instanceof VillageNPC || e instanceof VillageInteractable) && Math.hypot(player.x - e.x, player.y - e.y) < 100) {
-                GameState.activeInteractable = e;
-            }
-        });
-
+        entities.forEach(e => { if ((e instanceof VillageNPC || e instanceof VillageInteractable) && Math.hypot(player.x - e.x, player.y - e.y) < 100) GameState.activeInteractable = e; });
         if (GameState.frame % 10 === 0) UI.updateStats();
         if (GameState.frame % 120 === 0) { 
             let ec = 0; for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++;
@@ -624,7 +712,6 @@ function loop(timestamp) {
 // --- 10. BOOTSTRAP ---
 REFS.canvas.width = window.innerWidth; REFS.canvas.height = window.innerHeight;
 window.addEventListener('resize', () => { REFS.canvas.width = window.innerWidth; REFS.canvas.height = window.innerHeight; });
-
 window.onload = () => {
     loadGame(); let progress = 0;
     let bootInterval = setInterval(() => {
@@ -633,12 +720,7 @@ window.onload = () => {
         REFS.loadingFill.style.width = progress + '%';
     }, 80);
 };
-
-REFS.playBtn.addEventListener('click', () => {
-    REFS.mainMenu.classList.add('hidden'); REFS.uiLayer.classList.remove('hidden');
-    initLevel(true); UI.updateCurrencies(); UI.checkDailyLogin();
-    GameState.state = 'PLAYING'; GameState.lastTime = performance.now(); requestAnimationFrame(loop);
-});
+REFS.playBtn.addEventListener('click', () => { REFS.mainMenu.classList.add('hidden'); REFS.uiLayer.classList.remove('hidden'); initLevel(true); UI.updateCurrencies(); UI.checkDailyLogin(); GameState.state = 'PLAYING'; GameState.lastTime = performance.now(); requestAnimationFrame(loop); });
 
 const bindUIButton = (element, callback) => {
     if (!element) return; let fired = false;
@@ -650,43 +732,27 @@ window.addEventListener('DOMContentLoaded', () => {
     bindUIButton(document.getElementById('claim-daily-btn'), () => UI.claimDaily());
     bindUIButton(document.getElementById('avatar-btn'), () => UI.toggleInventory());
     bindUIButton(document.querySelector('.close-btn'), () => UI.toggleInventory());
-    
-    // Phase 2 Bindings
     bindUIButton(document.getElementById('auto-clean-btn'), () => UI.autoCleanBag());
 });
 
 // --- VILLAGE INTERACTABLES CLASSES ---
 class VillageNPC {
-    constructor(x, y, name, icon, message) {
-        this.x = x; this.y = y; this.name = name; this.icon = icon; this.message = message; this.radius = 25;
-    }
+    constructor(x, y, name, icon, message) { this.x = x; this.y = y; this.name = name; this.icon = icon; this.message = message; this.radius = 25; }
     update(dt) {}
     draw(ctx) {
-        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center";
-        ctx.fillText(this.icon, this.x, this.y);
-        ctx.font = "bold 14px Arial"; ctx.fillStyle = "white";
-        ctx.fillText(this.name, this.x, this.y + 20);
-        // Interaction Indicator
-        if (GameState.activeInteractable === this) {
-            ctx.fillStyle = "rgba(187, 134, 252, 0.5)"; ctx.beginPath(); ctx.arc(this.x, this.y, 40, 0, Math.PI*2); ctx.fill();
-        }
+        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y);
+        ctx.font = "bold 14px Arial"; ctx.fillStyle = "white"; ctx.fillText(this.name, this.x, this.y + 20);
+        if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(187, 134, 252, 0.5)"; ctx.beginPath(); ctx.arc(this.x, this.y, 40, 0, Math.PI*2); ctx.fill(); }
         ctx.restore();
     }
 }
-
 class VillageInteractable {
-    constructor(x, y, type, icon) {
-        this.x = x; this.y = y; this.type = type; this.icon = icon; this.radius = 25;
-    }
+    constructor(x, y, type, icon) { this.x = x; this.y = y; this.type = type; this.icon = icon; this.radius = 25; }
     update(dt) {}
     draw(ctx) {
-        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center";
-        ctx.fillText(this.icon, this.x, this.y);
-        ctx.font = "bold 14px Arial"; ctx.fillStyle = "#ffd700";
-        ctx.fillText(this.type, this.x, this.y + 20);
-        if (GameState.activeInteractable === this) {
-            ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y, 50, 0, Math.PI*2); ctx.fill();
-        }
+        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.fillText(this.icon, this.x, this.y);
+        ctx.font = "bold 14px Arial"; ctx.fillStyle = "#ffd700"; ctx.fillText(this.type, this.x, this.y + 20);
+        if (GameState.activeInteractable === this) { ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y, 50, 0, Math.PI*2); ctx.fill(); }
         ctx.restore();
     }
 }
