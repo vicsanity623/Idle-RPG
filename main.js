@@ -59,7 +59,10 @@ const REFS = {
     discardBtn:       document.getElementById('discard-btn'),
     portalUI:         document.getElementById('portal-ui'),
     portalCost:       document.getElementById('portal-cost-text'),
-    unlockBtn:        document.getElementById('unlock-portal-btn')
+    unlockBtn:        document.getElementById('unlock-portal-btn'),
+    // Phase 2 REFS
+    workbenchModal:   document.getElementById('workbench-modal'),
+    bountyModal:      document.getElementById('bounty-modal')
 };
 
 // --- 3. ENGINE GLOBALS ---
@@ -71,7 +74,8 @@ window.GameState = {
     camera: { x: 0, y: 0 },
     lastTime: 0,
     frame: 0,
-    pendingLevelUp: false
+    pendingLevelUp: false,
+    activeInteractable: null
 };
 
 window.Input = { joystick: { active: false, angle: 0, x:0, y:0 }, dashPressed: false };
@@ -89,7 +93,8 @@ window.PlayerData = {
         'Earrings': { level: 1, critMult: 0.15, regen: 0.8, rarity: 'Common' },
         'Necklace': { level: 1, regen: 2.0, hp: 25, rarity: 'Common' },
         'Boots':    { level: 1, def: 10, atkSpeed: 0.15, rarity: 'Common' } 
-    }
+    },
+    skillAmps: {} // Stores level of skill amplification
 };
 
 window.FormatNumber = function(value) {
@@ -294,10 +299,73 @@ const UI = {
     },
     notify: (msg) => { REFS.notification.innerText = msg; REFS.notification.style.opacity = 1; if (UI._notifTimeout) clearTimeout(UI._notifTimeout); UI._notifTimeout = setTimeout(() => REFS.notification.style.opacity = 0, 2000); },
     checkDailyLogin: () => { if (localStorage.getItem('dof_lastLogin') !== new Date().toDateString()) REFS.dailyLogin.style.display = 'block'; },
-    claimDaily: () => { PlayerData.gold += 500; PlayerData.shards += 50; localStorage.setItem('dof_lastLogin', new Date().toDateString()); REFS.dailyLogin.style.display = 'none'; UI.updateCurrencies(); saveGame(); UI.notify("Daily Claimed!"); }
+    claimDaily: () => { PlayerData.gold += 500; PlayerData.shards += 50; localStorage.setItem('dof_lastLogin', new Date().toDateString()); REFS.dailyLogin.style.display = 'none'; UI.updateCurrencies(); saveGame(); UI.notify("Daily Claimed!"); },
+
+    // --- PHASE 2 WORKBENCH & QOL LOGIC ---
+    openWorkbench: () => {
+        if (!REFS.workbenchModal) return;
+        REFS.workbenchModal.style.display = 'flex';
+        UI.renderWorkbench();
+    },
+    renderWorkbench: () => {
+        // Logic for Skill Amplification list goes here
+        // We'll update index.html to have a container for this
+    },
+    autoCleanBag: () => {
+        if (!player || PlayerData.inventory.length === 0) { UI.notify("Bag is already empty!"); return; }
+        
+        let initialShards = PlayerData.shards;
+        let itemsSwapped = 0;
+
+        // 1. Group inventory items by slot
+        const slotGroups = {};
+        PlayerData.inventory.forEach(item => {
+            if (!slotGroups[item.slot]) slotGroups[item.slot] = [];
+            slotGroups[item.slot].push(item);
+        });
+
+        // 2. Identify the absolute best CP for each slot in inventory
+        for (let slot in slotGroups) {
+            let currentEquipped = PlayerData.gear[slot];
+            let currentCP = currentEquipped ? player.getCombatPower() : 0;
+            
+            // To find if an item in bag is better, we'd need to simulate the CP.
+            // Simplified logic: Sort bag items by their raw stat sum.
+            slotGroups[slot].sort((a,b) => {
+                let sumA = Object.values(a.stats || a).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
+                let sumB = Object.values(b.stats || b).reduce((p,c) => typeof c === 'number' ? p+c : p, 0);
+                return sumB - sumA;
+            });
+
+            let bestInBag = slotGroups[slot][0];
+            // If we have an item and it's likely better (stat sum is higher), equip it.
+            // Note: UI.equipItem handles the actual logic and logic check.
+            let idx = PlayerData.inventory.indexOf(bestInBag);
+            UI.equipItem(idx);
+            itemsSwapped++;
+        }
+
+        // 3. Salvage all remaining items in bag
+        let rewardTotal = 0;
+        while (PlayerData.inventory.length > 0) {
+            let item = PlayerData.inventory[0];
+            let reward = 5;
+            if (item.rarity === 'Legendary') reward = 50; 
+            else if (item.rarity === 'Epic') reward = 20; 
+            else if (item.rarity === 'Rare') reward = 10;
+            rewardTotal += reward;
+            PlayerData.inventory.splice(0, 1);
+        }
+        PlayerData.shards += rewardTotal;
+
+        UI.notify(`Bag Cleaned! Found ${itemsSwapped} upgrades. Salvaged others for +${rewardTotal} 💎`);
+        UI.updateCurrencies();
+        UI.renderInventory();
+        saveGame();
+    }
 };
 
-// --- 5. MAP GENERATION (PHASE 1: THE SPLIT WORLD) ---
+// --- 5. MAP GENERATION ---
 let mapGrid = [], exploredGrid = [], entities = [], particles = [], floatingTexts = [], portal = null, player = null;
 
 function initEmptyMap() {
@@ -306,57 +374,26 @@ function initEmptyMap() {
 }
 
 function generateVillage() {
-    // Fill the bottom 15 rows with Village flooring
     for (let r = window.VILLAGE_START; r < window.MAP_SIZE; r++) {
         for (let c = 0; c < window.MAP_SIZE; c++) {
-            if (r === window.VILLAGE_START || r === window.MAP_SIZE - 1 || c === 0 || c === window.MAP_SIZE - 1) {
-                mapGrid[r][c] = 1; // Wall border
-            } else {
-                mapGrid[r][c] = 0; // Village Floor
-                exploredGrid[r][c] = true; // The village is fully explored
-            }
+            if (r === window.VILLAGE_START || r === window.MAP_SIZE - 1 || c === 0 || c === window.MAP_SIZE - 1) mapGrid[r][c] = 1;
+            else { mapGrid[r][c] = 0; exploredGrid[r][c] = true; }
         }
     }
-    // Create an opening (Gate) to the dungeon
     let gateX = Math.floor(window.MAP_SIZE / 2);
-    mapGrid[window.VILLAGE_START][gateX] = 0; 
-    mapGrid[window.VILLAGE_START][gateX - 1] = 0;
-    mapGrid[window.VILLAGE_START][gateX + 1] = 0;
+    mapGrid[window.VILLAGE_START][gateX] = 0; mapGrid[window.VILLAGE_START][gateX - 1] = 0; mapGrid[window.VILLAGE_START][gateX + 1] = 0;
 }
 
 function generateDungeon() {
-    // 1. Reset ONLY the top rows to walls
-    for (let r = 0; r < window.VILLAGE_START; r++) {
-        for (let c = 0; c < window.MAP_SIZE; c++) {
-            mapGrid[r][c] = 1;
-            exploredGrid[r][c] = false;
-        }
-    }
-    
-    // 2. Procedural Drunkard's Walk for the dungeon
-    let startX = Math.floor(window.MAP_SIZE / 2);
-    let startY = window.VILLAGE_START - 1; // Start right above the gate
-    let x = startX, y = startY;
-    let floorCount = 0;
-    let maxFloors = (window.MAP_SIZE * window.VILLAGE_START) * 0.45; // Carve out 45% of the dungeon
-    
+    for (let r = 0; r < window.VILLAGE_START; r++) { for (let c = 0; c < window.MAP_SIZE; c++) { mapGrid[r][c] = 1; exploredGrid[r][c] = false; } }
+    let startX = Math.floor(window.MAP_SIZE / 2); let startY = window.VILLAGE_START - 1; let x = startX, y = startY;
+    let floorCount = 0; let maxFloors = (window.MAP_SIZE * window.VILLAGE_START) * 0.45;
     mapGrid[y][x] = 0;
-    
     while (floorCount < maxFloors) {
         let dir = randomInt(0, 3);
-        if (dir === 0 && y > 2) y--; 
-        else if (dir === 1 && y < window.VILLAGE_START - 2) y++;
-        else if (dir === 2 && x > 2) x--; 
-        else if (dir === 3 && x < window.MAP_SIZE - 3) x++;
-        
-        if (mapGrid[y][x] === 1) { 
-            mapGrid[y][x] = 0; 
-            if(Math.random() > 0.5 && mapGrid[y+1]) mapGrid[y+1][x] = 0; 
-            floorCount++; 
-        }
+        if (dir === 0 && y > 2) y--; else if (dir === 1 && y < window.VILLAGE_START - 2) y++; else if (dir === 2 && x > 2) x--; else if (dir === 3 && x < window.MAP_SIZE - 3) x++;
+        if (mapGrid[y][x] === 1) { mapGrid[y][x] = 0; if(Math.random() > 0.5 && mapGrid[y+1]) mapGrid[y+1][x] = 0; floorCount++; }
     }
-    
-    // 3. Place Portal at the furthest carved point
     portal = { x: x * TILE_SIZE + TILE_SIZE/2, y: y * TILE_SIZE + TILE_SIZE/2, radius: 30 };
 }
 
@@ -444,52 +481,34 @@ function spawnEnemies() {
     let num = 10 + GameState.level; 
     for(let i=0; i<num; i++) {
         let ex, ey;
-        do { 
-            ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; 
-            ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; // ENEMY SPAWNS RESTRICTED TO DUNGEON
-        } while (isWall(ex, ey) || (player && Math.hypot(ex - player.x, ey - player.y) < 400)); 
+        do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || (player && Math.hypot(ex - player.x, ey - player.y) < 400)); 
         entities.push(new Enemy(ex, ey));
     }
 }
 
 function initLevel(isFirstLoad = false) {
-    if (isFirstLoad) {
-        initEmptyMap();
-        generateVillage(); // Only build the village once!
-    }
-    
-    generateDungeon(); // Generates the new procedural dungeon
-    
-    // Save the player and village entities (future proofing for NPCs)
-    let p = player;
-    
-    // Wipe everything else for the new floor
-    entities = []; 
-    particles = []; 
-    floatingTexts = [];
-    
-    // Spawn player precisely in the middle of the Safe Zone Village
+    if (isFirstLoad) { initEmptyMap(); generateVillage(); }
+    generateDungeon(); 
+    let p = player; entities = []; particles = []; floatingTexts = [];
     let spawnX = Math.floor(window.MAP_SIZE/2) * TILE_SIZE + TILE_SIZE/2;
     let spawnY = (window.VILLAGE_START + 5) * TILE_SIZE + TILE_SIZE/2;
-    
-    if(!p) {
-        player = new Player(spawnX, spawnY); 
-    } else { 
-        player = p;
-        player.x = spawnX; 
-        player.y = spawnY; 
-        player.hp = player.getMaxHp(); 
-    }
-    
+    if(!p) player = new Player(spawnX, spawnY); else { player = p; player.x = spawnX; player.y = spawnY; player.hp = player.getMaxHp(); }
     if (typeof initializeSkillTree === 'function') initializeSkillTree();
     
     entities.push(player); 
+    
+    // --- PHASE 2: SPAWN VILLAGE ENTITIES ---
+    // Spawn Workbench
+    entities.push(new VillageInteractable(spawnX + 150, spawnY - 100, 'WORKBENCH', '🛠️'));
+    // Spawn Master NPC
+    entities.push(new VillageNPC(spawnX - 150, spawnY - 100, 'ELDER VIC', '🧙‍♂️', "Welcome back, Hero. Clean your bag at the Workbench!"));
+    // Spawn Bounty Board
+    entities.push(new VillageInteractable(spawnX, spawnY - 200, 'BOUNTY BOARD', '📜'));
+
     spawnEnemies(); 
     REFS.depthLevel.innerText = GameState.level; 
     UI.updateMinimap();
-    
-    UI.buildHotbar();
-    UI.updateStats();
+    UI.buildHotbar(); UI.updateStats();
 }
 
 // --- 7. INPUT & SAVE ---
@@ -537,13 +556,8 @@ function drawMap(camX, camY) {
     for (let r = sRow; r <= eRow; r++) {
         for (let c = sCol; c <= eCol; c++) {
             if (!exploredGrid[r][c]) { ctx.fillStyle = '#000'; ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE); continue; }
-            
-            // NEW AESTHETICS: Village gets a blueish cobblestone color
-            if (r >= window.VILLAGE_START) {
-                ctx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50'; 
-            } else {
-                ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616'; 
-            }
+            if (r >= window.VILLAGE_START) ctx.fillStyle = mapGrid[r][c] === 1 ? '#1a252c' : '#2c3e50'; 
+            else ctx.fillStyle = mapGrid[r][c] === 1 ? '#1e1e1e' : '#161616'; 
             ctx.fillRect(c * TILE_SIZE - camX, r * TILE_SIZE - camY, TILE_SIZE, TILE_SIZE);
         }
     }
@@ -552,27 +566,15 @@ function drawMap(camX, camY) {
 function draw() {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height);
     if (GameState.state !== 'PLAYING' && GameState.state !== 'DEAD') return;
-    
     let targetCamX = Math.max(0, Math.min(player.x - REFS.canvas.width / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.width));
     let targetCamY = Math.max(0, Math.min(player.y - REFS.canvas.height / 2, window.MAP_SIZE * TILE_SIZE - REFS.canvas.height));
-    
     if (GameState.camera.x === 0 && GameState.camera.y === 0) { GameState.camera.x = targetCamX; GameState.camera.y = targetCamY; }
-
     let lerpSpeed = player.isBlinking ? 0.015 : 0.1;
-    GameState.camera.x += (targetCamX - GameState.camera.x) * lerpSpeed;
-    GameState.camera.y += (targetCamY - GameState.camera.y) * lerpSpeed;
-
-    ctx.save(); 
-    drawMap(GameState.camera.x, GameState.camera.y); 
-    ctx.translate(-GameState.camera.x, -GameState.camera.y);
-    
+    GameState.camera.x += (targetCamX - GameState.camera.x) * lerpSpeed; GameState.camera.y += (targetCamY - GameState.camera.y) * lerpSpeed;
+    ctx.save(); drawMap(GameState.camera.x, GameState.camera.y); ctx.translate(-GameState.camera.x, -GameState.camera.y);
     if (portal && exploredGrid[Math.floor(portal.y/TILE_SIZE)][Math.floor(portal.x/TILE_SIZE)]) { ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.arc(portal.x, portal.y, portal.radius, 0, Math.PI * 2); ctx.fill(); }
-    
     entities.filter(e => !e.markedForDeletion).sort((a, b) => a.y - b.y).forEach(e => e.draw?.(ctx));
-    particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); 
-    
-    ctx.restore();
-    
+    particles.forEach(p => p.draw(ctx)); floatingTexts.forEach(ft => ft.draw(ctx)); ctx.restore();
     if (GameState.state === 'DEAD') { ctx.fillStyle = 'rgba(100, 0, 0, 0.4)'; ctx.fillRect(0, 0, REFS.canvas.width, REFS.canvas.height); ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("YOU HAVE FALLEN", REFS.canvas.width/2, REFS.canvas.height/2); }
 }
 
@@ -582,27 +584,27 @@ function loop(timestamp) {
     if (GameState.state === 'PLAYING') {
         if (GameState.pendingLevelUp) { GameState.level++; UI.notify(`Depth ${GameState.level}`); initLevel(false); GameState.pendingLevelUp = false; saveGame(); }
         HiveMind.update();
-        
         for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].update) entities[i].update(dt);
         for (let i = entities.length - 1; i >= 0; i--) if (entities[i] && entities[i].markedForDeletion) entities.splice(i, 1);
-        
         for (let i = particles.length - 1; i >= 0; i--) particles[i].update(dt);
         for (let i = floatingTexts.length - 1; i >= 0; i--) floatingTexts[i].update(dt);
         
+        // --- PHASE 2: INTERACTION CHECK ---
+        GameState.activeInteractable = null;
+        entities.forEach(e => {
+            if ((e instanceof VillageNPC || e instanceof VillageInteractable) && Math.hypot(player.x - e.x, player.y - e.y) < 100) {
+                GameState.activeInteractable = e;
+            }
+        });
+
         if (GameState.frame % 10 === 0) UI.updateStats();
         if (GameState.frame % 120 === 0) { 
-            let ec = 0; 
-            for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++;
-            
+            let ec = 0; for(let i=0; i<entities.length; i++) if(entities[i] instanceof Enemy) ec++;
             let maxEnemies = 5 + GameState.level;
             if (ec < maxEnemies) {
                 let toSpawn = Math.min(2, maxEnemies - ec);
                 for(let s=0; s < toSpawn; s++) {
-                    let ex, ey;
-                    do { 
-                        ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; 
-                        ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; // RESTRICT TO DUNGEON
-                    } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
+                    let ex, ey; do { ex = randomInt(2, window.MAP_SIZE-3) * TILE_SIZE; ey = randomInt(2, window.VILLAGE_START - 2) * TILE_SIZE; } while (isWall(ex, ey) || Math.hypot(ex - player.x, ey - player.y) < 400);
                     entities.push(new Enemy(ex, ey));
                 }
             }
@@ -634,8 +636,7 @@ window.onload = () => {
 
 REFS.playBtn.addEventListener('click', () => {
     REFS.mainMenu.classList.add('hidden'); REFS.uiLayer.classList.remove('hidden');
-    initLevel(true); // TRUE = First time load, generate the village
-    UI.updateCurrencies(); UI.checkDailyLogin();
+    initLevel(true); UI.updateCurrencies(); UI.checkDailyLogin();
     GameState.state = 'PLAYING'; GameState.lastTime = performance.now(); requestAnimationFrame(loop);
 });
 
@@ -649,4 +650,43 @@ window.addEventListener('DOMContentLoaded', () => {
     bindUIButton(document.getElementById('claim-daily-btn'), () => UI.claimDaily());
     bindUIButton(document.getElementById('avatar-btn'), () => UI.toggleInventory());
     bindUIButton(document.querySelector('.close-btn'), () => UI.toggleInventory());
+    
+    // Phase 2 Bindings
+    bindUIButton(document.getElementById('auto-clean-btn'), () => UI.autoCleanBag());
 });
+
+// --- VILLAGE INTERACTABLES CLASSES ---
+class VillageNPC {
+    constructor(x, y, name, icon, message) {
+        this.x = x; this.y = y; this.name = name; this.icon = icon; this.message = message; this.radius = 25;
+    }
+    update(dt) {}
+    draw(ctx) {
+        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center";
+        ctx.fillText(this.icon, this.x, this.y);
+        ctx.font = "bold 14px Arial"; ctx.fillStyle = "white";
+        ctx.fillText(this.name, this.x, this.y + 20);
+        // Interaction Indicator
+        if (GameState.activeInteractable === this) {
+            ctx.fillStyle = "rgba(187, 134, 252, 0.5)"; ctx.beginPath(); ctx.arc(this.x, this.y, 40, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+class VillageInteractable {
+    constructor(x, y, type, icon) {
+        this.x = x; this.y = y; this.type = type; this.icon = icon; this.radius = 25;
+    }
+    update(dt) {}
+    draw(ctx) {
+        ctx.save(); ctx.font = "40px Arial"; ctx.textAlign = "center";
+        ctx.fillText(this.icon, this.x, this.y);
+        ctx.font = "bold 14px Arial"; ctx.fillStyle = "#ffd700";
+        ctx.fillText(this.type, this.x, this.y + 20);
+        if (GameState.activeInteractable === this) {
+            ctx.fillStyle = "rgba(255, 215, 0, 0.3)"; ctx.beginPath(); ctx.arc(this.x, this.y, 50, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
