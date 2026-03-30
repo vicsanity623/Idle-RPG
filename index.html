@@ -97,7 +97,7 @@
         .slot-key { position: absolute; top: -8px; right: -5px; background: var(--primary); color: #000; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; z-index: 2;}
 
         /* --- MODALS --- */
-        #inventory-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
+        #inventory-modal, #workbench-modal, #bounty-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
         .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
         .modal-body { flex: 1; overflow-y: auto; padding-right: 8px; }
         .modal-body h3 { margin: 15px 0 10px 0; font-size: 1.1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
@@ -114,6 +114,16 @@
         .upgrade-btn { margin-top: 8px; background: var(--shard); border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; color: #000; transition: 0.2s; }
         .upgrade-btn:active { transform: scale(0.95); }
         .close-btn { background: var(--hp-color); border: none; padding: 5px 15px; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        /* --- INTERACT BUTTON --- */
+        #interact-btn { 
+            position: absolute; bottom: 150px; right: 40px; 
+            width: 80px; height: 80px; background: var(--primary); 
+            border: 4px solid white; border-radius: 50%; color: black; 
+            font-weight: 900; font-size: 0.9rem; pointer-events: auto; 
+            display: none; justify-content: center; align-items: center; 
+            box-shadow: 0 0 20px var(--primary); z-index: 50;
+        }
 
         /* --- SOTA LEVEL UP POPUP --- */
         #stat-delta-popup {
@@ -312,9 +322,12 @@
     <!-- Game Canvas -->
     <canvas id="game-canvas"></canvas>
 
-    <!-- UI Layer -->
+    <!-- UI LAYER -->
     <div id="ui-layer" class="hidden">
         
+        <!-- Interaction Button (Appears when near NPCs) -->
+        <div id="interact-btn">INTERACT</div>
+
         <!-- Player Stats -->
         <div id="player-ui">
             <div class="avatar-box" id="avatar-btn">Lv<span id="p-level">1</span></div>
@@ -349,9 +362,7 @@
         </div>
 
         <!-- Dynamic Hotbar -->
-        <div id="hotbar">
-            <!-- Injected by JavaScript -->
-        </div>
+        <div id="hotbar"></div>
 
         <!-- Invisible Joystick -->
         <div id="joystick-zone">
@@ -436,6 +447,41 @@
                         <button id="equip-unequip-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--primary); color: #000; border: none;"></button>
                         <button id="discard-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--hp-color); color: #fff; border: none;">Discard</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WORKBENCH MODAL -->
+        <div id="workbench-modal">
+            <div class="inv-header">
+                <h2>🛠️ Village Workbench</h2>
+                <button class="close-btn">X</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--shard); margin-bottom: 20px;">
+                    <h3>One-Tap Maintenance</h3>
+                    <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Automatically equips better gear and converts trash into Shards.</p>
+                    <button id="auto-clean-btn" class="btn" style="width: 100%; font-size: 1.1rem;">CLEAN BAG & AUTO-EQUIP</button>
+                </div>
+
+                <h3>Skill Amplification</h3>
+                <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Infuse your skills with Shards to increase their efficiency.</p>
+                <div id="skill-amp-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Procedurally generated in main.js -->
+                </div>
+            </div>
+        </div>
+
+        <!-- BOUNTY BOARD MODAL -->
+        <div id="bounty-modal">
+            <div class="inv-header">
+                <h2>📜 Bounty Board</h2>
+                <button class="close-btn">X</button>
+            </div>
+            <div class="modal-body">
+                <h3>Active Tasks</h3>
+                <div id="bounty-list">
+                    <p style="text-align:center; color:#777; margin-top: 20px;">No bounties available. Reach Depth 10 to unlock!</p>
                 </div>
             </div>
         </div>
@@ -696,6 +742,34 @@ window.refreshSkillTreeUI = function() {
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeSkillTree();
+            
+            // Interaction Button Logic
+            const interactBtn = document.getElementById('interact-btn');
+            setInterval(() => {
+                if (window.GameState && GameState.activeInteractable) {
+                    interactBtn.style.display = 'flex';
+                    interactBtn.innerText = `USE ${GameState.activeInteractable.name || GameState.activeInteractable.type}`;
+                } else {
+                    interactBtn.style.display = 'none';
+                }
+            }, 100);
+
+            // Binders for closing Phase 2 modals
+            const closeWorkbench = () => { document.getElementById('workbench-modal').style.display = 'none'; };
+            const closeBounty = () => { document.getElementById('bounty-modal').style.display = 'none'; };
+            
+            // Dynamic Binder for Interaction
+            interactBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (GameState.activeInteractable) {
+                    if (GameState.activeInteractable.type === 'WORKBENCH') UI.openWorkbench();
+                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') document.getElementById('bounty-modal').style.display = 'flex';
+                    if (GameState.activeInteractable instanceof VillageNPC) showNotification(GameState.activeInteractable.message);
+                }
+            });
+
+            document.getElementById('close-workbench-btn').addEventListener('click', closeWorkbench);
+            document.getElementById('close-bounty-btn').addEventListener('click', closeBounty);
         });
     </script>
 </body>
