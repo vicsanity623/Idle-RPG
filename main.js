@@ -751,6 +751,8 @@ function initLevel(isFirstLoad = false) {
     spawnEnemies(); 
     REFS.depthLevel.innerText = GameState.level; 
     UI.updateMinimap(); UI.buildHotbar(); UI.updateStats();
+    GameState.camera.x = 0; 
+    GameState.camera.y = 0;
 }
 
 // --- 7. INPUT & SAVE ---
