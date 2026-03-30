@@ -17,7 +17,7 @@ const HiveMind = {
     }
 };
 
-const generateRandomGear = (level) => {
+const generateRandomGear = (level, isQuestReward = false) => {
     const effectiveLevel = Math.max(level, window.PlayerData.level || 1);
     let gearTemplates = [
         { slot: 'Head',     name: 'Helmet',     stats: { def: 20, hp: 80 } },
@@ -34,22 +34,38 @@ const generateRandomGear = (level) => {
     let roll = Math.random(), rarityName = 'Common', rarityColor = 'var(--rarity-common)', statMult = 1.0;
     let rarityFlatBonus = 0;
 
-    if (roll < 0.05) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 2.5; rarityFlatBonus = 50; } 
-    else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 1.8; rarityFlatBonus = 30; } 
-    else if (roll < 0.45) { rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; statMult = 1.4; rarityFlatBonus = 15; }
+    // --- PHASE 3: NPC GOD-TIER LOOT LOGIC ---
+    if (isQuestReward) {
+        rarityName = 'LEGENDARY RELIC'; 
+        rarityColor = 'var(--rarity-legendary)'; 
+        statMult = 50.0; // 50X Stat Multiplier for Quest Rewards
+        rarityFlatBonus = 500; 
+    } else {
+        if (roll < 0.05) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 2.5; rarityFlatBonus = 50; } 
+        else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 1.8; rarityFlatBonus = 30; } 
+        else if (roll < 0.45) { rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; statMult = 1.4; rarityFlatBonus = 15; }
+    }
 
-    let item = { id: `gear_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, name: `${rarityName} ${chosenTemplate.name}`, slot: chosenTemplate.slot, rarity: rarityName, color: rarityColor, stats: {} };
+    let item = { 
+        id: `gear_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, 
+        name: `${rarityName} ${chosenTemplate.name}`, 
+        slot: chosenTemplate.slot, 
+        rarity: rarityName, 
+        color: rarityColor, 
+        stats: {} 
+    };
 
     for (let stat in chosenTemplate.stats) {
         let weight = (stat === 'hp') ? 5 : (stat === 'atk' || stat === 'def') ? 1 : 0.1;
         let baseStat = chosenTemplate.stats[stat] + (rarityFlatBonus * weight);
         let rawValue = baseStat * (1 + effectiveLevel * 0.35) * randomFloat(1.05, 1.15) * statMult;
+        
         if (stat === 'hp' || stat === 'atk' || stat === 'def') item.stats[stat] = Math.max(1, Math.round(rawValue)); 
         else item.stats[stat] = Number(rawValue.toFixed(3)); 
     }
 
     const equipped = window.PlayerData.gear[item.slot];
-    if (equipped) {
+    if (equipped && !isQuestReward) { // Only apply bad luck protection to regular drops
         let eqStats = equipped.stats || equipped;
         for (let stat in item.stats) {
             if (eqStats[stat] && item.stats[stat] <= eqStats[stat]) {
@@ -61,6 +77,16 @@ const generateRandomGear = (level) => {
     }
     return item;
 };
+
+// Helper function for UI to determine stat comparison color based on whether higher is better
+function getStatDeltaColor(currentValue, equippedValue, isBetterHigher) {
+    if (currentValue === equippedValue) return 'var(--color-neutral, #fff)'; 
+    if (isBetterHigher) { 
+        return currentValue > equippedValue ? 'var(--color-green, #0f0)' : 'var(--color-red, #f00)';
+    } else { 
+        return currentValue < equippedValue ? 'var(--color-green, #0f0)' : 'var(--color-red, #f00)';
+    }
+}
 
 // --- ENEMY CLASS ---
 class Enemy {
@@ -116,7 +142,6 @@ class Enemy {
             let nextY = this.y + Math.sin(targetAngle) * moveStep;
             
             // PHASE 1: SAFE ZONE BARRIER
-            // Enemies cannot move further south than the Dungeon border
             let villageYLimit = (window.VILLAGE_START * 64) - this.radius;
             if (nextY > villageYLimit) nextY = this.y;
             
@@ -164,6 +189,11 @@ class Enemy {
         this.markedForDeletion = true;
         let xpReward = 10 * GameState.level;
         gainXp(Math.floor(xpReward * player.getXpMultiplier()));
+
+        // --- PHASE 3: BOUNTY TRACKING ---
+        if (!window.PlayerData.questLog) window.PlayerData.questLog = { totalKills: 0 };
+        window.PlayerData.questLog.totalKills++;
+
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
         if (Math.random() < 0.2) spawnLoot(this.x, this.y, 'shard');
         if (Math.random() < 0.13) spawnLoot(this.x, this.y, 'gear');
@@ -182,7 +212,7 @@ class Enemy {
 
 // --- WORLD ENTITIES ---
 class Loot {
-    constructor(x, y, type) { this.x = x; this.y = y; this.type = type; this.radius = 8; this.life = 15; this.floatY = 0; this.time = Math.random() * 10; }
+    constructor(x, y, type) { this.x = x; this.y = y; this.type = type; this.radius = 8; this.life = 15; this.floatY = 0; this.time = Math.random() * 10; this.markedForDeletion = false; }
     update(dt) {
         this.life -= dt; if (this.life <= 0) { this.markedForDeletion = true; return; }
         this.time += dt * 5; this.floatY = Math.sin(this.time) * 5;
@@ -237,7 +267,7 @@ class Particle {
 }
 
 class ExpandingRing {
-    constructor(x, y, color, maxRadius, life) { this.x = x; this.y = y; this.color = color; this.maxRadius = maxRadius; this.lifeMax = life; this.life = life; this.radius = 0; }
+    constructor(x, y, color, maxRadius, life) { this.x = x; this.y = y; this.color = color; this.maxRadius = maxRadius; this.lifeMax = life; this.life = life; this.radius = 0; this.markedForDeletion = false; }
     update(dt) {
         this.life -= dt; this.radius = this.maxRadius * (1 - (this.life / this.lifeMax));
         if (this.life <= 0) this.markedForDeletion = true;
