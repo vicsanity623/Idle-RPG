@@ -763,7 +763,13 @@ window.refreshSkillTreeUI = function() {
                 e.preventDefault();
                 if (GameState.activeInteractable) {
                     if (GameState.activeInteractable.type === 'WORKBENCH') UI.openWorkbench();
-                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') document.getElementById('bounty-modal').style.display = 'flex';
+                    
+                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') {
+                        document.getElementById('bounty-modal').style.display = 'flex';
+                        // TRIGGER THE RENDER SO THE BOARD SHOWS LIVE TASKS
+                        if (UI.renderBountyBoard) UI.renderBountyBoard(); 
+                    }
+                    
                     if (GameState.activeInteractable instanceof VillageNPC) showNotification(GameState.activeInteractable.message);
                 }
             });
