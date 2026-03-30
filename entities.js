@@ -38,11 +38,11 @@ const generateRandomGear = (level, isQuestReward = false) => {
     if (isQuestReward) {
         rarityName = 'LEGENDARY RELIC';
         rarityColor = 'var(--rarity-legendary)';
-        statMult = 50.0; // 50X Stat Multiplier for Quest Rewards
-        rarityFlatBonus = 500;
+        statMult = 3.5; // Action RPG Mythic Reward Tier
+        rarityFlatBonus = 100;
     } else {
-        if (roll < 0.05) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 2.5; rarityFlatBonus = 50; }
-        else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 1.8; rarityFlatBonus = 30; }
+        if (roll < 0.05) { rarityName = 'Legendary'; rarityColor = 'var(--rarity-legendary)'; statMult = 3.0; rarityFlatBonus = 50; }
+        else if (roll < 0.15) { rarityName = 'Epic'; rarityColor = 'var(--rarity-epic)'; statMult = 2.0; rarityFlatBonus = 30; }
         else if (roll < 0.45) { rarityName = 'Rare'; rarityColor = 'var(--rarity-rare)'; statMult = 1.4; rarityFlatBonus = 15; }
     }
 
@@ -58,7 +58,7 @@ const generateRandomGear = (level, isQuestReward = false) => {
     for (let stat in chosenTemplate.stats) {
         let weight = (stat === 'hp') ? 5 : (stat === 'atk' || stat === 'def') ? 1 : 0.1;
         let baseStat = chosenTemplate.stats[stat] + (rarityFlatBonus * weight);
-        let rawValue = baseStat * (1 + effectiveLevel * 0.35) * randomFloat(1.05, 1.15) * statMult;
+        let rawValue = baseStat * (1 + effectiveLevel * 0.15) * randomFloat(1.05, 1.15) * statMult;
 
         if (stat === 'hp' || stat === 'atk' || stat === 'def') item.stats[stat] = Math.max(1, Math.round(rawValue));
         else item.stats[stat] = Number(rawValue.toFixed(3));
@@ -99,10 +99,10 @@ class Enemy {
         this.baseSpeed = randomFloat(230, 280) * depthSpeedBonus;
         this.speed = this.baseSpeed;
 
-        let hpMultiplier = Math.pow(1.3, depth);
-        this.hp = 300 * hpMultiplier;
+        let depthScaling = 1 + depth * 0.4 + Math.pow(depth, 1.2) * 0.1;
+        this.hp = Math.floor(300 * depthScaling);
         this.maxHp = this.hp;
-        this.damage = (5 * hpMultiplier) * 0.6;
+        this.damage = Math.max(5, Math.floor(20 * (1 + depth * 0.25)));
 
         const types = ['semi', 'burst', 'rapid'];
         this.fireType = types[Math.floor(Math.random() * types.length)];
@@ -219,12 +219,12 @@ class BossEnemy extends Enemy {
         this.radius = 45; // Massive size
         this.bossLevel = bossLevel;
 
-        // 25% compounding increase per level
-        let statMultiplier = Math.pow(1.25, bossLevel - 1);
+        // Polynomial Action-RPG style scaling for Bosses
+        let statMultiplier = 1 + bossLevel * 0.8 + Math.pow(bossLevel, 1.5) * 0.2;
 
-        this.maxHp = 15000 * statMultiplier;
+        this.maxHp = Math.floor(10000 * statMultiplier);
         this.hp = this.maxHp;
-        this.damage = 100 * statMultiplier;
+        this.damage = Math.floor(60 * (1 + bossLevel * 0.3));
         this.speed = 180 + (bossLevel * 5); // Slightly slower, but speeds up per level
 
         this.fireType = 'burst'; // Shoots massive bursts
