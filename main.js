@@ -731,8 +731,12 @@ const bindUIButton = (element, callback) => {
 window.addEventListener('DOMContentLoaded', () => {
     bindUIButton(document.getElementById('claim-daily-btn'), () => UI.claimDaily());
     bindUIButton(document.getElementById('avatar-btn'), () => UI.toggleInventory());
-    bindUIButton(document.querySelector('.close-btn'), () => UI.toggleInventory());
     bindUIButton(document.getElementById('auto-clean-btn'), () => UI.autoCleanBag());
+
+    // Bind specific close buttons for each separate modal
+    bindUIButton(document.querySelector('#inventory-modal .close-btn'), () => REFS.invModal.style.display = 'none');
+    bindUIButton(document.querySelector('#workbench-modal .close-btn'), () => REFS.workbenchModal.style.display = 'none');
+    bindUIButton(document.querySelector('#bounty-modal .close-btn'), () => REFS.bountyModal.style.display = 'none');
 });
 
 // --- VILLAGE INTERACTABLES CLASSES ---
