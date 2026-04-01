@@ -295,7 +295,7 @@ const UI = {
     equipItem: (index) => {
         if (!PlayerData.inventory[index]) return; let itemToEquip = PlayerData.inventory[index], slot = itemToEquip.slot;
         let oldStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
-        PlayerData.inventory.splice(index, 1); let currentlyEquipped = PlayerData.gear[slot]; if (currentlyEquipped && currentlyEquipped.id) PlayerData.inventory.push(currentlyEquipped); PlayerData.gear[slot] = itemToEquip;
+        PlayerData.inventory.splice(index, 1); let currentlyEquipped = PlayerData.gear[slot]; if (currentlyEquipped) PlayerData.inventory.push(currentlyEquipped); PlayerData.gear[slot] = itemToEquip;
         player.hp = Math.min(player.hp, player.getMaxHp()); UI.renderInventory(); UI.updateStats(); saveGame();
         let newStats = typeof player.getUIStats === 'function' ? player.getUIStats() : { cp: player.getCombatPower() };
         let deltas = [], keys = [{ k: 'hp', l: 'Max HP' }, { k: 'atk', l: 'Attack' }, { k: 'def', l: 'Defense' }, { k: 'regen', l: 'Regen' }, { k: 'crit', l: 'Crit %' }, { k: 'cx', l: 'Crit X' }, { k: 'sp', l: 'Atk Spd' }, { k: 'mag', l: 'Magnet' }, { k: 'grd', l: 'Gold Farmer' }, { k: 'wis', l: 'XP Fiend' }, { k: 'fear', l: 'Fear Aura' }, { k: 'cp', l: 'cp' }];
