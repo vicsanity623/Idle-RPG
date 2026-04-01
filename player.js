@@ -526,6 +526,17 @@ class Player {
         ctx.stroke();
         ctx.restore();
     }
+
+    resetSkills() {
+        this.learnedSkills = [];
+        this.skillPoints = Math.max(0, (window.PlayerData ? window.PlayerData.level : 1) - 1); // Refunds all earned points
+        if (window.PlayerData && typeof window.PlayerData.gold === 'number') {
+            window.PlayerData.gold = Math.max(0, window.PlayerData.gold - 1000); // Deducts currency (placeholder)
+            if (typeof updateCurrencies === 'function') updateCurrencies();
+        }
+        if (typeof refreshSkillTreeUI === 'function') refreshSkillTreeUI();
+        if (typeof UI !== 'undefined' && UI.buildHotbar) UI.buildHotbar();
+    }
 }
 
 // --- NEW GHOST ENTITY ---
