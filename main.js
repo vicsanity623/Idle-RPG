@@ -743,6 +743,7 @@ function initLevel(isFirstLoad = false) {
     let spawnX = Math.floor(window.MAP_SIZE / 2) * TILE_SIZE + TILE_SIZE / 2;
     let spawnY = (window.VILLAGE_START + 5) * TILE_SIZE + TILE_SIZE / 2;
     if (!p) player = new Player(spawnX, spawnY); else { player = p; player.x = spawnX; player.y = spawnY; player.hp = player.getMaxHp(); }
+    window.player = player;
     if (typeof initializeSkillTree === 'function') initializeSkillTree();
     entities.push(player);
     entities.push(new VillageInteractable(spawnX + 150, spawnY - 100, 'WORKBENCH', '🛠️'));
