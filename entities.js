@@ -65,8 +65,8 @@ const generateRandomGear = (level, isQuestReward = false) => {
     }
 
     const equipped = window.PlayerData.gear[item.slot];
-    if (equipped && !isQuestReward) { // Only apply bad luck protection to regular drops
-        let eqStats = equipped.stats || equipped;
+    if (equipped && equipped.stats && !isQuestReward) { // Only apply bad luck protection to regular drops
+        let eqStats = equipped.stats;
         for (let stat in item.stats) {
             if (eqStats[stat] && item.stats[stat] <= eqStats[stat]) {
                 let boostedVal = eqStats[stat] * 1.15;
