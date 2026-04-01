@@ -519,7 +519,7 @@
             skillsTreePanel.addEventListener('mouseout', (event) => { if (event.target.closest('.skill-node')) clearSkillPathHighlight(); });
 
             function updateSkillTreeLockStates() {
-                if (typeof player === 'undefined' || !player || !player.hasSkill || !player.canLearnSkill) return;
+                // Player object is guaranteed to exist by the calling context (initializeSkillTree/refreshSkillTreeUI)
                 skillNodes.forEach(node => { 
                     const skillId = parseInt(node.dataset.skillId); const prereqId = parseInt(node.dataset.prereq); const skillCost = parseInt(node.dataset.cost);
                     const skillCostElement = node.querySelector('.skill-cost');
