@@ -97,7 +97,7 @@
         .slot-key { position: absolute; top: -8px; right: -5px; background: var(--primary); color: #000; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; z-index: 2;}
 
         /* --- MODALS --- */
-        #inventory-modal, #workbench-modal, #bounty-modal, #boss-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
+        #inventory-modal, #workbench-modal, #bounty-modal, #boss-modal, #achievement-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
         .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
         .modal-body { flex: 1; overflow-y: auto; padding-right: 8px; }
         .modal-body h3 { margin: 15px 0 10px 0; font-size: 1.1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
@@ -376,6 +376,9 @@
             <span id="boss-timer-text">75.0s</span>
         </div>
 
+        <!-- New Achievement Button -->
+        <button id="achievements-btn" class="btn" style="position: absolute; top: 20px; left: 200px; padding: 10px 20px; font-size: 1rem; z-index: 100; pointer-events: auto;">ð Achievements</button>
+
         <!-- Notifications & Popups -->
         <div id="notification"></div>
         
@@ -394,6 +397,27 @@
 
         <!-- BOSS MODAL -->
         <div id="boss-modal"></div>
+
+        <!-- Achievement Modal -->
+        <div id="achievement-modal" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9);">
+            <div class="inv-header">
+                <h2>ð Achievements</h2>
+                <button class="close-btn">X</button>
+            </div>
+            <div class="modal-body" id="achievement-list">
+                <!-- Example Achievement Item (will be dynamically rendered by JS) -->
+                <div class="achievement-item" style="background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column;">
+                    <h4 style="font-size: 1rem; color: var(--primary); margin-bottom: 5px;">First Blood</h4>
+                    <p style="font-size: 0.85rem; color: #eee; margin-bottom: 8px;">Defeat your first enemy.</p>
+                    <div class="progress-container" style="background: #333; border-radius: 5px; height: 10px; overflow: hidden; margin-bottom: 5px;">
+                        <div class="progress-fill" style="width: 0%; height: 100%; background: var(--xp-color); transition: width 0.3s ease-out;"></div>
+                    </div>
+                    <span class="progress-text" style="font-size: 0.75rem; color: #aaa; text-align: right;">Progress: 0/1</span>
+                    <button class="claim-btn btn" style="margin-top: 10px; padding: 5px 10px; font-size: 0.8rem; background: var(--gold); color: #000; border: none; width: 100%;" disabled>Claim Reward</button>
+                </div>
+                <!-- More achievements will be rendered here -->
+            </div>
+        </div>
 
         <!-- Inventory Modal -->
         <div id="inventory-modal">
