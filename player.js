@@ -43,8 +43,9 @@ class Player {
         this.color = '#bb86fc';
 
         // --- 1. INITIALIZE ARRAYS & READ FROM SAVE DATA ---
-        this.skillPoints = window.PlayerData.skillPoints || 0;
-        this.learnedSkills = window.PlayerData.learnedSkills || [];
+        const playerData = window.PlayerData || {};
+        this.skillPoints = playerData.skillPoints || 0;
+        this.learnedSkills = playerData.learnedSkills || [];
 
         this.skills = [
             { id: 'heal', cdMax: 17, current: 0 },
