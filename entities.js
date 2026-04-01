@@ -195,6 +195,9 @@ class Enemy {
         // --- PHASE 3: BOUNTY TRACKING ---
         if (!window.PlayerData.questLog) window.PlayerData.questLog = { totalKills: 0 };
         window.PlayerData.questLog.totalKills++;
+        if (player && player.checkAchievements) {
+            player.checkAchievements('killCount'); // Trigger check for kill-based achievements
+        }
 
         if (Math.random() < 0.6) spawnLoot(this.x, this.y, 'gold');
         if (Math.random() < 0.2) spawnLoot(this.x, this.y, 'shard');
@@ -286,6 +289,12 @@ class BossEnemy extends Enemy {
             this.markedForDeletion = true;
             // TRIGGER THE VICTORY SCREEN
             if (typeof window.winBossArena === 'function') window.winBossArena();
+            // NEW: Increment boss kills and trigger achievement check
+            if (!window.PlayerData.questLog.bossKills) window.PlayerData.questLog.bossKills = 0;
+            window.PlayerData.questLog.bossKills++;
+            if (player && player.checkAchievements) {
+                player.checkAchievements('bossKill', { bossLevel: this.bossLevel });
+            }
         }
     }
 
