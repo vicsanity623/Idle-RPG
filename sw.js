@@ -28,12 +28,12 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
-                cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
+                cacheNames
+                    .filter(cache => cache !== CACHE_NAME)
+                    .map((cache) => {
                         console.log('[Service Worker] Purging Stale Cache:', cache);
                         return caches.delete(cache);
-                    }
-                })
+                    })
             );
         })
     );
