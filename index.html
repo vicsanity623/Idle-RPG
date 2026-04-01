@@ -543,13 +543,16 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            if (window.player) { // Ensure player object is available before initializing skill tree
-                initializeSkillTree();
-            } else {
-                // Fallback or defer initialization if player is not ready
-                console.warn("Player object not found on DOMContentLoaded, deferring skill tree init.");
-                // A more robust solution might involve an event listener or a retry mechanism
+            function tryInitializeSkillTree() {
+                if (window.player) { // Ensure player object is available before initializing skill tree
+                    initializeSkillTree();
+                } else {
+                    // Fallback or defer initialization if player is not ready
+                    console.warn("Player object not found, retrying skill tree init in 100ms.");
+                    setTimeout(tryInitializeSkillTree, 100); // Retry after 100ms
+                }
             }
+            tryInitializeSkillTree(); // Start the check/retry loop
             const interactBtn = document.getElementById('interact-btn');
             setInterval(() => {
                 if (window.GameState && GameState.activeInteractable) { interactBtn.style.display = 'flex'; interactBtn.innerText = `USE ${GameState.activeInteractable.name || GameState.activeInteractable.type}`; } 
