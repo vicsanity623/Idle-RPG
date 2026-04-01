@@ -308,6 +308,17 @@
             font-weight: bold;
             margin-top: 8px;
         }
+        /* Add a style for the respec button if needed, or use existing .btn */
+        .respec-btn {
+            background: var(--hp-color); /* Use HP color for a "danger" action */
+            border-color: var(--hp-color);
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            /* Ensure it aligns well with the heading */
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -399,7 +410,10 @@
                 <h3>Inventory Bag</h3>
                 <div class="gear-grid" id="bag-grid"></div>
 
-                <h3>Skills & Talents (<span id="skill-points-available">0</span> SP Available)</h3>
+                <h3>Skills & Talents (<span id="skill-points-available">0</span> SP Available)
+                    <!-- NEW: Skill Respec Button -->
+                    <button id="respec-skills-btn" class="btn respec-btn" style="display: none;">Reset Skills</button>
+                </h3>
                 <div id="skills-tree-panel" class="skills-grid">
                     <svg id="skill-connections-svg"></svg> 
                     <div class="skill-node locked" data-skill-id="1" data-cost="1" data-prereq="0"><div class="skill-icon">💪</div><div class="skill-name">Strength Training</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Strength Training</h4><p>Increases base Strength by 5.</p></div></div>
@@ -502,6 +516,20 @@
             const skillConnectionsSvg = document.getElementById('skill-connections-svg'); 
             let skillNodes = []; 
 
+            // NEW: Populate window.PlayerData.skills from DOM if not already present
+            if (!window.PlayerData || !window.PlayerData.skills || window.PlayerData.skills.length === 0) {
+                window.PlayerData = window.PlayerData || {};
+                window.PlayerData.skills = [];
+                skillsTreePanel.querySelectorAll('.skill-node').forEach(node => {
+                    window.PlayerData.skills.push({
+                        id: parseInt(node.dataset.skillId),
+                        cost: parseInt(node.dataset.cost),
+                        prereq: parseInt(node.dataset.prereq),
+                        // Add other relevant data if needed for display or logic
+                    });
+                });
+            }
+
             function getElementCenter(element) { const rect = element.getBoundingClientRect(); const panelRect = skillsTreePanel.getBoundingClientRect(); return { x: (rect.left + rect.right) / 2 - panelRect.left, y: (rect.top + rect.bottom) / 2 - panelRect.top }; }
             function drawSkillConnections() { skillConnectionsSvg.innerHTML = ''; skillNodes = Array.from(skillsTreePanel.querySelectorAll('.skill-node')); const nodeMap = new Map(); skillNodes.forEach(node => { nodeMap.set(parseInt(node.dataset.skillId), node); }); skillNodes.forEach(node => { const skillId = parseInt(node.dataset.skillId); const prereqId = parseInt(node.dataset.prereq); if (prereqId !== 0 && nodeMap.has(prereqId)) { const prereqNode = nodeMap.get(prereqId); const start = getElementCenter(prereqNode); const end = getElementCenter(node); const line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); line.setAttribute('x1', start.x); line.setAttribute('y1', start.y); line.setAttribute('x2', end.x); line.setAttribute('y2', end.y); line.classList.add('skill-connection-line'); line.dataset.fromSkill = prereqId; line.dataset.toSkill = skillId; skillConnectionsSvg.appendChild(line); } }); }
             function highlightSkillPath(targetNode) { clearSkillPathHighlight(); const pathNodes = new Set(); const pathLines = new Set(); let currentNode = targetNode; while (currentNode && !player.hasSkill(parseInt(currentNode.dataset.skillId))) { pathNodes.add(currentNode); const prereqId = parseInt(currentNode.dataset.prereq); if (prereqId === 0) break; const prereqNode = skillNodes.find(n => parseInt(n.dataset.skillId) === prereqId); if (!prereqNode) break; const line = skillConnectionsSvg.querySelector(`[data-from-skill="${prereqId}"][data-to-skill="${parseInt(currentNode.dataset.skillId)}"]`); if (line) pathLines.add(line); currentNode = prereqNode; } pathNodes.forEach(node => node.classList.add('highlighted')); pathLines.forEach(line => line.classList.add('highlighted')); }
@@ -532,6 +560,8 @@
                         if (skillCostElement) skillCostElement.textContent = `${window.FormatNumber(skillCost)} SP`;
                     }
                 });
+                // NEW: Update respec button visibility and text
+                updateRespecButton();
             }
             window.refreshSkillTreeUI = function() { if (typeof player !== 'undefined' && player) { skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints); drawSkillConnections(); updateSkillTreeLockStates(); } };
         }
@@ -567,6 +597,43 @@
                     if (GameState.activeInteractable instanceof VillageNPC) {
                         if (typeof UI.openBossMenu === 'function') UI.openBossMenu();
                         else showNotification(GameState.activeInteractable.message);
+                    }
+                }
+            });
+
+            // NEW: Skill Respec Feature Logic
+            const respecSkillsBtn = document.getElementById('respec-skills-btn');
+            const RESPEC_COST = 50; // Define the cost to respec skills (e.g., 50 Shards)
+
+            // Function to update respec button visibility and text
+            window.updateRespecButton = function() { // Make it global for easier access if needed
+                if (window.player && window.player.learnedSkills && window.player.learnedSkills.length > 0) {
+                    respecSkillsBtn.style.display = 'inline-block';
+                    respecSkillsBtn.textContent = `Reset Skills (${window.FormatNumber(RESPEC_COST)} Shards)`;
+                } else {
+                    respecSkillsBtn.style.display = 'none';
+                }
+            };
+
+            respecSkillsBtn.addEventListener('click', () => {
+                if (!window.player) {
+                    showNotification("Player data not loaded.", "error");
+                    return;
+                }
+
+                if (window.player.shards < RESPEC_COST) {
+                    showNotification(`Not enough Shards! Need ${RESPEC_COST} Shards to reset skills.`, "error");
+                    return;
+                }
+
+                if (confirm(`Are you sure you want to reset all your skills for ${RESPEC_COST} Shards? This cannot be undone.`)) {
+                    // Call the new method on the player object (to be implemented in player.js)
+                    if (window.player.resetSkills(RESPEC_COST)) {
+                        window.refreshSkillTreeUI(); // Refresh UI after reset
+                        // Also update currencies display if it's a separate function
+                        if (typeof UI !== 'undefined' && typeof UI.updateCurrencies === 'function') {
+                            UI.updateCurrencies();
+                        }
                     }
                 }
             });
