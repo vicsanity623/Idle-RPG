@@ -14,6 +14,24 @@ const PLAYER_ATTACK_RANGE = 280,
         crit: 0.01
     };
 
+// Placeholder for missing global ACTIVE_SKILLS_CONFIG to prevent ReferenceError.
+// In a fully modularized application, this would typically be imported from a shared config.
+const ACTIVE_SKILLS_CONFIG = {
+    5: { cd: 10 }, // Invincibility
+    6: { cd: 8 },  // Scorch Trail
+    7: { cd: 15 }, // Heat Wave
+    8: { cd: 12 }, // Blink
+    9: { cd: 20 }, // Rage
+    10: { cd: 18 },// Twister
+    11: { cd: 25 },// Summon
+    12: { cd: 30 },// Rain Fire
+    13: { cd: 22 },// Zen
+    14: { cd: 15 },// Pipe Bomb
+    22: { cd: 10 },// Frost Nova
+    23: { cd: 12 },// Dagger Shield
+    // Add other active skills as needed based on their IDs
+};
+
 class Player {
     constructor(x, y) {
         this.x = x;
