@@ -1,4 +1,3 @@
-```markdown
 # PR_SUMMARY.md
 
 ## Master Session Summary
@@ -40,4 +39,3 @@ The architectural impact of this session is significant, leading to a more stabl
 *   **Clearer Global State Management:** Explicitly setting `window.player = player` clarifies how the central player object is accessed globally, reducing ambiguity and potential for errors in other modules.
 
 This session has not only delivered valuable new features but has also significantly strengthened the underlying architecture, paving the way for continued development with greater confidence and efficiency.
-```
