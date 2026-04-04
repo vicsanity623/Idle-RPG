@@ -1,11 +1,8 @@
-const CACHE_NAME = 'dungeons-of-fate-v15.5';
+const CACHE_NAME = 'idle-pets-v1';
 
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
-    './player.js',
-    './entities.js',
-    './main.js',
     './manifest.json',
     './icon-192.png',
     './icon-512.png'
