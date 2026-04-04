@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Running Idle-RPG Validation on GitHub Actions..."
+echo "🚀 Running Idle Pets RPG Validation on GitHub Actions..."
 
 # 1. Install dependencies
 echo "📦 Installing testing dependencies..."
@@ -18,55 +18,19 @@ import unittest
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
-class TestMainJS(unittest.TestCase):
+class TestIdlePetsRPG(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         cls.root_dir = os.path.dirname(current_dir)
-        cls.main_js_path = os.path.join(cls.root_dir, 'main.js')
-        cls.test_html_path = os.path.join(cls.root_dir, 'test_runner.html')
+        cls.index_path = os.path.join(cls.root_dir, 'index.html')
 
-        if not os.path.exists(cls.main_js_path):
-            cls.main_js_path = os.path.join(current_dir, 'main.js')
-            cls.test_html_path = os.path.join(current_dir, 'test_runner.html')
-
-        html_content = """
-        <!DOCTYPE html>
-        <html>
-        <head><title>Game Engine Test</title></head>
-        <body>
-            <canvas id="game-canvas"></canvas>
-            <canvas id="minimap"></canvas>
-            <div id="joystick-zone"></div>
-            <div id="j-base"><div id="j-stick"></div></div>
-            <div id="p-level"></div><div id="hp-fill"></div><div id="hp-text"></div>
-            <div id="xp-fill"></div><div id="xp-text"></div>
-            <div id="c-gold"></div><div id="c-shard"></div>
-            <div id="inventory-modal" style="display:none"></div>
-            <div id="stats-sheet"></div><div id="gear-grid"></div>
-            <div id="notification"></div>
-            <div id="daily-login" style="display:none"></div>
-            <div id="d-level"></div>
-            <div id="loading-fill"></div><div id="loading-screen"></div>
-            <div id="main-menu" class="hidden"></div>
-            <button id="play-btn">Play</button>
-            <div id="ui-layer" class="hidden"></div>
-
-            <script>
-                class Player { constructor(x,y){this.x=x;this.y=y;this.hp=100;} getMaxHp(){return 100;} getAttackPower(){return 10;} getDefense(){return 10;} getRegen(){return 1;} getCritChance(){return 1;} getCritMultiplier(){return 1;} }
-                class Enemy { constructor(x,y){this.x=x;this.y=y;} update(){} draw(){} }
-                class Loot { constructor(x,y,t){this.x=x;this.y=y;this.type=t;} update(){} draw(){} }
-                class Particle { constructor(x,y,c){this.x=x;this.y=y;this.c=c;} update(){} draw(){} }
-                class FloatingText { constructor(x,y,t,c){this.x=x;this.y=y;} update(){} draw(){} }
-                const HiveMind = { update: () => {} };
-            </script>
-            <script src="main.js"></script>
-        </body>
-        </html>
-        """
-        
-        with open(cls.test_html_path, "w") as f:
-            f.write(html_content)
+        # Fallback if running directly in the same directory
+        if not os.path.exists(cls.index_path):
+            cls.index_path = os.path.join(current_dir, 'index.html')
+            
+        if not os.path.exists(cls.index_path):
+            raise FileNotFoundError(f"Could not find index.html at {cls.index_path}. Make sure the standalone HTML file is named index.html")
 
         chrome_options = Options()
         chrome_options.add_argument("--headless")
@@ -74,59 +38,96 @@ class TestMainJS(unittest.TestCase):
         chrome_options.add_argument("--disable-dev-shm-usage")
         
         cls.driver = webdriver.Chrome(options=chrome_options)
-        file_uri = f"file://{cls.test_html_path}"
+        file_uri = f"file://{cls.index_path}"
         cls.driver.get(file_uri)
+        
+        # Clear storage and reload to ensure a fresh state for testing
         cls.driver.execute_script("localStorage.clear();")
-
-        # Wait for boot animation to finish
-        time.sleep(2.5) 
-        cls.driver.execute_script("document.getElementById('play-btn').click();")
-        time.sleep(0.5)
+        cls.driver.refresh()
+        time.sleep(1) # Wait for DOM and game to initialize
 
     @classmethod
     def tearDownClass(cls):
         cls.driver.quit()
-        if os.path.exists(cls.test_html_path):
-            os.remove(cls.test_html_path)
-
-    def get_game_state_level(self):
-        return self.driver.execute_script("return GameState.level;")
-
-    def get_local_storage_save(self):
-        data = self.driver.execute_script("return localStorage.getItem('dof_save');")
-        return json.loads(data) if data else {}
 
     def test_01_initialization(self):
-        level = self.get_game_state_level()
-        self.assertEqual(level, 1, "Game should initialize at Depth Level 1")
-
-    def test_02_death_resets_depth(self):
-        self.driver.execute_script("die();")
-        level = self.get_game_state_level()
-        self.assertEqual(level, 1, "Death should instantly reset GameState.level to 1")
+        # Test if the game sets up default values correctly (Base 10 + 50 from instant Daily Login)
+        food = self.driver.execute_script("return rpgGame.state.food;")
+        level = self.driver.execute_script("return rpgGame.state.pets[0].level;")
         
-        save_data = self.get_local_storage_save()
-        self.assertEqual(save_data.get('dungeonLevel'), 1, "dungeonLevel 1 should be saved to localStorage upon death")
+        self.assertEqual(food, 60, "Game should initialize with 60 Food (10 Base + 50 Daily Bonus)")
+        self.assertEqual(level, 1, "Initial pet should start at Level 1")
 
-    def test_03_load_game_restores_depth(self):
-        fake_save = {"dungeonLevel": 5, "gold": 100, "shards": 50}
-        self.driver.execute_script(f"localStorage.setItem('dof_save', JSON.stringify({json.dumps(fake_save)}));")
-        self.driver.execute_script("loadGame();")
-        level = self.get_game_state_level()
-        self.assertEqual(level, 5, "loadGame() should sync GameState.level to match PlayerData.dungeonLevel")
+    def test_02_feeding_mechanic(self):
+        # Get current food dynamically
+        initial_food = self.driver.execute_script("return rpgGame.state.food;")
+
+        # Manually lower hunger to test feeding
+        self.driver.execute_script("rpgGame.state.pets[0].hunger = 50; rpgGame.updateUI();")
+        
+        # Feed the pet
+        self.driver.execute_script("rpgGame.feedPet();")
+        
+        new_food = self.driver.execute_script("return rpgGame.state.food;")
+        hunger = self.driver.execute_script("return rpgGame.state.pets[0].hunger;")
+        
+        self.assertEqual(new_food, initial_food - 1, "Food should decrease by exactly 1 after feeding")
+        self.assertEqual(hunger, 80, "Hunger should increase by 30 (from 50 to 80)")
+
+    def test_03_level_up_mechanic(self):
+        # Max out XP artificially
+        self.driver.execute_script("""
+            let pet = rpgGame.state.pets[0];
+            pet.xp = pet.maxXp;
+            rpgGame.updateUI();
+        """)
+        
+        # Trigger level up
+        self.driver.execute_script("rpgGame.levelUpPet();")
+        
+        level = self.driver.execute_script("return rpgGame.state.pets[0].level;")
+        xp = self.driver.execute_script("return rpgGame.state.pets[0].xp;")
+        
+        self.assertEqual(level, 2, "Pet should advance to Level 2")
+        self.assertEqual(xp, 0, "XP should reset to 0 after leveling up")
+
+    def test_04_save_load_system(self):
+        # Inject a fake save into localStorage
+        fake_save = {
+            "pets": [{"id": 999, "typeIndex": 2, "emoji": "🐥", "name": "Baby Bird", "level": 10, "xp": 0, "maxXp": 500, "hp": 200, "maxHp": 200, "hunger": 100, "maxHunger": 100}],
+            "activePetIndex": 0,
+            "food": 99,
+            "gems": 50,
+            "lastTick": int(time.time() * 1000),
+            "lastDaily": int(time.time() * 1000) # prevent daily login override during test
+        }
+        
+        save_json = json.dumps(fake_save)
+        self.driver.execute_script(f"localStorage.setItem('idle_rpg_save_standalone_v1', JSON.stringify({save_json}));")
+        
+        # Re-initialize the game instance to trigger loadState()
+        self.driver.execute_script("rpgGame = new IdleRPG();")
+        
+        loaded_food = self.driver.execute_script("return rpgGame.state.food;")
+        loaded_level = self.driver.execute_script("return rpgGame.state.pets[0].level;")
+        loaded_name = self.driver.execute_script("return rpgGame.state.pets[0].name;")
+        
+        self.assertEqual(loaded_food, 99, "Game should load the saved 99 Food")
+        self.assertEqual(loaded_level, 10, "Game should load the saved Pet Level 10")
+        self.assertEqual(loaded_name, "Baby Bird", "Game should load the evolved pet name")
 
 if __name__ == "__main__":
     unittest.main()
 EOF
 
 # 3. Run the test suite and capture the exit code
-echo "🧪 Running E2E tests for main.js..."
+echo "🧪 Running E2E tests for Idle Pets RPG..."
 python3 -m pytest tests/test_main.py -v
 TEST_EXIT_CODE=$?
 
 # 4. Evaluate the result
 if [ $TEST_EXIT_CODE -eq 0 ]; then
-    echo "✅ All checks passed! The save systems load successfully."
+    echo "✅ All checks passed! The Idle Pets RPG functions and save states work perfectly."
     exit 0
 else
     echo "❌ Tests failed! Please review the logs above."

@@ -3,487 +3,442 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Endless Dungeons of Fate</title>
+    <title>Idle Pets RPG</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#bb86fc">
     <link rel="apple-touch-icon" href="./icon-192.png">
     <style>
         :root {
-            /* Core Theme Colors */
-            --primary: #bb86fc;
-            --bg-dark: #121212;
-            --hp-color: #ff5252;
-            --xp-color: #03dac6;
-            --gold: #ffd700;
-            --shard: #00e5ff;
-            --panel-bg: rgba(18, 18, 18, 0.9);
-            --glow-color: rgba(187, 134, 252, 0.3);
-            --border-glow: 0px 0px 10px var(--glow-color);
-
-            /* Rarity Palette */
-            --rarity-common: #A0A0A0;
-            --rarity-rare: #00BFFF;
-            --rarity-epic: #8A2BE2;
-            --rarity-legendary: #FFD700;
+            --bg-dark: #0f111a;
+            --bg-panel: #1a1d2d;
+            --accent: #00f2ff;
+            --text-main: #ffffff;
+            --text-dim: #8f9bb3;
+            --border: #2e344e;
+            --success: #00ff9d;
+            --warning: #ffb700;
+            --danger: #ff4444;
         }
 
-        /* --- PWA RESET & ROBUSTNESS --- */
-        * { 
-            box-sizing: border-box; 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            -webkit-touch-callout: none; 
-            -webkit-user-select: none; 
-            -moz-user-select: none; 
-            -ms-user-select: none; 
-            user-select: none; 
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: radial-gradient(circle at center, #1a1d2d 0%, #0f111a 100%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
         }
 
-        body { 
-            background-color: #000; 
-            overflow: hidden; 
-            color: white; 
-            touch-action: none; 
-            -webkit-text-size-adjust: none;
-        }
-        
-        #game-canvas { position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        /* --- SCREENS --- */
-        .screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; background: var(--bg-dark); transition: opacity 0.5s; }
-        .hidden { opacity: 0; pointer-events: none; }
-        .screen.hidden { z-index: -1; } 
-        
-        #loading-bar { width: 200px; height: 10px; border: 1px solid var(--primary); margin-top: 20px; border-radius: 5px; overflow: hidden; }
-        #loading-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
-        .title { font-size: 3rem; text-shadow: 0 0 10px var(--primary); text-align: center; margin-bottom: 20px; }
-        .btn { padding: 15px 40px; font-size: 1.5rem; background: transparent; border: 2px solid var(--primary); color: var(--primary); border-radius: 8px; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.3s; box-shadow: var(--border-glow); }
-        .btn:active { background: var(--primary); color: #000; }
-        
-        /* --- UI LAYER --- */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; }
-        
-        #player-ui { position: absolute; top: 20px; left: 20px; display: flex; align-items: center; gap: 15px; pointer-events: auto; }
-        .avatar-box { width: 60px; height: 60px; border: 2px solid var(--primary); border-radius: 50%; background: #333; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 10px var(--primary); cursor: pointer;}
-        .bars { width: 150px; display: flex; flex-direction: column; gap: 8px; }
-        .bar-container { width: 100%; height: 15px; background: #333; border-radius: 8px; border: 1px solid #555; overflow: hidden; position: relative;}
-        .bar-fill { height: 100%; transition: width 0.3s ease-out; }
-        #hp-fill { background: var(--hp-color); width: 100%; box-shadow: 0 0 8px var(--hp-color); }
-        #xp-fill { background: var(--xp-color); width: 0%; box-shadow: 0 0 8px var(--xp-color); }
-        .bar-text { position: absolute; width: 100%; text-align: center; font-size: 0.7rem; top: 1px; font-weight: bold; text-shadow: 1px 1px 2px #000;}
-
-        #minimap-container { position: absolute; top: 20px; right: 20px; text-align: right; pointer-events: auto;}
-        #level-text { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 5px; text-shadow: 0 0 5px var(--primary);}
-        #minimap { width: 120px; height: 120px; background: rgba(0,0,0,0.5); border: 2px solid var(--primary); border-radius: 8px; }
-        
-        #currencies { position: absolute; top: 170px; right: 20px; display: flex; flex-direction: column; gap: 5px; text-align: right; font-weight: bold; font-size: 1.1rem; text-shadow: 1px 1px 2px #000;}
-        .gold-text { color: var(--gold); }
-        .shard-text { color: var(--shard); }
-
-        /* --- DYNAMIC HOTBAR --- */
-        #hotbar { 
-            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); 
-            display: flex; gap: 8px; pointer-events: auto; justify-content: center; 
-            flex-wrap: wrap; width: 95vw; max-width: 600px;
-        }
-        .slot { 
-            width: 45px; height: 45px; border: 2px solid #555; background: rgba(0,0,0,0.6); 
-            border-radius: 8px; display: flex; justify-content: center; align-items: center; 
-            position: relative; font-size: 1.3rem; overflow: hidden;
-        }
-        .ext-slot { border-color: var(--primary); background: rgba(187, 134, 252, 0.15); box-shadow: 0 0 8px rgba(187, 134, 252, 0.4); }
-        .cooldown-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0,0,0,0.75); transition: height 0.1s linear;}
-        .slot-key { position: absolute; top: -8px; right: -5px; background: var(--primary); color: #000; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; z-index: 2;}
-
-        /* --- MODALS --- */
-        #inventory-modal, #workbench-modal, #bounty-modal, #boss-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90vw; max-width: 600px; height: 80vh; background: var(--panel-bg); border: 2px solid var(--primary); border-radius: 12px; backdrop-filter: blur(15px); padding: 20px; display: none; flex-direction: column; pointer-events: auto; z-index: 110; box-shadow: 0 0 30px rgba(0,0,0,0.9); }
-        .inv-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 10px; flex-shrink: 0; }
-        .modal-body { flex: 1; overflow-y: auto; padding-right: 8px; }
-        .modal-body h3 { margin: 15px 0 10px 0; font-size: 1.1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
-
-        .stats-panel { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(187, 134, 252, 0.3); border-radius: 8px; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
-        .stat-line { font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
-        .stat-val { color: var(--shard); font-weight: bold; }
-
-        .gear-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; padding-bottom: 20px; }
-        .gear-item { background: rgba(255,255,255,0.05); border: 1px solid #444; border-radius: 8px; padding: 10px; text-align: center; transition: 0.2s; }
-        .gear-item:hover { border-color: var(--primary); background: rgba(187, 134, 252, 0.05); }
-        .gear-item h4 { font-size: 0.9rem; color: var(--primary); margin-bottom: 5px; text-transform: capitalize;}
-        
-        .upgrade-btn { margin-top: 8px; background: var(--shard); border: none; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; color: #000; transition: 0.2s; }
-        .upgrade-btn:active { transform: scale(0.95); }
-        .close-btn { background: var(--hp-color); border: none; padding: 5px 15px; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
-
-        /* --- INTERACT BUTTON --- */
-        #interact-btn { 
-            position: absolute; bottom: 150px; right: 40px; 
-            width: 80px; height: 80px; background: var(--primary); 
-            border: 4px solid white; border-radius: 50%; color: black; 
-            font-weight: 900; font-size: 0.9rem; pointer-events: auto; 
-            display: none; justify-content: center; align-items: center; 
-            box-shadow: 0 0 20px var(--primary); z-index: 50;
-        }
-
-        /* --- SOTA LEVEL UP POPUP --- */
-        #stat-delta-popup {
-            position: absolute; 
-            bottom: 90px; 
-            left: 50%; 
-            transform: translate(-50%, 20px); 
-            width: 340px; 
-            max-height: 45vh; 
-            background: linear-gradient(180deg, rgba(30, 30, 45, 0.98) 0%, rgba(15, 15, 25, 0.98) 100%);
-            border: 1px solid rgba(255, 215, 0, 0.3); 
-            border-top: 4px solid var(--primary);
-            border-radius: 12px; 
-            padding: 20px 15px 15px 15px; 
-            color: white; 
-            opacity: 0;
-            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(187, 134, 252, 0.2);
-            z-index: 2000; 
-            pointer-events: none; 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            overflow-y: auto; 
-        }
-        #delta-title { font-size: 1.4rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; text-shadow: 0 0 10px var(--primary); text-align: center; }
-        .delta-row { display: grid; grid-template-columns: 24px 80px 1fr 60px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 6px 10px; border-radius: 6px; margin-top: 4px; }
-        .delta-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; font-weight: 700; }
-        .delta-change { font-size: 0.9rem; font-weight: 800; text-align: right; }
-        .level-badge { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #000; padding: 4px 15px; border-radius: 20px; font-weight: 900; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.5); white-space: nowrap; }
-
-        /* --- OTHER UI ELEMENTS --- */
-        #portal-ui {
-            position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85); border: 2px solid var(--gold); padding: 15px;
-            border-radius: 10px; text-align: center; display: none; z-index: 100; pointer-events: auto;
-            box-shadow: 0 0 15px var(--gold);
-        }
-        #notification { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 1.2rem; color: var(--gold); text-shadow: 0 0 5px #000; opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 1000; }
-        
-        #daily-login { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            background: var(--panel-bg); border: 2px solid var(--gold); padding: 25px; 
-            border-radius: 12px; text-align: center; display: none; z-index: 120; 
-            pointer-events: auto; backdrop-filter: blur(10px); width: 320px;
-        }
-
-        #joystick-zone { position: absolute; bottom: 0; left: 0; width: 50vw; height: 50vh; pointer-events: auto; }
-        .joystick-base { position: absolute; width: 100px; height: 100px; border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; display: none; transform: translate(-50%, -50%); pointer-events: none;}
-        .joystick-stick { position: absolute; width: 40px; height: 40px; background: rgba(187, 134, 252, 0.5); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;}
-        .version-tag { position: absolute; bottom: 30px; right: 30px; font-size: 0.9rem; color: var(--primary); opacity: 0.6; font-weight: bold; transform: rotate(-5deg); border: 1px solid var(--primary); padding: 4px 10px; border-radius: 4px; pointer-events: none; }
-        .modal-body::-webkit-scrollbar { width: 6px; }
-        .modal-body::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
-
-        /* --- SKILLS & TALENTS PANEL --- */
-        .skills-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
-            gap: 15px;
-            padding-bottom: 20px;
-            position: relative; 
-        }
-
-        #skill-connections-svg { 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; 
-            z-index: 1; 
-        }
-
-        .skill-connection-line { 
-            stroke: rgba(100, 100, 100, 0.5);
-            stroke-width: 2px;
-            transition: stroke 0.2s, stroke-width 0.2s;
-        }
-
-        .skill-connection-line.highlighted { 
-            stroke: var(--primary);
-            stroke-width: 4px;
-            filter: drop-shadow(0 0 5px var(--primary));
-        }
-
-        .skill-node {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #444;
-            border-radius: 8px;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.2s;
+        /* Standalone Centered Panel */
+        #rpg-panel {
             position: relative;
-            overflow: visible; 
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
-            z-index: 2; 
+            width: 400px;
+            max-width: 95vw;
+            height: 750px;
+            max-height: 95vh;
+            background: rgba(15, 17, 26, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        .skill-node:hover {
-            border-color: var(--primary);
-            background: rgba(187, 134, 252, 0.05);
-            box-shadow: 0 0 15px var(--glow-color);
+        .rpg-header {
+            background: linear-gradient(90deg, rgba(26, 29, 45, 0.9), rgba(46, 52, 78, 0.9));
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
         }
 
-        .skill-node.highlighted { 
-            box-shadow: 0 0 20px var(--primary);
-            border-color: var(--primary);
-            transform: scale(1.02);
+        .rpg-header h3 {
+            margin: 0;
+            font-size: 1.4rem;
+            background: linear-gradient(to right, #00f2ff, #ff007f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .skill-node.locked {
-            opacity: 0.5;
-            cursor: not-allowed;
-            border-color: #666;
-            filter: grayscale(70%);
+        .rpg-inventory {
+            font-size: 1rem;
+            color: var(--text-dim);
+            display: flex;
+            gap: 15px;
+            font-weight: bold;
         }
 
-        .skill-node.unlocked {
-            border-color: var(--xp-color);
-            background: rgba(3, 218, 198, 0.1);
-            box-shadow: 0 0 15px rgba(3, 218, 198, 0.3);
+        .rpg-content {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding-bottom: 30px;
         }
 
-        .skill-icon {
-            font-size: 2rem;
-            margin-bottom: 5px;
-            line-height: 1;
+        .rpg-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .rpg-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
         }
 
-        .skill-name {
+        .rpg-pet-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px 20px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .rpg-pet-avatar {
+            font-size: 6rem;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.15));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .rpg-pet-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .rpg-pet-level {
             font-size: 0.9rem;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 5px;
-            text-transform: capitalize;
-        }
-
-        .skill-cost {
-            font-size: 0.75rem;
-            color: var(--shard);
+            color: var(--accent);
+            background: rgba(0, 242, 255, 0.1);
+            padding: 3px 12px;
+            border-radius: 20px;
+            margin-top: 8px;
             font-weight: bold;
         }
 
-        /* Tooltip for skill nodes */
-        .skill-tooltip {
+        .rpg-bars {
+            width: 100%;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rpg-bar-container {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            height: 14px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .rpg-bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .rpg-bar-fill::after {
+            content: '';
             position: absolute;
-            bottom: calc(100% + 10px); 
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.95);
-            border: 1px solid var(--primary);
-            border-radius: 8px;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+            animation: shimmer 2s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .rpg-hp-fill { background: linear-gradient(90deg, #ff4444, #ff8888); box-shadow: 0 0 10px rgba(255, 68, 68, 0.5); }
+        .rpg-hunger-fill { background: linear-gradient(90deg, #ffb700, #ffdd55); box-shadow: 0 0 10px rgba(255, 183, 0, 0.5); }
+        .rpg-xp-fill { background: linear-gradient(90deg, #00f2ff, #0088ff); box-shadow: 0 0 10px rgba(0, 242, 255, 0.5); }
+
+        .rpg-bar-label {
+            position: absolute;
+            top: -1px;
+            left: 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            line-height: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .rpg-bar-value {
+            position: absolute;
+            top: -1px;
+            right: 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 16px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .rpg-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .rpg-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
             padding: 12px;
-            width: 220px;
-            text-align: left;
-            font-size: 0.85rem;
-            color: #eee;
-            display: none; 
-            pointer-events: none; 
-            z-index: 200;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-        }
-
-        .skill-node:hover .skill-tooltip {
-            display: block;
-        }
-
-        .skill-tooltip h4 {
-            color: var(--primary);
-            margin-bottom: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            text-align: center;
             font-size: 1rem;
         }
 
-        .skill-tooltip p {
-            margin-bottom: 5px;
-            line-height: 1.3;
+        .rpg-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
         }
-        .skill-tooltip p:last-child {
-            margin-bottom: 0;
+
+        .rpg-btn:active:not(:disabled) {
+            transform: translateY(1px);
         }
-        .skill-tooltip .cost-info {
-            color: var(--shard);
+
+        .rpg-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .rpg-btn.level-up {
+            background: linear-gradient(135deg, #00f2ff, #7f00ff);
+            border: none;
+            color: white;
+            animation: pulse-glow 1.5s infinite;
+            display: none;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+            padding: 15px;
+        }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 5px rgba(0, 242, 255, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(0, 242, 255, 0.8), 0 0 20px rgba(127, 0, 255, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(0, 242, 255, 0.5); }
+        }
+
+        .rpg-roster-title {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-weight: bold;
-            margin-top: 8px;
+        }
+
+        .rpg-roster {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .rpg-roster-item {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .rpg-roster-item:hover {
+            background: rgba(255,255,255,0.1);
+            transform: scale(1.05);
+        }
+
+        .rpg-roster-item.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(0,242,255,0.3);
+            background: rgba(0, 242, 255, 0.1);
+        }
+
+        .rpg-roster-item .lvl-badge {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            background: var(--bg-dark);
+            color: var(--success);
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-weight: bold;
+        }
+
+        .rpg-logs {
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            padding: 12px;
+            height: 100px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            color: #aaa;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border: 1px solid rgba(255,255,255,0.05);
+            flex-shrink: 0;
+        }
+
+        .rpg-logs::-webkit-scrollbar { width: 4px; }
+        .rpg-logs::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+
+        .rpg-log-entry { animation: fadeInRight 0.3s ease; line-height: 1.3; }
+        .rpg-log-entry.rare { color: #ffb700; font-weight: bold; }
+        .rpg-log-entry.epic { color: #ff007f; font-weight: bold; text-shadow: 0 0 5px rgba(255,0,127,0.5); }
+        .rpg-log-entry.system { color: var(--accent); }
+
+        @keyframes fadeInRight {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Modal Overlays for RPG */
+        .rpg-modal-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+            border-radius: 20px;
+        }
+
+        .rpg-modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--accent);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.2);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 80%;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="screen">
-        <h1 class="title">Dungeons of Fate</h1>
-        <p>Initializing & Generating Realms...</p>
-        <div id="loading-bar"><div id="loading-fill"></div></div>
-    </div>
-
-    <!-- Main Menu -->
-    <div id="main-menu" class="screen hidden">
-        <h1 class="title">Dungeons of Fate</h1>
-        <button id="play-btn" class="btn">Play Game</button>
-        <div class="version-tag">꧁𓊈𒆜v0.0.8𒆜𓊉꧂</div>
-    </div>
-
-    <!-- Game Canvas -->
-    <canvas id="game-canvas"></canvas>
-
-    <!-- UI LAYER -->
-    <div id="ui-layer" class="hidden">
-        
-        <!-- Interaction Button -->
-        <div id="interact-btn">INTERACT</div>
-
-        <!-- Player Stats -->
-        <div id="player-ui">
-            <div class="avatar-box" id="avatar-btn">Lv<span id="p-level">1</span></div>
-            <div class="bars">
-                <div class="bar-container">
-                    <div id="hp-fill" class="bar-fill"></div>
-                    <div class="bar-text" id="hp-text">100 / 100</div>
-                </div>
-                <div class="bar-container">
-                    <div id="xp-fill" class="bar-fill"></div>
-                    <div class="bar-text" id="xp-text">0 / 100</div>
-                </div>
+    <div id="rpg-panel">
+        <div class="rpg-header">
+            <h3>Idle Pets RPG</h3>
+            <div class="rpg-inventory">
+                🍖 <span id="rpg-food-count">0</span> &nbsp;|&nbsp; 💎 <span id="rpg-gems-count">0</span>
             </div>
         </div>
-
-        <!-- Minimap & Currencies -->
-        <div id="minimap-container">
-            <div id="level-text">Depth: <span id="d-level">1</span></div>
-            <canvas id="minimap" width="120" height="120"></canvas>
-        </div>
-        <div id="currencies">
-            <div class="gold-text">🪙 <span id="c-gold">0</span></div>
-            <div class="shard-text">💎 <span id="c-shard">0</span></div>
-        </div>
-
-        <!-- BOSS TIMER UI -->
-        <div id="boss-timer-ui" style="display: none; position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 2.5rem; font-weight: 900; color: #ff5252; text-shadow: 0 0 10px #000, 0 0 20px #ff0000; z-index: 100; pointer-events: none;">
-            <span id="boss-timer-text">75.0s</span>
-        </div>
-
-        <!-- Notifications & Popups -->
-        <div id="notification"></div>
         
-        <div id="stat-delta-popup">
-            <h3 id="delta-title">Level Up!</h3>
-            <div id="delta-content"></div>
-        </div>
-
-        <!-- Dynamic Hotbar -->
-        <div id="hotbar"></div>
-
-        <!-- Invisible Joystick -->
-        <div id="joystick-zone">
-            <div id="j-base" class="joystick-base"><div id="j-stick" class="joystick-stick"></div></div>
-        </div>
-
-        <!-- BOSS MODAL -->
-        <div id="boss-modal"></div>
-
-        <!-- Inventory Modal -->
-        <div id="inventory-modal">
-            <div class="inv-header">
-                <h2>Character Info</h2>
-                <button class="close-btn">X</button>
-            </div>
-            <div class="modal-body">
-                <div class="stats-panel" id="stats-sheet"></div>
-        
-                <h3>Equipment</h3>
-                <div class="gear-grid" id="gear-grid"></div>
+        <div class="rpg-content">
+            <div class="rpg-pet-display">
+                <div class="rpg-pet-avatar" id="rpg-active-avatar">🥚</div>
+                <div class="rpg-pet-name" id="rpg-active-name">Basic Egg</div>
+                <div class="rpg-pet-level">Lv. <span id="rpg-active-lvl">1</span></div>
                 
-                <h3>Inventory Bag</h3>
-                <div class="gear-grid" id="bag-grid"></div>
-
-                <h3>Skills & Talents (<span id="skill-points-available">0</span> SP Available)</h3>
-                <div id="skills-tree-panel" class="skills-grid">
-                    <svg id="skill-connections-svg"></svg> 
-                    <div class="skill-node locked" data-skill-id="1" data-cost="1" data-prereq="0"><div class="skill-icon">💪</div><div class="skill-name">Strength Training</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Strength Training</h4><p>Increases base Strength by 5.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="2" data-cost="1" data-prereq="1"><div class="skill-icon">🔨</div><div class="skill-name">Heavy Blow</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Heavy Blow</h4><p>Basic attacks deal 10% bonus damage.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="9" data-cost="2" data-prereq="2"><div class="skill-icon">💢</div><div class="skill-name">Rage</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Rage</h4><p>Glow bright red dealing explosive damage with massive crit. (Auto-cast, 6s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="13" data-cost="3" data-prereq="9"><div class="skill-icon">🧘</div><div class="skill-name">Zen</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Zen</h4><p>Attack speed increased by 500% & deal 10x damage for 5s. (Auto-cast, 12s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="3" data-cost="1" data-prereq="0"><div class="skill-icon">🏃</div><div class="skill-name">Agile Footwork</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Agile Footwork</h4><p>Increases movement speed by 10%.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="4" data-cost="1" data-prereq="3"><div class="skill-icon">💨</div><div class="skill-name">Evasion Mastery</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Evasion Mastery</h4><p>Increases Health Regen by 5.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="8" data-cost="2" data-prereq="4"><div class="skill-icon">👁️‍🗨️</div><div class="skill-name">Blink</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Blink</h4><p>Teleport behind nearest enemy + 2s invincibility. (Auto-cast, 8s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="5" data-cost="2" data-prereq="8"><div class="skill-icon">🛡️</div><div class="skill-name">Invincibility</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Invincibility</h4><p>Enemies cannot damage player for 3 seconds. (Auto-cast, 14s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="14" data-cost="3" data-prereq="5"><div class="skill-icon">💣</div><div class="skill-name">Pipe Bomb</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Pipe Bomb</h4><p>Absorb all damage for 5s then explode it back outward. (Auto-cast, 20s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="7" data-cost="1" data-prereq="0"><div class="skill-icon">🌋</div><div class="skill-name">Heat Wave</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Heat Wave</h4><p>Pushes explosive 360 wave dealing massive damage. (Auto-cast, 17s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="6" data-cost="2" data-prereq="7"><div class="skill-icon">🔥</div><div class="skill-name">Scorch Trail</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Scorch Trail</h4><p>Leave a burning trail that damages enemies. (Auto-cast, 9s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="12" data-cost="3" data-prereq="6"><div class="skill-icon">☄️</div><div class="skill-name">Rain Fire</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Rain Fire</h4><p>Flaming projectiles drop from the sky dealing AOE damage. (Auto-cast, 10s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="10" data-cost="1" data-prereq="0"><div class="skill-icon">🌪️</div><div class="skill-name">Twister</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Twister</h4><p>Spawns massive spiraling outward tornados (500% DMG). (Auto-cast, 12s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="11" data-cost="3" data-prereq="10"><div class="skill-icon">👥</div><div class="skill-name">Summon</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Summon</h4><p>Spawn a massive clone that tackles up to 5 enemies (900% DMG). (Auto-cast, 13s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="15" data-cost="1" data-prereq="0"><div class="skill-icon">❤️</div><div class="skill-name">Vitality Surge</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Vitality Surge</h4><p>Increases Max HP by 50%.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="16" data-cost="1" data-prereq="15"><div class="skill-icon">🧱</div><div class="skill-name">Iron Skin</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Iron Skin</h4><p>Increases Defense by 50%.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="17" data-cost="2" data-prereq="16"><div class="skill-icon">🦇</div><div class="skill-name">Vampire Aura</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Vampire Aura</h4><p>Slowly siphon health from nearby enemies.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="18" data-cost="1" data-prereq="0"><div class="skill-icon">🧲</div><div class="skill-name">Magnetic Field</div><div class="skill-cost">1 SP</div><div class="skill-tooltip"><h4>Magnetic Field</h4><p>Increases pickup radius drastically.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="19" data-cost="2" data-prereq="18"><div class="skill-icon">💰</div><div class="skill-name">Wealth Magnet</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Wealth Magnet</h4><p>Gain +50% Gold Multiplier.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="20" data-cost="2" data-prereq="19"><div class="skill-icon">📜</div><div class="skill-name">Scholar's Insight</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Scholar's Insight</h4><p>Gain +50% XP Multiplier.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="22" data-cost="2" data-prereq="0"><div class="skill-icon">❄️</div><div class="skill-name">Frost Nova</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Frost Nova</h4><p>Freezes nearby enemies in place. (Auto-cast, 15s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="23" data-cost="2" data-prereq="22"><div class="skill-icon">🗡️</div><div class="skill-name">Dagger Shield</div><div class="skill-cost">2 SP</div><div class="skill-tooltip"><h4>Dagger Shield</h4><p>Spinning daggers orbit you dealing continuous damage. (Auto-cast, 10s CD)</p></div></div>
-                    <div class="skill-node locked" data-skill-id="24" data-cost="3" data-prereq="23"><div class="skill-icon">☠️</div><div class="skill-name">Executioner</div><div class="skill-cost">3 SP</div><div class="skill-tooltip"><h4>Executioner</h4><p>Instantly shatter nearby enemies below 15% HP.</p></div></div>
-                    <div class="skill-node locked" data-skill-id="25" data-cost="5" data-prereq="13"><div class="skill-icon">👑</div><div class="skill-name">Ascension</div><div class="skill-cost">5 SP</div><div class="skill-tooltip"><h4>Ascension</h4><p>Increases ALL Core Stats by 25%. Requires Zen.</p></div></div>
-                </div>
-
-                <div id="item-detail-panel" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--primary); border-radius: 8px;">
-                    <h3 id="detail-item-name" style="color: var(--primary); margin-bottom: 10px;">Item Name</h3>
-                    <div id="detail-item-rarity" style="font-weight: bold; margin-bottom: 10px;">Rarity: <span id="detail-rarity-text">Common</span></div>
-                    <div class="comparison-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div id="selected-item-display"><h4 style="color: #aaa;">Selected Item</h4><div class="stat-list" id="selected-stats-list"></div></div>
-                        <div id="equipped-item-display"><h4 style="color: #aaa;">Equipped Item</h4><div class="stat-list" id="equipped-stats-list"></div></div>
+                <div class="rpg-bars">
+                    <div class="rpg-bar-container" title="Health">
+                        <div class="rpg-bar-fill rpg-hp-fill" id="rpg-bar-hp" style="width: 100%;"></div>
+                        <span class="rpg-bar-label">HP</span>
+                        <span class="rpg-bar-value" id="rpg-val-hp">100/100</span>
                     </div>
-                    <div class="item-actions" style="display: flex; gap: 10px; margin-top: 20px;">
-                        <button id="equip-unequip-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--primary); color: #000; border: none;"></button>
-                        <button id="discard-btn" class="btn" style="flex: 1; padding: 10px; font-size: 1rem; background: var(--hp-color); color: #fff; border: none;">Discard</button>
+                    <div class="rpg-bar-container" title="Hunger">
+                        <div class="rpg-bar-fill rpg-hunger-fill" id="rpg-bar-hunger" style="width: 100%;"></div>
+                        <span class="rpg-bar-label">Hunger</span>
+                        <span class="rpg-bar-value" id="rpg-val-hunger">100/100</span>
+                    </div>
+                    <div class="rpg-bar-container" title="Experience">
+                        <div class="rpg-bar-fill rpg-xp-fill" id="rpg-bar-xp" style="width: 0%;"></div>
+                        <span class="rpg-bar-label">XP</span>
+                        <span class="rpg-bar-value" id="rpg-val-xp">0/100</span>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div id="workbench-modal">
-            <div class="inv-header"><h2>🛠️ Village Workbench</h2><button class="close-btn">X</button></div>
-            <div class="modal-body">
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--shard); margin-bottom: 20px;">
-                    <h3>One-Tap Maintenance</h3>
-                    <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Automatically equips better gear and converts trash into Shards.</p>
-                    <button id="auto-clean-btn" class="btn" style="width: 100%; font-size: 1.1rem;">CLEAN BAG & AUTO-EQUIP</button>
+            <div class="rpg-actions">
+                <button class="rpg-btn" id="rpg-btn-feed" onclick="rpgGame.feedPet()">🍖 Feed</button>
+                <button class="rpg-btn" id="rpg-btn-heal" onclick="rpgGame.healPet()">💖 Heal</button>
+            </div>
+            <button class="rpg-btn level-up" id="rpg-btn-levelup" onclick="rpgGame.levelUpPet()">🌟 TAP TO LEVEL UP! 🌟</button>
+
+            <div>
+                <div class="rpg-roster-title">
+                    <span>Pet Roster</span>
+                    <button class="rpg-btn" id="rpg-btn-merge" style="display:none; padding: 4px 12px; font-size: 0.85rem; flex: none;" onclick="rpgGame.mergePets()">🧬 Merge</button>
                 </div>
-                <h3>Skill Amplification</h3>
-                <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Infuse your skills with Shards to increase their efficiency.</p>
-                <div id="skill-amp-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                <div class="rpg-roster" id="rpg-roster-grid">
+                    <!-- Roster items injected via JS -->
+                </div>
+            </div>
+
+            <div class="rpg-logs" id="rpg-logs-container">
+                <div class="rpg-log-entry system">Welcome to Idle Pets RPG! Auto-exploring...</div>
             </div>
         </div>
 
-        <div id="bounty-modal">
-            <div class="inv-header"><h2>📜 Bounty Board</h2><button class="close-btn">X</button></div>
-            <div class="modal-body"><h3>Active Tasks</h3><div id="bounty-list"></div></div>
-        </div>
-
-        <!-- DAILY LOGIN & OFFLINE MODAL -->
-        <div id="daily-login">
-            <h2 style="color:var(--gold); text-shadow: 0 0 10px var(--gold);">Welcome Back!</h2>
-            <p style="font-size: 0.8rem; color: #888; margin-top: 5px;">Away time: <span id="off-time" style="color:white">0m</span></p>
-            
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--primary); margin: 15px 0;">
-                <h3 style="font-size: 0.9rem; color: var(--primary); margin-bottom: 10px; text-transform: uppercase;">Offline Activity</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; font-size: 0.85rem;">
-                    <div>💀 Kills: <span id="off-kills" style="color:var(--hp-color)">0</span></div>
-                    <div>🪙 Gold: <span id="off-gold" style="color:var(--gold)">0</span></div>
-                    <div>💎 Shards: <span id="off-shards" style="color:var(--shard)">0</span></div>
-                    <div>✨ XP: <span id="off-xp" style="color:var(--xp-color)">0</span></div>
-                </div>
+        <!-- Offline/Daily Modal -->
+        <div class="rpg-modal-overlay" id="rpg-modal">
+            <div class="rpg-modal-content">
+                <h3 style="margin-top:0; font-size: 1.5rem; color:var(--accent);" id="rpg-modal-title">Welcome Back!</h3>
+                <p id="rpg-modal-text" style="color:var(--text-dim); margin-bottom: 25px; line-height: 1.5;">Calculating offline progress...</p>
+                <button class="rpg-btn" style="width: 100%; background: var(--success); color: black; font-size: 1.1rem; padding: 15px;" onclick="document.getElementById('rpg-modal').style.display='none'">Claim Rewards</button>
             </div>
-            <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">(Includes standard daily login bonus)</p>
-            <button class="btn" style="padding: 10px 20px; font-size: 1rem;" id="claim-daily-btn">CLAIM ALL</button>
-        </div>
-        
-        <div id="portal-ui">
-            <h4 style="color:var(--gold)">Portal Sealed</h4>
-            <p id="portal-cost-text" style="font-size: 0.9rem; margin-bottom: 10px;">Unlock Cost: 500 Gold</p>
-            <button class="btn" style="padding: 5px 15px; font-size: 1rem; border-color: var(--gold); color: var(--gold);" id="unlock-portal-btn">Unlock & Descend</button>
         </div>
     </div>
 
@@ -492,75 +447,336 @@
         document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
         document.addEventListener('gesturestart', (e) => e.preventDefault());
     </script>
-    <script src="player.js?v=2"></script>
-    <script src="entities.js?v=2"></script>
-    <script src="main.js?v=2"></script>
+
     <script>
-        function initializeSkillTree() {
-            const skillsTreePanel = document.getElementById('skills-tree-panel');
-            const skillPointsDisplay = document.getElementById('skill-points-available');
-            const skillConnectionsSvg = document.getElementById('skill-connections-svg'); 
-            let skillNodes = []; 
+        class IdleRPG {
+            constructor() {
+                this.saveKey = 'idle_rpg_save_standalone_v1';
+                this.tickRate = 1000;
+                
+                this.petDictionary = [
+                    { emoji: '🥚', name: 'Basic Egg' },
+                    { emoji: '🐣', name: 'Hatching Chick' },
+                    { emoji: '🐥', name: 'Baby Bird' },
+                    { emoji: '🐔', name: 'Chicken' },
+                    { emoji: '🦊', name: 'Mystic Fox' },
+                    { emoji: '🐉', name: 'Baby Dragon' },
+                    { emoji: '🦖', name: 'T-Rex' },
+                    { emoji: '🦄', name: 'Unicorn' },
+                    { emoji: '👽', name: 'Alien Pet' }
+                ];
 
-            function getElementCenter(element) { const rect = element.getBoundingClientRect(); const panelRect = skillsTreePanel.getBoundingClientRect(); return { x: (rect.left + rect.right) / 2 - panelRect.left, y: (rect.top + rect.bottom) / 2 - panelRect.top }; }
-            function drawSkillConnections() { skillConnectionsSvg.innerHTML = ''; skillNodes = Array.from(skillsTreePanel.querySelectorAll('.skill-node')); const nodeMap = new Map(); skillNodes.forEach(node => { nodeMap.set(parseInt(node.dataset.skillId), node); }); skillNodes.forEach(node => { const skillId = parseInt(node.dataset.skillId); const prereqId = parseInt(node.dataset.prereq); if (prereqId !== 0 && nodeMap.has(prereqId)) { const prereqNode = nodeMap.get(prereqId); const start = getElementCenter(prereqNode); const end = getElementCenter(node); const line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); line.setAttribute('x1', start.x); line.setAttribute('y1', start.y); line.setAttribute('x2', end.x); line.setAttribute('y2', end.y); line.classList.add('skill-connection-line'); line.dataset.fromSkill = prereqId; line.dataset.toSkill = skillId; skillConnectionsSvg.appendChild(line); } }); }
-            function highlightSkillPath(targetNode) { clearSkillPathHighlight(); const pathNodes = new Set(); const pathLines = new Set(); let currentNode = targetNode; while (currentNode && !player.hasSkill(parseInt(currentNode.dataset.skillId))) { pathNodes.add(currentNode); const prereqId = parseInt(currentNode.dataset.prereq); if (prereqId === 0) break; const prereqNode = skillNodes.find(n => parseInt(n.dataset.skillId) === prereqId); if (!prereqNode) break; const line = skillConnectionsSvg.querySelector(`[data-from-skill="${prereqId}"][data-to-skill="${parseInt(currentNode.dataset.skillId)}"]`); if (line) pathLines.add(line); currentNode = prereqNode; } pathNodes.forEach(node => node.classList.add('highlighted')); pathLines.forEach(line => line.classList.add('highlighted')); }
-            function clearSkillPathHighlight() { skillsTreePanel.querySelectorAll('.skill-node.highlighted').forEach(node => node.classList.remove('highlighted')); skillConnectionsSvg.querySelectorAll('.skill-connection-line.highlighted').forEach(line => line.classList.remove('highlighted')); }
-
-            if (typeof player !== 'undefined' && player) { skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints); drawSkillConnections(); updateSkillTreeLockStates(); }
-            skillsTreePanel.addEventListener('click', (event) => {
-                let targetNode = event.target.closest('.skill-node'); if (!targetNode) return;
-                const skillId = parseInt(targetNode.dataset.skillId); const skillCost = parseInt(targetNode.dataset.cost); const prereqId = parseInt(targetNode.dataset.prereq);
-                if (typeof player === 'undefined' || !player || !player.learnSkill || !player.canLearnSkill) { showNotification("Game not fully loaded.", "error"); return; }
-                if (!player.canLearnSkill(skillId, skillCost, prereqId)) { if (player.hasSkill(skillId)) showNotification("Already learned!", "info"); else if (player.skillPoints < skillCost) showNotification("Need more SP!", "error"); else if (prereqId !== 0 && !player.hasSkill(prereqId)) showNotification("Need prerequisite!", "error"); return; }
-                if (player.learnSkill(skillId, skillCost, prereqId)) { targetNode.classList.remove('locked'); targetNode.classList.add('unlocked'); const skillCostElement = targetNode.querySelector('.skill-cost'); if (skillCostElement) skillCostElement.textContent = 'Learned'; skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints); showNotification("Skill unlocked!", "success"); updateSkillTreeLockStates(); }
-            });
-            skillsTreePanel.addEventListener('mouseover', (event) => { let targetNode = event.target.closest('.skill-node'); if (targetNode && !player.hasSkill(parseInt(targetNode.dataset.skillId))) highlightSkillPath(targetNode); });
-            skillsTreePanel.addEventListener('mouseout', (event) => { if (event.target.closest('.skill-node')) clearSkillPathHighlight(); });
-
-            function updateSkillTreeLockStates() {
-                if (typeof player === 'undefined' || !player || !player.hasSkill || !player.canLearnSkill) return;
-                skillNodes.forEach(node => { 
-                    const skillId = parseInt(node.dataset.skillId); const prereqId = parseInt(node.dataset.prereq); const skillCost = parseInt(node.dataset.cost);
-                    const skillCostElement = node.querySelector('.skill-cost');
-                    node.classList.remove('locked', 'unlocked'); node.style.borderColor = ''; node.style.filter = ''; node.style.opacity = ''; node.style.cursor = '';
-                    if (player.hasSkill(skillId)) { node.classList.add('unlocked'); if (skillCostElement) skillCostElement.textContent = 'Learned'; } 
-                    else {
-                        const prereqMet = (prereqId === 0 || player.hasSkill(prereqId)); const affordable = (player.skillPoints >= skillCost);
-                        if (prereqMet && affordable) { node.style.borderColor = 'var(--primary)'; node.style.filter = 'none'; node.style.opacity = '1'; node.style.cursor = 'pointer'; } 
-                        else { node.classList.add('locked'); if (prereqMet && !affordable) node.style.filter = 'grayscale(30%)'; }
-                        if (skillCostElement) skillCostElement.textContent = `${window.FormatNumber(skillCost)} SP`;
-                    }
-                });
+                this.state = this.loadState();
+                this.gameLoop = setInterval(() => this.tick(), this.tickRate);
+                
+                this.initUI();
+                this.processOfflineProgress();
             }
-            window.refreshSkillTreeUI = function() { if (typeof player !== 'undefined' && player) { skillPointsDisplay.textContent = window.FormatNumber(player.skillPoints); drawSkillConnections(); updateSkillTreeLockStates(); } };
-        }
 
-        function showNotification(message, type = "info") {
-            const el = document.getElementById('notification'); if (!el) return;
-            el.textContent = message; el.style.opacity = 1; el.style.color = type === "success" ? "var(--xp-color)" : (type === "error" ? "var(--hp-color)" : "var(--gold)");
-            clearTimeout(el._hideTimeout); el._hideTimeout = setTimeout(() => { el.style.opacity = 0; }, 3000);
-        }
+            getDefaultState() {
+                return {
+                    pets: [this.createNewPet(0, 1)], // Start with 1 egg
+                    activePetIndex: 0,
+                    food: 10,
+                    gems: 0,
+                    lastTick: Date.now(),
+                    lastDaily: 0
+                };
+            }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initializeSkillTree();
-            const interactBtn = document.getElementById('interact-btn');
-            setInterval(() => {
-                if (window.GameState && GameState.activeInteractable) { interactBtn.style.display = 'flex'; interactBtn.innerText = `USE ${GameState.activeInteractable.name || GameState.activeInteractable.type}`; } 
-                else { interactBtn.style.display = 'none'; }
-            }, 100);
+            createNewPet(typeIndex, level = 1) {
+                const base = this.petDictionary[typeIndex];
+                return {
+                    id: Date.now() + Math.floor(Math.random()*1000),
+                    typeIndex: typeIndex,
+                    emoji: base.emoji,
+                    name: base.name,
+                    level: level,
+                    xp: 0,
+                    maxXp: 100 * Math.pow(1.5, level - 1),
+                    hp: 100 + (level * 10),
+                    maxHp: 100 + (level * 10),
+                    hunger: 100,
+                    maxHunger: 100
+                };
+            }
 
-            interactBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                if (GameState.activeInteractable) {
-                    if (GameState.activeInteractable.type === 'WORKBENCH') UI.openWorkbench();
-                    if (GameState.activeInteractable.type === 'BOUNTY BOARD') { document.getElementById('bounty-modal').style.display = 'flex'; if (typeof UI.renderBountyBoard === 'function') UI.renderBountyBoard(); }
-                    if (GameState.activeInteractable instanceof VillageNPC) {
-                        if (typeof UI.openBossMenu === 'function') UI.openBossMenu();
-                        else showNotification(GameState.activeInteractable.message);
+            loadState() {
+                const saved = localStorage.getItem(this.saveKey);
+                if (saved) {
+                    try { return JSON.parse(saved); } catch(e) { console.error("Corrupted save."); }
+                }
+                return this.getDefaultState();
+            }
+
+            saveState() {
+                this.state.lastTick = Date.now();
+                localStorage.setItem(this.saveKey, JSON.stringify(this.state));
+            }
+
+            processOfflineProgress() {
+                const now = Date.now();
+                const elapsedSeconds = Math.floor((now - this.state.lastTick) / 1000);
+                
+                let offlineMsg = "";
+
+                // Daily Login Check (24 hours)
+                if (now - this.state.lastDaily > 86400000) {
+                    this.state.food += 50;
+                    this.state.gems += 5;
+                    this.state.lastDaily = now;
+                    this.state.pets.push(this.createNewPet(Math.floor(Math.random() * 2), 1)); 
+                    offlineMsg += "🎁 Daily Login Bonus: 50 Food, 5 Gems, and a new Pet!<br><br>";
+                }
+
+                if (elapsedSeconds > 60) {
+                    const cycles = Math.min(elapsedSeconds, 43200); // Cap at 12 hours offline
+                    const activePet = this.state.pets[this.state.activePetIndex];
+                    
+                    if (activePet) {
+                        const hpLost = Math.floor(cycles * 0.05);
+                        const hungerLost = Math.floor(cycles * 0.1);
+                        const xpGain = Math.floor(cycles * 0.5);
+
+                        activePet.hunger = Math.max(0, activePet.hunger - hungerLost);
+                        activePet.hp = Math.max(0, activePet.hp - hpLost);
+                        
+                        if (activePet.hp > 0 && activePet.xp < activePet.maxXp) {
+                            activePet.xp = Math.min(activePet.maxXp, activePet.xp + xpGain);
+                            offlineMsg += `💤 Your active pet earned ${xpGain} XP while you were gone.<br>`;
+                        } else {
+                            offlineMsg += `💤 Your pet got exhausted or leveled up while you were away.<br>`;
+                        }
+                    }
+                    
+                    // Offline drop calculations
+                    const minutesOffline = Math.min(Math.floor(elapsedSeconds / 60), 720);
+                    let foundFood = 0;
+                    for(let i=0; i<minutesOffline; i++) {
+                        if(Math.random() < 0.1) foundFood++;
+                    }
+                    if(foundFood > 0) {
+                        this.state.food += foundFood;
+                        offlineMsg += `🎒 Found ${foundFood} Food passively.<br>`;
                     }
                 }
-            });
+
+                if (offlineMsg !== "") {
+                    document.getElementById('rpg-modal-text').innerHTML = offlineMsg;
+                    document.getElementById('rpg-modal').style.display = 'flex';
+                }
+                
+                this.updateUI();
+            }
+
+            tick() {
+                const activePet = this.state.pets[this.state.activePetIndex];
+                if (!activePet) return;
+
+                // Mechanics
+                if (activePet.hunger > 0) {
+                    activePet.hunger -= 0.5; // Drain hunger
+                } else {
+                    activePet.hp -= 1; // Drain HP if starving
+                }
+
+                // Passive XP if alive and not pending level up
+                if (activePet.hp > 0 && activePet.xp < activePet.maxXp) {
+                    activePet.xp += (activePet.hunger > 50 ? 2 : 1);
+                    
+                    // Random Drops during active play
+                    const rng = Math.random();
+                    if (rng < 0.05) {
+                        this.state.food += 1;
+                        this.logMsg("Found 1x 🍖 Food!", "system");
+                    } else if (rng < 0.005 && this.state.pets.length < 16) {
+                        this.state.pets.push(this.createNewPet(0, 1));
+                        this.logMsg("✨ Found a wild Basic Egg!", "epic");
+                        this.updateRosterUI();
+                    } else if (rng < 0.02) {
+                        activePet.xp += 10;
+                        this.logMsg("💫 Huge XP Burst (+10 XP)", "rare");
+                    }
+                }
+
+                // Cap values
+                activePet.hunger = Math.max(0, activePet.hunger);
+                activePet.hp = Math.max(0, activePet.hp);
+                activePet.xp = Math.min(activePet.maxXp, activePet.xp);
+
+                if (Math.random() < 0.2) this.saveState(); // Periodic save
+                this.updateUI();
+            }
+
+            feedPet() {
+                const pet = this.state.pets[this.state.activePetIndex];
+                if (this.state.food > 0 && pet.hunger < pet.maxHunger) {
+                    this.state.food--;
+                    pet.hunger = Math.min(pet.maxHunger, pet.hunger + 30);
+                    this.logMsg(`Fed ${pet.name}. +30 Hunger`);
+                    this.updateUI();
+                } else if (this.state.food <= 0) {
+                    this.logMsg("Out of food! Wait for drops.", "system");
+                }
+            }
+
+            healPet() {
+                const pet = this.state.pets[this.state.activePetIndex];
+                if (this.state.food > 2 && pet.hp < pet.maxHp) {
+                    this.state.food -= 3; // Costs 3 food to heal
+                    pet.hp = Math.min(pet.maxHp, pet.hp + 40);
+                    this.logMsg(`Healed ${pet.name}. +40 HP (Cost: 3 Food)`);
+                    this.updateUI();
+                } else if (this.state.food <= 2) {
+                    this.logMsg("Need 3 food to heal!", "system");
+                }
+            }
+
+            levelUpPet() {
+                const pet = this.state.pets[this.state.activePetIndex];
+                if (pet.xp >= pet.maxXp) {
+                    pet.level++;
+                    pet.xp = 0;
+                    pet.maxXp = 100 * Math.pow(1.5, pet.level - 1);
+                    pet.maxHp += 20;
+                    pet.hp = pet.maxHp;
+                    pet.maxHunger += 10;
+                    pet.hunger = pet.maxHunger;
+                    
+                    // Evolution check
+                    if (pet.level % 5 === 0 && pet.typeIndex < this.petDictionary.length - 1) {
+                        pet.typeIndex++;
+                        const newData = this.petDictionary[pet.typeIndex];
+                        pet.emoji = newData.emoji;
+                        pet.name = newData.name;
+                        this.logMsg(`🌟 EVOLUTION! Your pet became a ${pet.name}!`, "epic");
+                    } else {
+                        this.logMsg(`⭐ LEVEL UP! ${pet.name} is now Lv.${pet.level}!`, "rare");
+                    }
+
+                    this.updateUI();
+                    this.updateRosterUI();
+                    this.saveState();
+                }
+            }
+
+            mergePets() {
+                // Find duplicates of same type and level
+                const pet = this.state.pets[this.state.activePetIndex];
+                const duplicates = this.state.pets.filter(p => p.typeIndex === pet.typeIndex && p.level === pet.level && p.id !== pet.id);
+                
+                if (duplicates.length > 0) {
+                    const toConsume = duplicates[0];
+                    // Remove consumed pet
+                    this.state.pets = this.state.pets.filter(p => p.id !== toConsume.id);
+                    
+                    // Boost active pet
+                    pet.level++;
+                    pet.maxHp += 30;
+                    pet.hp = pet.maxHp;
+                    pet.maxXp = 100 * Math.pow(1.5, pet.level - 1);
+                    
+                    this.logMsg(`🧬 MERGE SUCCESS! Consumed a duplicate to reach Lv.${pet.level}!`, "epic");
+                    
+                    // Re-adjust index if array shifted
+                    this.state.activePetIndex = this.state.pets.findIndex(p => p.id === pet.id);
+                    
+                    this.updateRosterUI();
+                    this.updateUI();
+                    this.saveState();
+                }
+            }
+
+            setActivePet(index) {
+                this.state.activePetIndex = index;
+                this.updateRosterUI();
+                this.updateUI();
+            }
+
+            logMsg(msg, cssClass = "") {
+                const logs = document.getElementById('rpg-logs-container');
+                const entry = document.createElement('div');
+                entry.className = `rpg-log-entry ${cssClass}`;
+                entry.innerHTML = msg;
+                logs.prepend(entry);
+                if (logs.children.length > 20) {
+                    logs.removeChild(logs.lastChild);
+                }
+            }
+
+            initUI() {
+                this.updateRosterUI();
+                this.updateUI();
+            }
+
+            updateRosterUI() {
+                const roster = document.getElementById('rpg-roster-grid');
+                roster.innerHTML = '';
+                
+                let hasMergeable = false;
+                const activePet = this.state.pets[this.state.activePetIndex];
+
+                this.state.pets.forEach((pet, index) => {
+                    const div = document.createElement('div');
+                    div.className = `rpg-roster-item ${index === this.state.activePetIndex ? 'active' : ''}`;
+                    div.innerHTML = `${pet.emoji} <div class="lvl-badge">${pet.level}</div>`;
+                    div.onclick = () => this.setActivePet(index);
+                    roster.appendChild(div);
+
+                    if (activePet && pet.id !== activePet.id && pet.typeIndex === activePet.typeIndex && pet.level === activePet.level) {
+                        hasMergeable = true;
+                    }
+                });
+
+                document.getElementById('rpg-btn-merge').style.display = hasMergeable ? 'block' : 'none';
+            }
+
+            updateUI() {
+                document.getElementById('rpg-food-count').innerText = this.state.food;
+                document.getElementById('rpg-gems-count').innerText = this.state.gems;
+
+                const pet = this.state.pets[this.state.activePetIndex];
+                if (!pet) return;
+
+                document.getElementById('rpg-active-avatar').innerText = pet.emoji;
+                document.getElementById('rpg-active-name').innerText = pet.name;
+                document.getElementById('rpg-active-lvl').innerText = pet.level;
+
+                // Bars
+                const hpPct = (pet.hp / pet.maxHp) * 100;
+                const hungerPct = (pet.hunger / pet.maxHunger) * 100;
+                const xpPct = (pet.xp / pet.maxXp) * 100;
+
+                document.getElementById('rpg-bar-hp').style.width = `${hpPct}%`;
+                document.getElementById('rpg-val-hp').innerText = `${Math.floor(pet.hp)}/${pet.maxHp}`;
+                
+                document.getElementById('rpg-bar-hunger').style.width = `${hungerPct}%`;
+                document.getElementById('rpg-val-hunger').innerText = `${Math.floor(pet.hunger)}/${pet.maxHunger}`;
+                
+                document.getElementById('rpg-bar-xp').style.width = `${xpPct}%`;
+                document.getElementById('rpg-val-xp').innerText = `${Math.floor(pet.xp)}/${Math.floor(pet.maxXp)}`;
+
+                // Level up button logic
+                const btnFeed = document.getElementById('rpg-btn-feed');
+                const btnHeal = document.getElementById('rpg-btn-heal');
+                const btnLevelUp = document.getElementById('rpg-btn-levelup');
+
+                if (pet.xp >= pet.maxXp) {
+                    btnLevelUp.style.display = 'block';
+                    btnFeed.style.display = 'none';
+                    btnHeal.style.display = 'none';
+                } else {
+                    btnLevelUp.style.display = 'none';
+                    btnFeed.style.display = 'block';
+                    btnHeal.style.display = 'block';
+                }
+            }
+        }
+
+        // Initialize RPG on load
+        let rpgGame;
+        document.addEventListener('DOMContentLoaded', () => {
+            rpgGame = new IdleRPG();
         });
     </script>
 </body>
