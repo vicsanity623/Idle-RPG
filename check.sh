@@ -51,24 +51,27 @@ class TestIdlePetsRPG(unittest.TestCase):
         cls.driver.quit()
 
     def test_01_initialization(self):
-        # Test if the game sets up default values correctly
+        # Test if the game sets up default values correctly (Base 10 + 50 from instant Daily Login)
         food = self.driver.execute_script("return rpgGame.state.food;")
         level = self.driver.execute_script("return rpgGame.state.pets[0].level;")
         
-        self.assertEqual(food, 10, "Game should initialize with 10 Food")
+        self.assertEqual(food, 60, "Game should initialize with 60 Food (10 Base + 50 Daily Bonus)")
         self.assertEqual(level, 1, "Initial pet should start at Level 1")
 
     def test_02_feeding_mechanic(self):
+        # Get current food dynamically
+        initial_food = self.driver.execute_script("return rpgGame.state.food;")
+
         # Manually lower hunger to test feeding
         self.driver.execute_script("rpgGame.state.pets[0].hunger = 50; rpgGame.updateUI();")
         
         # Feed the pet
         self.driver.execute_script("rpgGame.feedPet();")
         
-        food = self.driver.execute_script("return rpgGame.state.food;")
+        new_food = self.driver.execute_script("return rpgGame.state.food;")
         hunger = self.driver.execute_script("return rpgGame.state.pets[0].hunger;")
         
-        self.assertEqual(food, 9, "Food should decrease by 1 after feeding")
+        self.assertEqual(new_food, initial_food - 1, "Food should decrease by exactly 1 after feeding")
         self.assertEqual(hunger, 80, "Hunger should increase by 30 (from 50 to 80)")
 
     def test_03_level_up_mechanic(self):
