@@ -616,6 +616,10 @@
 
             feedPet() {
                 const pet = this.state.pets[this.state.activePetIndex];
+                if (!pet) { // Ensure an active pet exists
+                    this.logMsg("No active pet to feed.", "system");
+                    return;
+                }
                 if (this.state.food > 0 && pet.hunger < pet.maxHunger) {
                     this.state.food--;
                     pet.hunger = Math.min(pet.maxHunger, pet.hunger + 30);
