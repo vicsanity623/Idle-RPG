@@ -60,3 +60,4 @@ self.addEventListener('fetch', (event) => {
             })
     );
 });
+// [PYOB Feature]: 'New Version Available' prompt (client-side) leverages existing self.skipWaiting() and self.clients.claim() for immediate SW activation.
