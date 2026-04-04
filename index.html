@@ -517,8 +517,14 @@
             processOfflineProgress() {
                 const now = Date.now();
                 const elapsedSeconds = Math.floor((now - this.state.lastTick) / 1000);
-                
+
                 let offlineMsg = "";
+
+                if (this.state.pets.length === 0) {
+                    this.logMsg("No pets to process offline progress for.", "system");
+                    this.updateUI();
+                    return;
+                }
 
                 // Daily Login Check (24 hours)
                 if (now - this.state.lastDaily > 86400000) {
