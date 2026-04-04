@@ -54,9 +54,10 @@ self.addEventListener('fetch', (event) => {
                 }
                 return networkResponse;
             })
-            .catch(() => {
+            .catch(async () => {
                 // If network fails (offline), try to serve from cache
-                return caches.match(event.request);
+                const cachedResponse = await caches.match(event.request);
+                return cachedResponse || new Response(null, { status: 404, statusText: 'Not Found' });
             })
     );
 });
