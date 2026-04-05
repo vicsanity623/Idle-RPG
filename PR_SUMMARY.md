@@ -1,4 +1,3 @@
-```markdown
 # PR_SUMMARY.md
 
 ## Session Overview
@@ -27,4 +26,3 @@ The changes introduced in this session have a profound and positive impact on th
 *   **Elevated Code Quality and Maintainability:** The introduction of clear guard clauses and the refinement of Service Worker logic contribute to a cleaner, more readable, and easier-to-maintain codebase. This reduces technical debt and facilitates future development and scaling efforts.
 
 This session represents a significant leap forward in the application's maturity, laying a stronger foundation for future innovations and continued success.
-```
