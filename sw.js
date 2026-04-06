@@ -61,3 +61,11 @@ self.addEventListener('fetch', (event) => {
     );
 });
 // [PYOB Feature]: 'New Version Available' prompt (client-side) leverages existing self.skipWaiting() and self.clients.claim() for immediate SW activation.
+
+// Add this new event listener to the existing Service Worker file
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        console.log('[Service Worker] Client requested to skip waiting. Activating new SW.');
+        self.skipWaiting();
+    }
+});
