@@ -667,8 +667,12 @@
             }
 
             mergePets() {
-                // Find duplicates of same type and level
+                if (this.state.pets.length === 0 || this.state.activePetIndex < 0 || this.state.activePetIndex >= this.state.pets.length) {
+                    this.logMsg("No active pet to merge.", "system");
+                    return;
+                }
                 const pet = this.state.pets[this.state.activePetIndex];
+                // Find duplicates of same type and level
                 const duplicates = this.state.pets.filter(p => p.typeIndex === pet.typeIndex && p.level === pet.level && p.id !== pet.id);
                 
                 if (duplicates.length > 0) {
