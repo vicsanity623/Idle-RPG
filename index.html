@@ -538,8 +538,8 @@
                 if (elapsedSeconds > 60) {
                     const cycles = Math.min(elapsedSeconds, 43200); // Cap at 12 hours offline
                     const activePet = this.state.pets[this.state.activePetIndex];
-                    
-                    if (activePet) {
+
+                    if (activePet && this.state.activePetIndex >= 0 && this.state.activePetIndex < this.state.pets.length) {
                         const hpLost = Math.floor(cycles * 0.05);
                         const hungerLost = Math.floor(cycles * 0.1);
                         const xpGain = Math.floor(cycles * 0.5);
@@ -705,6 +705,7 @@
                 this.state.activePetIndex = index;
                 this.updateRosterUI();
                 this.updateUI();
+                this.saveState(); // Persist active pet selection
             }
 
             logMsg(msg, cssClass = "") {
