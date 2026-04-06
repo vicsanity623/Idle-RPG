@@ -33,9 +33,8 @@ self.addEventListener('activate', (event) => {
                     })
             );
         })
+        .then(() => self.clients.claim()) // Ensure the new Service Worker takes control of the page immediately
     );
-    // Ensure the new Service Worker takes control of the page immediately
-    self.clients.claim();
 });
 
 // Fetch Event - NETWORK-FIRST STRATEGY
