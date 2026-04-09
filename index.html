@@ -632,6 +632,10 @@
 
             healPet() {
                 const pet = this.state.pets[this.state.activePetIndex];
+                if (!pet) { // Ensure an active pet exists
+                    this.logMsg("No active pet to heal.", "system");
+                    return;
+                }
                 if (this.state.food > 2 && pet.hp < pet.maxHp) {
                     this.state.food -= 3; // Costs 3 food to heal
                     pet.hp = Math.min(pet.maxHp, pet.hp + 40);
