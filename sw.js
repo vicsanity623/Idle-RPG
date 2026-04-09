@@ -45,7 +45,7 @@ self.addEventListener('fetch', (event) => {
         fetch(event.request)
             .then((networkResponse) => {
                 // If we get a valid response from the network, update the cache
-                if (networkResponse && networkResponse.status === 200) {
+                if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
                     const cacheCopy = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, cacheCopy);
