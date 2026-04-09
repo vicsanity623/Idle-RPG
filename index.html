@@ -615,11 +615,11 @@
             }
 
             feedPet() {
-                const pet = this.state.pets[this.state.activePetIndex];
-                if (!pet) { // Ensure an active pet exists
+                if (this.state.pets.length === 0 || this.state.activePetIndex < 0 || this.state.activePetIndex >= this.state.pets.length) {
                     this.logMsg("No active pet to feed.", "system");
                     return;
                 }
+                const pet = this.state.pets[this.state.activePetIndex];
                 if (this.state.food > 0 && pet.hunger < pet.maxHunger) {
                     this.state.food--;
                     pet.hunger = Math.min(pet.maxHunger, pet.hunger + 30);
@@ -631,11 +631,11 @@
             }
 
             healPet() {
-                const pet = this.state.pets[this.state.activePetIndex];
-                if (!pet) { // Ensure an active pet exists
+                if (this.state.pets.length === 0 || this.state.activePetIndex < 0 || this.state.activePetIndex >= this.state.pets.length) {
                     this.logMsg("No active pet to heal.", "system");
                     return;
                 }
+                const pet = this.state.pets[this.state.activePetIndex];
                 if (this.state.food > 2 && pet.hp < pet.maxHp) {
                     this.state.food -= 3; // Costs 3 food to heal
                     pet.hp = Math.min(pet.maxHp, pet.hp + 40);
