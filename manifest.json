@@ -6,6 +6,17 @@
   "background_color": "#121212",
   "theme_color": "#bb86fc",
   "orientation": "landscape",
+  "game_features": {
+    "pet_care_interaction": {
+      "enabled": true,
+      "description": "Enables interactive pet care buttons with animations, contextual actions, and immediate benefits.",
+      "cooldown_seconds": {
+        "min": 30,
+        "max": 300
+      },
+      "benefits": ["happiness", "resource_boost", "experience_gain"]
+    }
+  },
   "icons": [
     {
       "src": "icon-192.png",
