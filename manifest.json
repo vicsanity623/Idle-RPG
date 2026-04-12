@@ -1,6 +1,7 @@
 {
   "name": "Idle Pets",
   "short_name": "IdlePets",
+  "description": "An idle pet simulation game featuring interactive pet care, status tracking, and actions like feeding, playing, and grooming.",
   "start_url": "index.html",
   "display": "fullscreen",
   "background_color": "#121212",
