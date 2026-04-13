@@ -9,6 +9,35 @@
   "theme_color": "#bb86fc",
   "orientation": "landscape",
   "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Feed Pet",
+      "short_name": "Feed",
+      "description": "Give your pet some food.",
+      "url": "/index.html?action=feed",
+      "icons": [
+        { "src": "icon-192.png", "sizes": "192x192" }
+      ]
+    },
+    {
+      "name": "Play with Pet",
+      "short_name": "Play",
+      "description": "Engage your pet in a fun activity.",
+      "url": "/index.html?action=play",
+      "icons": [
+        { "src": "icon-192.png", "sizes": "192x192" }
+      ]
+    },
+    {
+      "name": "Groom Pet",
+      "short_name": "Groom",
+      "description": "Clean and care for your pet.",
+      "url": "/index.html?action=groom",
+      "icons": [
+        { "src": "icon-192.png", "sizes": "192x192" }
+      ]
+    }
+  ],
   "icons": [
     {
       "src": "icon-192.png",
