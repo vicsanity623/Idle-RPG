@@ -362,11 +362,11 @@ function triggerWorldTransition() {
 
 // --- CRAFTING / UPGRADES ---
 const upgradesData = [
-    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 10, baseIron: 2, scale: 1.5, boost: 5 },
-    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 10, baseIron: 2, scale: 1.5, boost: 20 },
-    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 25, baseIron: 5, scale: 1.6, boost: 2 },
-    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 100, baseCore: 1, scale: 2.0, boost: 1 }, 
-    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 50, baseCore: 2, scale: 1.8, boost: 1 }
+    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 1, baseIron: 2, scale: 1.5, boost: 5 },
+    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 3, baseIron: 2, scale: 1.5, boost: 20 },
+    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 8, baseIron: 5, scale: 1.6, boost: 2 },
+    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 20, baseCore: 1, scale: 2.0, boost: 1 }, 
+    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 15, baseCore: 2, scale: 1.8, boost: 1 }
 ];
 
 function renderCrafting() {
