@@ -149,6 +149,11 @@ function loadGame() {
 }
 function calcOffline() {
     let diff = Math.max(0, Math.floor((Date.now() - state.lastSave) / 1000));
+if (diff < 0) {
+  console.error("Negative time difference detected. Resetting last save time.");
+  state.lastSave = Date.now();
+  diff = 0;
+}
     if (diff > 60) {
         let active = state.pals[state.activePalIndex];
         let simBattles = Math.floor(diff / 10);
