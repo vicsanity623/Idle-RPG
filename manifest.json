@@ -1,7 +1,7 @@
 {
-  "name": "Satoshi Chronicles",
-  "short_name": "Satoshi RPG",
-  "description": "An Idle RPG powered by Sats",
+  "name": "Idle Chronicles",
+  "short_name": "Idle RPG",
+  "description": "An Idle RPG",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f0f15",
