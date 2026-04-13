@@ -1,0 +1,28 @@
+/* Battle UI */
+#battle-ui {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3); z-index: 20;
+    display: flex; flex-direction: column; justify-content: space-between;
+}
+.battle-top, .battle-bottom { padding: 20px; display: flex; flex-direction: column; }
+.battle-top { align-items: flex-end; }
+.battle-bottom { align-items: flex-start; background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
+
+.hp-box {
+    background: rgba(30, 30, 36, 0.9); border: 2px solid var(--ui-border);
+    padding: 15px; border-radius: 8px; width: 280px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+.name-tag { font-size: 10px; margin-bottom: 10px; color: #fff; text-shadow: 1px 1px 0 #000; }
+.hp-bar-bg { background: #333; height: 14px; border-radius: 7px; overflow: hidden; border: 1px solid #111; }
+.hp-bar-fill { height: 100%; background: #4CAF50; transition: width 0.3s ease, background-color 0.3s; }
+
+.battle-menu {
+    display: flex; gap: 10px; margin-top: 15px; width: 100%;
+}
+.b-btn {
+    flex: 1; padding: 12px; background: var(--primary); color: white; border: none;
+    border-radius: 6px; font-size: 10px; cursor: pointer; box-shadow: 0 4px 0 var(--primary-dark);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+.b-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--primary-dark); }
+#btn-run { background: #e53935; box-shadow: 0 4px 0 #b71c1c; }
