@@ -2,61 +2,136 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Satoshi Idle RPG</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Satoshi Chronicles</title>
+    
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f0f15">
+    
+    <!-- Game Styles and Fonts -->
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="game-container">
-        <!-- Header -->
-        <header>
-            <h1>Satoshi Idle RPG</h1>
-            <div id="btc-wallet">Bank: <span id="sats-balance">0</span> Sats</div>
+        <!-- Top Bar: Game Title and Treasury -->
+        <header id="top-bar">
+            <div class="title-section">
+                <h1>Satoshi Chronicles</h1>
+                <p class="subtitle">Idle RPG</p>
+            </div>
+            <div class="treasury-section">
+                <div class="wallet-box">
+                    <span class="wallet-icon">💎</span>
+                    <span id="sats-balance">0</span> Sats
+                </div>
+            </div>
         </header>
 
-        <div id="main-content">
-            <!-- Left Panel: Combat -->
-            <div id="combat-panel" class="panel">
-                <h2>Stage <span id="stage-display">1</span> - Wave <span id="wave-display">1</span>/3</h2>
-                
-                <div id="battle-arena">
+        <!-- Main Battle Arena (Side-scrolling view) -->
+        <main id="battle-scene">
+            <div class="stage-info">
+                <h2>Stage <span id="stage-display">1</span></h2>
+                <p>Wave <span id="wave-display">1</span>/3</p>
+            </div>
+
+            <!-- Floating Text Container (for damage numbers) -->
+            <div id="fx-container"></div>
+
+            <div id="characters-container">
+                <!-- Player Character -->
+                <div id="player-wrapper" class="character-wrapper">
+                    <div class="health-bar-container">
+                        <div id="player-hp-fill" class="health-bar-fill"></div>
+                    </div>
+                    <div class="hp-text"><span id="player-hp">100</span> / <span id="player-max-hp">100</span></div>
+                    <!-- The actual player sprite/image -->
                     <div id="player-sprite" class="sprite">
-                        <h3>Player</h3>
-                        <p>HP: <span id="player-hp">100</span>/<span id="player-max-hp">100</span></p>
-                        <p>ATK: <span id="player-atk">10</span></p>
+                        <div class="sprite-name">Hero</div>
                     </div>
-                    <div id="vs">VS</div>
+                </div>
+
+                <!-- Enemy Character -->
+                <div id="enemy-wrapper" class="character-wrapper">
+                    <div class="health-bar-container">
+                        <div id="enemy-hp-fill" class="health-bar-fill enemy-fill"></div>
+                    </div>
+                    <div class="hp-text"><span id="enemy-hp">30</span> / <span id="enemy-max-hp">30</span></div>
+                    <!-- The actual enemy sprite/image -->
                     <div id="enemy-sprite" class="sprite">
-                        <h3 id="enemy-name">Slime</h3>
-                        <p>HP: <span id="enemy-hp">30</span>/<span id="enemy-max-hp">30</span></p>
+                        <div id="enemy-name" class="sprite-name">Slime</div>
                     </div>
                 </div>
+            </div>
+            <div class="ground"></div>
+        </main>
 
-                <div id="combat-log">Game Started. Entering Stage 1!</div>
+        <!-- Bottom UI Panels -->
+        <footer id="ui-panels">
+            <!-- Left: Combat Log -->
+            <div class="panel log-panel">
+                <h3>Battle Log</h3>
+                <div id="combat-log"></div>
             </div>
 
-            <!-- Right Panel: Inventory & Crafting -->
-            <div id="menu-panel" class="panel">
-                <h2>Inventory</h2>
+            <!-- Middle: Stats & Inventory -->
+            <div class="panel inventory-panel">
+                <h3>Bag & Stats</h3>
+                <div class="stats-box">
+                    <p>Attack Power: <span id="player-atk" class="stat-highlight">10</span></p>
+                </div>
                 <ul id="inventory-list">
-                    <li>Scrap Iron: <span id="inv-iron">0</span></li>
-                    <li>Monster Core: <span id="inv-core">0</span></li>
+                    <li>
+                        <div class="item-icon">⚙️</div>
+                        <div class="item-info">Scrap Iron <br><span id="inv-iron">0</span></div>
+                    </li>
+                    <li>
+                        <div class="item-icon">🔮</div>
+                        <div class="item-info">Monster Core <br><span id="inv-core">0</span></div>
+                    </li>
                 </ul>
+            </div>
 
-                <h2>Crafting</h2>
+            <!-- Right: Crafting -->
+            <div class="panel craft-panel">
+                <h3>Forge</h3>
                 <div class="craft-box">
-                    <p><strong>Iron Sword (+10 ATK)</strong></p>
-                    <p>Cost: 5 Scrap Iron</p>
-                    <button onclick="craftItem('sword')">Craft Sword</button>
+                    <div class="craft-details">
+                        <h4>Iron Sword</h4>
+                        <p class="craft-effect">+10 ATK</p>
+                        <p class="craft-cost">Cost: 5 Scrap Iron</p>
+                    </div>
+                    <button class="craft-btn" onclick="craftItem('sword')">Craft</button>
                 </div>
                 <div class="craft-box">
-                    <p><strong>Health Potion (Heal 50 HP)</strong></p>
-                    <p>Cost: 2 Monster Cores</p>
-                    <button onclick="craftItem('potion')">Craft Potion</button>
+                    <div class="craft-details">
+                        <h4>Health Potion</h4>
+                        <p class="craft-effect">Heal 50 HP</p>
+                        <p class="craft-cost">Cost: 2 Monster Cores</p>
+                    </div>
+                    <button class="craft-btn heal-btn" onclick="craftItem('potion')">Craft</button>
                 </div>
             </div>
-        </div>
+        </footer>
     </div>
+
+    <!-- Game Engine Script -->
     <script src="game.js"></script>
+
+    <!-- Service Worker Registration for PWA/Offline Support -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((registration) => {
+                        console.log('ServiceWorker registered successfully with scope: ', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
