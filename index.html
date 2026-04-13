@@ -2,134 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Idle Pal RPG - Endless Adventure</title>
-    
-    <!-- PWA Manifest & Meta Tags -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2E7D32">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Idle Pal">
-    
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satoshi Idle RPG</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
-        <!-- Main Game Area -->
-        <div id="canvas-container">
-            <canvas id="gameCanvas" width="600" height="600"></canvas>
-            
-            <!-- Virtual Joystick Overlay -->
-            <div id="joystick-zone">
-                <div id="joystick-base" class="hidden">
-                    <div id="joystick-knob"></div>
-                </div>
-                <div id="joystick-hint">Drag here to move</div>
-            </div>
-            
-            <!-- Battle Overlay UI -->
-            <div id="battle-ui" class="hidden">
-                <div class="battle-top">
-                    <div class="hp-box enemy-hp">
-                        <div id="enemy-name" class="name-tag">Wild Pal Lvl 1</div>
-                        <div class="hp-bar-bg"><div id="enemy-hp-bar" class="hp-bar-fill"></div></div>
-                    </div>
-                </div>
+        <!-- Header -->
+        <header>
+            <h1>Satoshi Idle RPG</h1>
+            <div id="btc-wallet">Bank: <span id="sats-balance">0</span> Sats</div>
+        </header>
+
+        <div id="main-content">
+            <!-- Left Panel: Combat -->
+            <div id="combat-panel" class="panel">
+                <h2>Stage <span id="stage-display">1</span> - Wave <span id="wave-display">1</span>/3</h2>
                 
-                <div class="battle-bottom">
-                    <div class="hp-box player-hp">
-                        <div id="player-name" class="name-tag">Your Pal Lvl 1</div>
-                        <div class="hp-bar-bg"><div id="player-hp-bar" class="hp-bar-fill"></div></div>
+                <div id="battle-arena">
+                    <div id="player-sprite" class="sprite">
+                        <h3>Player</h3>
+                        <p>HP: <span id="player-hp">100</span>/<span id="player-max-hp">100</span></p>
+                        <p>ATK: <span id="player-atk">10</span></p>
                     </div>
-                    <!-- Manual Combat Menu -->
-                    <div class="battle-menu">
-                        <button id="btn-attack" class="b-btn">ATTACK</button>
-                        <button id="btn-catch" class="b-btn">CATCH</button>
-                        <button id="btn-run" class="b-btn">RUN</button>
+                    <div id="vs">VS</div>
+                    <div id="enemy-sprite" class="sprite">
+                        <h3 id="enemy-name">Slime</h3>
+                        <p>HP: <span id="enemy-hp">30</span>/<span id="enemy-max-hp">30</span></p>
                     </div>
                 </div>
-            </div>
-            
-            <div id="action-log"></div>
-        </div>
 
-        <!-- Sidebar UI Area -->
-        <div id="sidebar">
-            <div id="header-stats">
-                <h2>Exploration Mode</h2>
-                <div class="stat-row">
-                    <span>Gold: <span id="gold-amount" class="highlight">0</span></span>
-                    <span>Stones: <span id="stone-amount" class="highlight">0</span></span>
+                <div id="combat-log">Game Started. Entering Stage 1!</div>
+            </div>
+
+            <!-- Right Panel: Inventory & Crafting -->
+            <div id="menu-panel" class="panel">
+                <h2>Inventory</h2>
+                <ul id="inventory-list">
+                    <li>Scrap Iron: <span id="inv-iron">0</span></li>
+                    <li>Monster Core: <span id="inv-core">0</span></li>
+                </ul>
+
+                <h2>Crafting</h2>
+                <div class="craft-box">
+                    <p><strong>Iron Sword (+10 ATK)</strong></p>
+                    <p>Cost: 5 Scrap Iron</p>
+                    <button onclick="craftItem('sword')">Craft Sword</button>
+                </div>
+                <div class="craft-box">
+                    <p><strong>Health Potion (Heal 50 HP)</strong></p>
+                    <p>Cost: 2 Monster Cores</p>
+                    <button onclick="craftItem('potion')">Craft Potion</button>
                 </div>
             </div>
-
-            <!-- Tab Navigation -->
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="pals">Pals</button>
-                <button class="tab-btn" data-tab="upgrades">Upgrades</button>
-                <button class="tab-btn" data-tab="prestige">Prestige</button>
-            </div>
-
-            <!-- Tab Content: Pals -->
-            <div id="tab-pals" class="tab-content active">
-                <h3>Active Pal <span id="active-evolve-btn" class="evolve-btn hidden">EVOLVE (3 Stones)</span></h3>
-                <div id="active-pal-card" class="pal-card"></div>
-                <hr>
-                <h3>Pal Box (<span id="pal-count">0</span>/20)</h3>
-                <div id="pal-inventory"></div>
-            </div>
-
-            <!-- Tab Content: Upgrades -->
-            <div id="tab-upgrades" class="tab-content">
-                <div class="upgrade-item">
-                    <div><h4>Catch Rate</h4><p>Lvl <span id="upg-catch-lvl">0</span></p></div>
-                    <button id="btn-upg-catch">Cost: <span id="upg-catch-cost">10</span>G</button>
-                </div>
-                <div class="upgrade-item">
-                    <div><h4>Player Speed</h4><p>Lvl <span id="upg-speed-lvl">0</span></p></div>
-                    <button id="btn-upg-speed">Cost: <span id="upg-speed-cost">50</span>G</button>
-                </div>
-                <div class="upgrade-item">
-                    <div><h4>Pal Auto-Heal</h4><p>Lvl <span id="upg-heal-lvl">0</span></p></div>
-                    <button id="btn-upg-heal">Cost: <span id="upg-heal-cost">100</span>G</button>
-                </div>
-            </div>
-
-            <!-- Tab Content: Prestige -->
-            <div id="tab-prestige" class="tab-content">
-                <p>Prestige resets Gold, Pals, and Upgrades, but grants permanent <strong>Badges</strong>.</p>
-                <p>Badges scale by the highest level Pal you've ever owned.</p>
-                <p>Pending Badges: <span id="pending-badges" class="highlight">0</span></p>
-                <button id="btn-prestige" class="danger-btn">Prestige Now</button>
-            </div>
-            
-            <button id="btn-hard-reset" class="reset-btn">Hard Reset Save</button>
         </div>
     </div>
-
-    <!-- Offline Progress Modal -->
-    <div id="offline-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Welcome Back!</h2>
-            <p>You were gone for <span id="offline-time">0</span>.</p>
-            <p>Your Pals trained automatically:</p>
-            <ul>
-                <li>Gold Earned: <span id="offline-gold">0</span></li>
-                <li>XP Earned: <span id="offline-xp">0</span></li>
-            </ul>
-            <button id="btn-claim-offline">Claim Rewards</button>
-        </div>
-    </div>
-
     <script src="game.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(e => console.log(e));
-            });
-        }
-    </script>
 </body>
 </html>
