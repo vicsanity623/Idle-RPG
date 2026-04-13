@@ -1,19 +1,16 @@
-name: HTML Game Check
+name: Game Integrity Check
 
-on:
-  push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+# Run this workflow every time you push code or make a pull request
+on: [push, pull_request]
 
 jobs:
-  validate-game:
+  verify-files:
     runs-on: ubuntu-latest
+    
     steps:
-      # Step 1: Grab your code
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-      # Step 2: Run the check.sh script using 'bash' (No execution permissions needed!)
-      - name: Run check.sh
+      - name: Run PWA Check Script
+        # Using 'bash check.sh' bypasses the need for the file to be +x (executable)
         run: bash check.sh
