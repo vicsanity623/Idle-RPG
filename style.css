@@ -106,3 +106,37 @@ body {
 .modal-content { background: #1e1e28; padding: 40px; border: 2px solid #d4af37; border-radius: 10px; text-align: center; }
 .modal-content h2 { color: #d4af37; margin-bottom: 20px; }
 .modal-content p { margin-bottom: 10px; font-size: 18px; }
+
+/* Add this to your existing style.css */
+.xp-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+.lvl-badge {
+    background: #d4af37;
+    color: #000;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 14px;
+}
+.xp-bar-bg {
+    width: 150px;
+    height: 10px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.xp-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(to right, #3498db, #2980b9);
+    transition: width 0.4s ease;
+}
+.xp-text {
+    font-size: 11px;
+    color: #aaa;
+}
