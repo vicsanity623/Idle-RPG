@@ -1,12 +1,12 @@
 {
-  "name": "Idle Pal RPG - Red/Blue Edition",
-  "short_name": "Idle Pal",
-  "description": "An infinite progression SOTA idle monster catching RPG.",
+  "name": "Satoshi Chronicles",
+  "short_name": "Satoshi RPG",
+  "description": "An Idle RPG powered by Sats",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#2b2b2b",
-  "theme_color": "#8bac0f",
-  "orientation": "portrait",
+  "background_color": "#0f0f15",
+  "theme_color": "#1e1e28",
+  "orientation": "landscape",
   "icons": [
     {
       "src": "icon-192.png",
