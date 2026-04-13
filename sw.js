@@ -1,71 +1,57 @@
-const CACHE_NAME = 'idle-pets-v1';
-
+const CACHE_NAME = 'idle-pal-v1';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
+    './styles.css',
+    './game.js',
     './manifest.json',
-    './icon-192.png',
-    './icon-512.png'
+    'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'
 ];
 
-// Install Event - Initial Caching
+// Install Event: Cache assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('[Service Worker] Fresh Install: Caching Assets');
+                console.log('[Service Worker] Caching Game Assets');
                 return cache.addAll(ASSETS_TO_CACHE);
             })
-            .then(() => self.skipWaiting()) // Force the new service worker to become active immediately
+            .then(() => self.skipWaiting())
     );
 });
 
-// Activate Event - Immediate Cache Purge
+// Activate Event: Clean up old caches if we update the version
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
-                cacheNames
-                    .filter((cacheName) => cacheName !== CACHE_NAME)
-                    .map((cacheName) => {
-                        console.log('[Service Worker] Purging Stale Cache:', cacheName);
-                        return caches.delete(cacheName);
-                    })
+                cacheNames.map((cache) => {
+                    if (cache !== CACHE_NAME) {
+                        console.log('[Service Worker] Clearing Old Cache');
+                        return caches.delete(cache);
+                    }
+                })
             );
-        })
-        .then(() => self.clients.claim()) // Ensure the new Service Worker takes control of the page immediately
+        }).then(() => self.clients.claim())
     );
 });
 
-// Fetch Event - NETWORK-FIRST STRATEGY
-// This ensures that if the user has internet, they get the LATEST version.
-// If they are offline, they get the cached version.
+// Fetch Event: Serve from Cache, Fallback to Network
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        fetch(event.request)
-            .then((networkResponse) => {
-                // If we get a valid response from the network, update the cache
-                if (networkResponse && networkResponse.status === 200 && event.request.method === 'GET') {
-                    const cacheCopy = networkResponse.clone();
-                    caches.open(CACHE_NAME)
-                        .then((cache) => cache.put(event.request, cacheCopy))
-                        .catch((error) => console.error('[Service Worker] Failed to update cache:', error));
+        caches.match(event.request)
+            .then((cachedResponse) => {
+                // Return cached file if found
+                if (cachedResponse) {
+                    return cachedResponse;
                 }
-                return networkResponse;
-            })
-            .catch(async () => {
-                // If network fails (offline), try to serve from cache
-                const cachedResponse = await caches.match(event.request);
-                return cachedResponse || new Response(null, { status: 404, statusText: 'Not Found' });
+                // Otherwise fetch from the network
+                return fetch(event.request).catch(() => {
+                    // If offline and trying to navigate to a page, return index.html
+                    if (event.request.mode === 'navigate') {
+                        return caches.match('./index.html');
+                    }
+                });
             })
     );
-});
-// [PYOB Feature]: 'New Version Available' prompt (client-side) leverages existing self.skipWaiting() and self.clients.claim() for immediate SW activation.
-
-// Add this new event listener to the existing Service Worker file
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        console.log('[Service Worker] Client requested to skip waiting. Activating new SW.');
-        self.skipWaiting();
-    }
 });

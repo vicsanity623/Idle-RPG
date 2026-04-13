@@ -1,13 +1,12 @@
 {
-  "name": "Idle Pets",
-  "short_name": "IdlePets",
-  "description": "An idle pet simulation game featuring interactive pet care, status tracking, and actions like feeding, playing, and grooming.",
-  "start_url": "index.html",
-  "display": "fullscreen",
-  "background_color": "#121212",
-  "theme_color": "#bb86fc",
-  "orientation": "landscape",
-  "scope": "/",
+  "name": "Idle Pal RPG - Red/Blue Edition",
+  "short_name": "Idle Pal",
+  "description": "An infinite progression SOTA idle monster catching RPG.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#2b2b2b",
+  "theme_color": "#8bac0f",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
