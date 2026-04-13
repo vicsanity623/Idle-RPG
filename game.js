@@ -336,10 +336,12 @@ function updatePlayer(dt) {
         let newX = engine.player.x + px/TILE_SIZE;
         let newY = engine.player.y + py/TILE_SIZE;
         
-        // Collision (Circle-to-Grid rough check)
+        // Collision (Bounding box check against impassable tiles)
         let r = 0.3; // player radius in tiles
-        if(getTile(Math.floor(newX+r), Math.floor(engine.player.y)) !== 2 && getTile(Math.floor(newX+r), Math.floor(engine.player.y)) !== 3 &&
-           getTile(Math.floor(newX-r), Math.floor(engine.player.y)) !== 2 && getTile(Math.floor(newX-r), Math.floor(engine.player.y)) !== 3) {
+        let canMoveX = true;
+        if (px > 0 && (getTile(Math.floor(newX+r), Math.floor(engine.player.y)) === 2 || getTile(Math.floor(newX+r), Math.floor(engine.player.y)) === 3)) canMoveX = false;
+        else if (px < 0 && (getTile(Math.floor(newX-r), Math.floor(engine.player.y)) === 2 || getTile(Math.floor(newX-r), Math.floor(engine.player.y)) === 3)) canMoveX = false;
+        if (canMoveX) {
             engine.player.x = newX;
         }
         if(getTile(Math.floor(engine.player.x), Math.floor(newY+r)) !== 2 && getTile(Math.floor(engine.player.x), Math.floor(newY+r)) !== 3 &&
