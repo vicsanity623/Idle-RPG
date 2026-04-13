@@ -4,61 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Satoshi Chronicles</title>
-    
-    <!-- PWA Manifest Link -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f0f15">
-    
-    <!-- Game Styles and Fonts -->
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- World Transition Animation Overlay -->
+    <div id="falling-transition" class="hidden">
+        <div class="speed-lines"></div>
+        <h1 class="drop-text">DESCENDING TO WORLD <span id="trans-world-num">2</span>...</h1>
+    </div>
+
+    <!-- HUD Map Overlay -->
+    <div id="map-view" class="hidden">
+        <header class="map-header">
+            <h2>World <span id="map-world">1</span> Map</h2>
+            <div class="map-wallet">✨ Gold Dust: <span id="map-dust">0</span></div>
+            <button class="close-map-btn" onclick="closeMap()">Back to Battle</button>
+        </header>
+        <div id="map-grid">
+            <!-- JavaScript will populate 50 stage nodes here -->
+        </div>
+    </div>
+
     <div id="game-container">
-        <!-- Top Bar: Game Title and Treasury -->
+        <!-- Top Bar -->
         <header id="top-bar">
             <div class="title-section">
                 <h1>Satoshi Chronicles</h1>
-                <p class="subtitle">Idle RPG</p>
+                <p class="subtitle">World <span id="world-display">1</span></p>
             </div>
             <div class="treasury-section">
-                <div class="wallet-box">
+                <div class="wallet-box" style="margin-bottom: 5px;">
+                    <span class="wallet-icon">✨</span>
+                    <span id="dust-balance">0</span> Dust
+                </div>
+                <div class="wallet-box" style="border-color: #f9a826;">
                     <span class="wallet-icon">💎</span>
                     <span id="sats-balance">0</span> Sats
                 </div>
             </div>
         </header>
 
-        <!-- Main Battle Arena (Side-scrolling view) -->
+        <!-- Main Battle Arena -->
         <main id="battle-scene">
             <div class="stage-info">
                 <h2>Stage <span id="stage-display">1</span></h2>
-                <p>Wave <span id="wave-display">1</span>/3</p>
+                <p>Wave <span id="wave-display">1</span>/3 | Next Cost: <span id="next-cost">0</span> ✨</p>
             </div>
 
-            <!-- Floating Text Container (for damage numbers) -->
             <div id="fx-container"></div>
 
             <div id="characters-container">
-                <!-- Player Character -->
                 <div id="player-wrapper" class="character-wrapper">
                     <div class="health-bar-container">
                         <div id="player-hp-fill" class="health-bar-fill"></div>
                     </div>
                     <div class="hp-text"><span id="player-hp">100</span> / <span id="player-max-hp">100</span></div>
-                    <!-- The actual player sprite/image -->
                     <div id="player-sprite" class="sprite">
                         <div class="sprite-name">Hero</div>
                     </div>
                 </div>
 
-                <!-- Enemy Character -->
                 <div id="enemy-wrapper" class="character-wrapper">
                     <div class="health-bar-container">
                         <div id="enemy-hp-fill" class="health-bar-fill enemy-fill"></div>
                     </div>
                     <div class="hp-text"><span id="enemy-hp">30</span> / <span id="enemy-max-hp">30</span></div>
-                    <!-- The actual enemy sprite/image -->
                     <div id="enemy-sprite" class="sprite">
                         <div id="enemy-name" class="sprite-name">Slime</div>
                     </div>
@@ -69,68 +82,49 @@
 
         <!-- Bottom UI Panels -->
         <footer id="ui-panels">
-            <!-- Left: Combat Log -->
             <div class="panel log-panel">
                 <h3>Battle Log</h3>
                 <div id="combat-log"></div>
             </div>
 
-            <!-- Middle: Stats & Inventory -->
             <div class="panel inventory-panel">
-                <h3>Bag & Stats</h3>
+                <h3>Hero Stats & Bag</h3>
                 <div class="stats-box">
-                    <p>Attack Power: <span id="player-atk" class="stat-highlight">10</span></p>
+                    <p>❤️ Max HP: <span id="stat-maxhp" class="stat-highlight">100</span></p>
+                    <p>⚔️ ATK: <span id="stat-atk" class="stat-highlight">10</span></p>
+                    <p>🛡️ DEF: <span id="stat-def" class="stat-highlight">2</span></p>
+                    <p>⚡ CRIT: <span id="stat-crit" class="stat-highlight">5</span>%</p>
+                    <p>💖 REGEN: <span id="stat-regen" class="stat-highlight">1</span>/turn</p>
                 </div>
                 <ul id="inventory-list">
-                    <li>
-                        <div class="item-icon">⚙️</div>
-                        <div class="item-info">Scrap Iron <br><span id="inv-iron">0</span></div>
-                    </li>
-                    <li>
-                        <div class="item-icon">🔮</div>
-                        <div class="item-info">Monster Core <br><span id="inv-core">0</span></div>
-                    </li>
+                    <li><div class="item-icon">⚙️</div><div class="item-info">Scrap Iron <br><span id="inv-iron">0</span></div></li>
+                    <li><div class="item-icon">🔮</div><div class="item-info">Monster Core <br><span id="inv-core">0</span></div></li>
                 </ul>
             </div>
 
-            <!-- Right: Crafting -->
             <div class="panel craft-panel">
-                <h3>Forge</h3>
-                <div class="craft-box">
-                    <div class="craft-details">
-                        <h4>Iron Sword</h4>
-                        <p class="craft-effect">+10 ATK</p>
-                        <p class="craft-cost">Cost: 5 Scrap Iron</p>
-                    </div>
-                    <button class="craft-btn" onclick="craftItem('sword')">Craft</button>
-                </div>
-                <div class="craft-box">
-                    <div class="craft-details">
-                        <h4>Health Potion</h4>
-                        <p class="craft-effect">Heal 50 HP</p>
-                        <p class="craft-cost">Cost: 2 Monster Cores</p>
-                    </div>
-                    <button class="craft-btn heal-btn" onclick="craftItem('potion')">Craft</button>
+                <h3>Enhance Stats</h3>
+                <div id="crafting-list">
+                    <!-- JS populates this to prevent massive HTML bloat -->
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- Game Engine Script -->
-    <script src="game.js"></script>
+    <!-- Offline Modal -->
+    <div id="offline-modal" class="hidden">
+        <div class="modal-content">
+            <h2>Welcome Back!</h2>
+            <p>You were gone for <span id="offline-time">0</span> minutes.</p>
+            <p>Your heroes gathered <span id="offline-dust" style="color: gold; font-weight: bold;">0</span> ✨ Gold Dust while you rested.</p>
+            <button onclick="closeOfflineModal()" class="craft-btn">Claim</button>
+        </div>
+    </div>
 
-    <!-- Service Worker Registration for PWA/Offline Support -->
+    <script src="game.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then((registration) => {
-                        console.log('ServiceWorker registered successfully with scope: ', registration.scope);
-                    })
-                    .catch((error) => {
-                        console.log('ServiceWorker registration failed: ', error);
-                    });
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
         }
     </script>
 </body>
