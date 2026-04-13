@@ -148,7 +148,7 @@ function loadGame() {
     updateUI();
 }
 function calcOffline() {
-    let diff = Math.floor((Date.now() - state.lastSave) / 1000);
+    let diff = Math.max(0, Math.floor((Date.now() - state.lastSave) / 1000));
     if (diff > 60) {
         let active = state.pals[state.activePalIndex];
         let simBattles = Math.floor(diff / 10);
