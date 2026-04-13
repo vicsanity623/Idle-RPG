@@ -5,7 +5,7 @@ echo "   Starting Idle Pal RPG Check...    "
 echo "====================================="
 
 # Define the required PWA game files
-FILES=("index.html" "styles.css" "game.js" "manifest.json" "sw.js")
+FILES=("index.html" "style.css" "game.js" "manifest.json" "sw.js")
 ERRORS=0
 
 # Loop through each file and verify it exists and is not empty
