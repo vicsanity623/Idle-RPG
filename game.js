@@ -42,7 +42,7 @@ function loadGame() {
     if (save) {
         let loaded = JSON.parse(save);
         state = { ...state, ...loaded }; 
-        if(!state.satsClaimed) state.satsClaimed = {}; // Fallback for old saves
+        if(!state.satsClaimed || typeof state.satsClaimed !== 'object') state.satsClaimed = {}; // Fallback for old saves or invalid data
         currentHp = state.stats.maxHp;
         
         let now = Date.now();
