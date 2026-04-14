@@ -1,10 +1,7 @@
-// --- NUMBER FORMATTER (Safeguards numbers to 3 digits maximum) ---
 function formatNumber(num) {
     if (num < 1000) return Number.isInteger(num) ? num.toString() : num.toFixed(2);
-    
     const exponent = Math.floor(Math.log10(num) / 3);
     const shortValue = num / Math.pow(10, exponent * 3);
-    
     let suffix = "";
     if (exponent === 1) suffix = "K";
     else if (exponent === 2) suffix = "M";
@@ -19,27 +16,12 @@ function formatNumber(num) {
     return shortValue.toFixed(2) + suffix;
 }
 
-// --- GAME STATE ---
 let state = {
-    world: 1,
-    stage: 1,
-    highestStage: 1,
-    wave: 1,
-    level: 1,
-    xp: 0,
-    clearCounts: {}, // Tracks how many times a stage was beaten to reduce XP
-    goldDust: 0,
-    sats: 0,
-    iron: 0,
-    core: 0,
+    world: 1, stage: 1, highestStage: 1, wave: 1,
+    level: 1, xp: 0, clearCounts: {}, 
+    goldDust: 0, sats: 0, iron: 0, core: 0,
     lastSaveTime: Date.now(),
-    stats: {
-        maxHp: 100,
-        atk: 10,
-        def: 2,
-        crit: 5, // % chance
-        regen: 1
-    },
+    stats: { maxHp: 100, atk: 10, def: 2, crit: 5, regen: 1 },
     upgrades: { hp: 0, atk: 0, def: 0, crit: 0, regen: 0 }
 };
 
@@ -47,7 +29,6 @@ let currentHp = 100;
 let enemy = { name: 'Slime', hp: 30, maxHp: 30, atk: 2, def: 0 };
 let isBattling = false; 
 
-// --- LOCAL STORAGE ---
 function saveGame() {
     state.lastSaveTime = Date.now();
     localStorage.setItem('satoshiRpgSave', JSON.stringify(state));
@@ -74,38 +55,29 @@ function loadGame() {
     }
 }
 
-// --- XP & LEVELING MATH ---
-function getMaxXp() {
-    return 100 * Math.pow(1.3, state.level - 1);
-}
+function getMaxXp() { return 100 * Math.pow(1.3, state.level - 1); }
 
 function checkLevelUp() {
     let maxXp = getMaxXp();
     let leveledUp = false;
-    
     while (state.xp >= maxXp) {
         state.xp -= maxXp;
         state.level++;
-        
-        // Permanent Stat Increases from Leveling
         state.stats.maxHp += 5;
         state.stats.atk += 1;
         state.stats.def += 0.5;
         state.stats.crit = Math.min(50, state.stats.crit + 0.1); 
         state.stats.regen += 0.2;
-        
         maxXp = getMaxXp();
         leveledUp = true;
     }
-    
     if (leveledUp) {
-        currentHp = state.stats.maxHp; // Heal to full
+        currentHp = state.stats.maxHp; 
         log(`Level Up! You are now Lv.${formatNumber(state.level)}`, 'log-boss');
         spawnText('player', 'LEVEL UP!', 'heal-text');
     }
 }
 
-// --- DOM ELEMENTS & UPDATES ---
 function updateDOM() {
     document.getElementById('world-display').innerText = formatNumber(state.world);
     document.getElementById('stage-display').innerText = formatNumber(state.stage);
@@ -113,7 +85,6 @@ function updateDOM() {
     document.getElementById('dust-balance').innerText = formatNumber(state.goldDust);
     document.getElementById('sats-balance').innerText = formatNumber(state.sats);
     
-    // Fix: Show Next Cost as Unlocked if already cleared
     let nextStageCost = getStageCost(state.stage + 1);
     document.getElementById('next-cost').innerText = nextStageCost === 0 ? "Unlocked" : formatNumber(nextStageCost) + " ✨";
     
@@ -121,7 +92,6 @@ function updateDOM() {
     document.getElementById('player-max-hp').innerText = formatNumber(state.stats.maxHp);
     document.getElementById('player-hp-fill').style.width = Math.max(0, (currentHp / state.stats.maxHp) * 100) + '%';
     
-    // XP DOM Updates
     document.getElementById('player-level').innerText = formatNumber(state.level);
     document.getElementById('player-xp-fill').style.width = Math.max(0, Math.min(100, (state.xp / getMaxXp()) * 100)) + '%';
     
@@ -157,11 +127,8 @@ function closeOfflineModal() {
     isBattling = true;
 }
 
-// --- COMBAT MATH & SCALING ---
 function getStageCost(targetStage) {
-    // If the stage is already unlocked, cost is 0!
     if (targetStage <= state.highestStage) return 0;
-    // Otherwise, exponential cost
     return 5 * Math.pow(1.2, targetStage - 1) * Math.pow(2, state.world - 1);
 }
 
@@ -172,7 +139,6 @@ function spawnEnemy() {
     let baseHp = isBoss ? 100 : 20;
     let baseAtk = isBoss ? 5 : 2;
     let baseDef = isBoss ? 2 : 0;
-
     let waveScale = 1 + (state.wave * 0.1);
 
     enemy = {
@@ -210,7 +176,6 @@ function combatTick() {
 
     let isCrit = Math.random() * 100 < state.stats.crit;
     let rawDamage = (state.stats.atk * (isCrit ? 2 : 1)) - enemy.def;
-    
     let maxAllowedDmg = enemy.maxHp * 0.33;
     let actualDamage = Math.max(1, Math.min(rawDamage, maxAllowedDmg));
 
@@ -239,9 +204,9 @@ function combatTick() {
 
         if (currentHp <= 0) {
             currentHp = 0;
-            log('Hero died. Retreating...', 'log-kill');
+            log('Hero died. Retreating to Hub...', 'log-kill');
             currentHp = state.stats.maxHp;
-            showMap(); 
+            goToHub(); // Send to hub on death
         }
         updateDOM();
     }, 700);
@@ -252,12 +217,11 @@ function combatTick() {
 function enemyDefeated() {
     log(`Defeated ${enemy.name}!`, 'log-kill');
     
-    // XP Calculation Logic
     let stageKey = `${state.world}-${state.stage}`;
     let clearCount = state.clearCounts[stageKey] || 0;
     
     let baseXp = 15 * Math.pow(1.3, state.world - 1) * Math.pow(1.1, state.stage);
-    let earnedXp = baseXp / Math.pow(2, clearCount); // Cuts in half per repeat clear
+    let earnedXp = baseXp / Math.pow(2, clearCount); 
     
     if (earnedXp > 0.01) {
         state.xp += earnedXp;
@@ -265,7 +229,6 @@ function enemyDefeated() {
         checkLevelUp();
     }
     
-    // Drops
     let dustDrop = 0.5 * Math.pow(1.5, state.world - 1) * Math.pow(1.1, state.stage);
     state.goldDust += dustDrop;
     log(`Found ${formatNumber(dustDrop)} Dust.`);
@@ -277,36 +240,79 @@ function enemyDefeated() {
 
     state.wave++;
     if (state.wave > 3) {
-        // End of stage logic
-        state.clearCounts[stageKey] = clearCount + 1; // Mark stage as cleared to trigger XP penalty next time
+        // STAGE CLEARED - INTERCEPT AUTO LOOP
+        state.clearCounts[stageKey] = clearCount + 1; 
         state.wave = 1;
         
-        let nextCost = getStageCost(state.stage + 1);
+        isBattling = false; // Pause combat
         
-        if (state.goldDust >= nextCost) {
-            // Deduct cost (Will be 0 if already unlocked)
-            if (nextCost > 0) state.goldDust -= nextCost;
-            
-            state.stage++;
-            if (state.stage > state.highestStage) state.highestStage = state.stage;
-            
-            if (state.stage > 50) {
-                triggerWorldTransition();
-                return;
-            }
+        // Show Victory Modal
+        let nextCost = getStageCost(state.stage + 1);
+        let nextBtn = document.getElementById('btn-next-stage');
+        if (nextCost > 0) {
+            nextBtn.innerText = `Unlock Stage ${state.stage + 1} (Cost: ${formatNumber(nextCost)} ✨)`;
         } else {
-            log('Not enough Gold Dust to unlock next stage. Falling back to Map.');
-            showMap();
-            return;
+            nextBtn.innerText = `Proceed to Stage ${state.stage + 1} (Free)`;
         }
+        
+        document.getElementById('next-stage-error').innerText = ''; // Clear old errors
+        document.getElementById('stage-clear-modal').classList.remove('hidden');
+        
+        saveGame();
+        return; // Stops spawnEnemy from running
     }
+    
     saveGame();
     setTimeout(spawnEnemy, 1000);
 }
 
+// --- NEW STAGE / HUB NAVIGATION CONTROLS ---
+
+function handleNextStage() {
+    let nextCost = getStageCost(state.stage + 1);
+    
+    if (state.goldDust >= nextCost) {
+        if (nextCost > 0) state.goldDust -= nextCost;
+        
+        state.stage++;
+        if (state.stage > state.highestStage) state.highestStage = state.stage;
+        
+        document.getElementById('stage-clear-modal').classList.add('hidden');
+        
+        if (state.stage > 50) {
+            triggerWorldTransition();
+            return;
+        }
+        
+        isBattling = true;
+        spawnEnemy();
+    } else {
+        document.getElementById('next-stage-error').innerText = 'Not enough Gold Dust to unlock the next stage!';
+    }
+}
+
+function handleReplayStage() {
+    document.getElementById('stage-clear-modal').classList.add('hidden');
+    isBattling = true;
+    spawnEnemy();
+}
+
+function goToHub() {
+    document.getElementById('stage-clear-modal').classList.add('hidden');
+    document.getElementById('game-container').classList.add('hub-mode');
+    document.getElementById('hub-nav').classList.remove('hidden');
+    isBattling = false; // Stay paused
+}
+
+function returnFromHub() {
+    document.getElementById('game-container').classList.remove('hub-mode');
+    document.getElementById('hub-nav').classList.add('hidden');
+    isBattling = true;
+    spawnEnemy();
+}
+
 // --- MAP & WORLDS ---
 function showMap() {
-    isBattling = false;
     document.getElementById('map-view').classList.remove('hidden');
     document.getElementById('map-world').innerText = formatNumber(state.world);
     document.getElementById('map-dust').innerText = formatNumber(state.goldDust);
@@ -328,6 +334,7 @@ function showMap() {
                 state.stage = i;
                 state.wave = 1;
                 closeMap();
+                returnFromHub(); // Ensures we jump right into battle from map
             };
         }
         grid.appendChild(node);
@@ -336,9 +343,7 @@ function showMap() {
 
 function closeMap() {
     document.getElementById('map-view').classList.add('hidden');
-    isBattling = true;
-    currentHp = state.stats.maxHp;
-    spawnEnemy();
+    // We do NOT set isBattling=true here, because they might be looking at the map from the Hub.
 }
 
 function triggerWorldTransition() {
@@ -362,11 +367,11 @@ function triggerWorldTransition() {
 
 // --- CRAFTING / UPGRADES ---
 const upgradesData = [
-    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 1, baseIron: 2, scale: 1.5, boost: 5 },
-    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 3, baseIron: 2, scale: 1.5, boost: 20 },
-    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 8, baseIron: 5, scale: 1.6, boost: 2 },
-    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 20, baseCore: 1, scale: 2.0, boost: 1 }, 
-    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 15, baseCore: 2, scale: 1.8, boost: 1 }
+    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 10, baseIron: 2, scale: 1.5, boost: 5 },
+    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 10, baseIron: 2, scale: 1.5, boost: 20 },
+    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 25, baseIron: 5, scale: 1.6, boost: 2 },
+    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 100, baseCore: 1, scale: 2.0, boost: 1 }, 
+    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 50, baseCore: 2, scale: 1.8, boost: 1 }
 ];
 
 function renderCrafting() {
