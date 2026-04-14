@@ -112,3 +112,42 @@ body {
 .modal-content { background: #1e1e28; padding: 40px; border: 2px solid #d4af37; border-radius: 10px; text-align: center; }
 .modal-content h2 { color: #d4af37; margin-bottom: 20px; }
 .modal-content p { margin-bottom: 10px; font-size: 18px; }
+
+/* --- NEW MODAL & HUB STYLES --- */
+#stage-clear-modal {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 300; display: flex; align-items: center; justify-content: center;
+}
+.modal-buttons {
+    display: flex; flex-direction: column; gap: 12px; margin-top: 20px;
+}
+.modal-buttons button { padding: 12px; font-size: 16px; }
+
+#hub-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #111; padding: 15px 20px; border-bottom: 2px solid #3a2e22;
+}
+
+/* 
+   HUB MODE MAGIC 
+   When 'hub-mode' class is added to game-container, it hides the battle 
+   and expands the inventory/crafting panels to take up the full screen!
+*/
+#game-container.hub-mode #battle-scene {
+    display: none; /* Hide battle */
+}
+#game-container.hub-mode #ui-panels {
+    flex: 1; 
+    height: 100%; 
+    flex-wrap: wrap; 
+    align-content: flex-start;
+}
+#game-container.hub-mode .log-panel {
+    display: none; /* Don't need battle log in camp */
+}
+#game-container.hub-mode .inventory-panel, 
+#game-container.hub-mode .craft-panel {
+    flex: 1; 
+    min-width: 300px; /* Allows side-by-side or stacked layout */
+    height: 100%;
+}
