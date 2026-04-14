@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Satoshi Chronicles</title>
+    <title>X Chronicles</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f0f15">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- World Transition Animation -->
     <div id="falling-transition" class="hidden">
         <div class="speed-lines"></div>
         <h1 class="drop-text">DESCENDING TO WORLD <span id="trans-world-num">2</span>...</h1>
     </div>
 
-    <!-- HUD Map Overlay -->
     <div id="map-view" class="hidden">
         <header class="map-header">
             <h2>World <span id="map-world">1</span> Map</h2>
@@ -26,16 +24,55 @@
         <div id="map-grid"></div>
     </div>
 
-    <!-- Stage Cleared Modal -->
+    <!-- Enhanced Stage Cleared Modal with Mini-Game -->
     <div id="stage-clear-modal" class="hidden">
-        <div class="modal-content">
-            <h2 style="color: #4caf50;">Victory! Stage Cleared</h2>
-            <p>What would you like to do next?</p>
-            <div class="modal-buttons">
-                <button id="btn-next-stage" onclick="handleNextStage()" class="craft-btn" style="background: linear-gradient(to bottom, #4caf50, #2e7d32); color: white;">Next Stage</button>
-                <button onclick="handleReplayStage()" class="craft-btn">Replay Stage</button>
-                <button onclick="goToHub()" class="craft-btn" style="background: linear-gradient(to bottom, #3a7bd5, #00d2ff);">Go to Main Hub</button>
+        <div class="modal-content" style="width: 95%; max-width: 500px;">
+            <h2 style="color: #4caf50; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px;">Victory! Stage <span id="modal-stage"></span> Cleared</h2>
+            
+            <div class="modal-stats-container">
+                <!-- Hero Stats Column -->
+                <div class="modal-col" style="border-right: 1px solid #333;">
+                    <h3 style="color: #d4af37; font-size: 15px; margin-bottom: 5px;">Hero Progression</h3>
+                    <p>Level: <span id="modal-level" class="stat-highlight"></span></p>
+                    <p>Max HP: <span id="modal-hp"></span></p>
+                    <p>ATK: <span id="modal-atk"></span></p>
+                    <p>DEF: <span id="modal-def"></span></p>
+                    <p>CRIT: <span id="modal-crit"></span>%</p>
+                </div>
+                <!-- Rewards Column -->
+                <div class="modal-col">
+                    <h3 style="color: #4caf50; font-size: 15px; margin-bottom: 5px;">Stage Rewards</h3>
+                    <p>✨ Dust: <span id="modal-dust"></span></p>
+                    <p>📘 XP: <span id="modal-xp"></span></p>
+                    <p>⚙️ Iron: <span id="modal-iron"></span></p>
+                    <p>🔮 Cores: <span id="modal-core"></span></p>
+                </div>
             </div>
+
+            <!-- Standard Modal Buttons -->
+            <div id="modal-normal-actions" class="modal-buttons" style="margin-top: 15px;">
+                <button onclick="startMiniGame()" class="craft-btn pulse-btn" style="background: linear-gradient(to bottom, #f9a826, #e65100); color: white; padding: 15px; font-size: 16px;">🎯 Launch Multiplier Mini-Game</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-next-stage" onclick="handleNextStage()" class="craft-btn" style="flex: 1; background: linear-gradient(to bottom, #4caf50, #2e7d32); color: white;">Next Stage</button>
+                    <button onclick="handleReplayStage()" class="craft-btn" style="flex: 1;">Replay Stage</button>
+                </div>
+                <button onclick="goToHub()" class="craft-btn" style="background: linear-gradient(to bottom, #3a7bd5, #00d2ff);">🏕️ Go to Main Hub</button>
+            </div>
+
+            <!-- Mini-Game UI (Hidden by default) -->
+            <div id="modal-minigame-ui" class="hidden" style="margin-top: 20px;">
+                <h3 style="color: #f9a826; margin-bottom: 10px; font-family: 'Cinzel', serif;">Tap in the Green Zone!</h3>
+                <div id="mg-bar">
+                    <div id="mg-target"></div>
+                    <div id="mg-cursor"></div>
+                </div>
+                <div id="mg-progress-bg">
+                    <div id="mg-progress-fill"></div>
+                </div>
+                <button onclick="mgTap()" class="craft-btn" style="width: 100%; padding: 15px; font-size: 20px; background: linear-gradient(to bottom, #4caf50, #2e7d32); color: white;">TAP!</button>
+                <p id="mg-feedback">Ready...</p>
+            </div>
+
             <p id="next-stage-error" style="color: #ff3b3b; font-size: 14px; margin-top: 10px;"></p>
         </div>
     </div>
@@ -54,7 +91,7 @@
         <!-- Top Bar -->
         <header id="top-bar">
             <div class="title-section">
-                <h1>Satoshi Chronicles</h1>
+                <h1>X Chronicles</h1>
                 <p class="subtitle">World <span id="world-display">1</span></p>
             </div>
             <div class="treasury-section">
@@ -69,7 +106,7 @@
             </div>
         </header>
 
-        <!-- Hub Navigation (Only visible in Hub Mode) -->
+        <!-- Hub Navigation -->
         <div id="hub-nav" class="hidden">
             <h2 style="color: #d4af37; font-family: 'Cinzel', serif;">Main Camp</h2>
             <div>
@@ -78,7 +115,6 @@
             </div>
         </div>
 
-        <!-- Main Battle Arena -->
         <main id="battle-scene">
             <div class="stage-info">
                 <h2>Stage <span id="stage-display">1</span></h2>
@@ -101,7 +137,6 @@
             <div class="ground"></div>
         </main>
 
-        <!-- Bottom UI Panels -->
         <footer id="ui-panels">
             <div class="panel log-panel">
                 <h3>Battle Log</h3>
