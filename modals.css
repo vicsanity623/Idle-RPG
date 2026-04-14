@@ -1,0 +1,51 @@
+/* Modal Styles */
+#offline-modal { 
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.9); 
+    z-index: 300; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+.modal-content { 
+    background: #1e1e28; 
+    padding: 40px; 
+    border: 2px solid #d4af37; 
+    border-radius: 10px; 
+    text-align: center; 
+}
+.modal-content h2 { 
+    color: #d4af37; 
+    margin-bottom: 20px; 
+}
+.modal-content p { 
+    margin-bottom: 10px; 
+    font-size: 18px; 
+}
+
+#stage-clear-modal {
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(0,0,0,0.85); 
+    z-index: 300; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+}
+.modal-buttons {
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+    margin-top: 20px;
+}
+.modal-buttons button { 
+    padding: 12px; 
+    font-size: 16px; 
+}
