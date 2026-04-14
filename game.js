@@ -18,7 +18,7 @@ function formatNumber(num) {
 
 let state = {
     world: 1, stage: 1, highestStage: 1, wave: 1,
-    level: 1, xp: 0, clearCounts: {}, 
+    level: 1, xp: 0, clearCounts: {}, satsClaimed: {}, // Tracked boss wins
     goldDust: 0, sats: 0, iron: 0, core: 0,
     lastSaveTime: Date.now(),
     stats: { maxHp: 100, atk: 10, def: 2, crit: 5, regen: 1 },
@@ -28,6 +28,9 @@ let state = {
 let currentHp = 100;
 let enemy = { name: 'Slime', hp: 30, maxHp: 30, atk: 2, def: 0 };
 let isBattling = false; 
+
+// Track rewards per stage for the modal
+let stageRewards = { dust: 0, xp: 0, iron: 0, core: 0 };
 
 function saveGame() {
     state.lastSaveTime = Date.now();
@@ -39,6 +42,7 @@ function loadGame() {
     if (save) {
         let loaded = JSON.parse(save);
         state = { ...state, ...loaded }; 
+        if(!state.satsClaimed) state.satsClaimed = {}; // Fallback for old saves
         currentHp = state.stats.maxHp;
         
         let now = Date.now();
@@ -133,6 +137,9 @@ function getStageCost(targetStage) {
 }
 
 function spawnEnemy() {
+    // Reset tracker at wave 1
+    if (state.wave === 1) stageRewards = { dust: 0, xp: 0, iron: 0, core: 0 };
+
     const isBoss = state.stage % 10 === 0 && state.wave === 3;
     const multiplier = Math.pow(1.5, state.world - 1) * Math.pow(1.15, state.stage - 1);
     
@@ -176,7 +183,7 @@ function combatTick() {
 
     let isCrit = Math.random() * 100 < state.stats.crit;
     let rawDamage = (state.stats.atk * (isCrit ? 2 : 1)) - enemy.def;
-    let actualDamage = Math.max(1, rawDamage);
+    let actualDamage = Math.max(1, rawDamage); // Math allows 1-hit kills now
 
     enemy.hp -= actualDamage;
     spawnText('enemy', `-${formatNumber(actualDamage)}${isCrit ? '!' : ''}`, 'dmg-enemy');
@@ -204,7 +211,7 @@ function combatTick() {
             currentHp = 0;
             log('Hero died. Retreating to Hub...', 'log-kill');
             currentHp = state.stats.maxHp;
-            goToHub(); // Send to hub on death
+            goToHub(); 
         }
         updateDOM();
     }, 700);
@@ -218,33 +225,58 @@ function enemyDefeated() {
     let stageKey = `${state.world}-${state.stage}`;
     let clearCount = state.clearCounts[stageKey] || 0;
     
+    // XP Calculation
     let baseXp = 15 * Math.pow(1.3, state.world - 1) * Math.pow(1.1, state.stage);
     let earnedXp = baseXp / Math.pow(2, clearCount); 
     
     if (earnedXp > 0.01) {
         state.xp += earnedXp;
+        stageRewards.xp += earnedXp;
         log(`+${formatNumber(earnedXp)} XP`, 'log-loot');
         checkLevelUp();
     }
     
-    let dustDrop = 0.75 * Math.pow(1.5, state.world - 1) * Math.pow(1.1, state.stage);
+    // Dust Calculation
+    let dustDrop = 0.5 * Math.pow(1.5, state.world - 1) * Math.pow(1.1, state.stage);
     state.goldDust += dustDrop;
+    stageRewards.dust += dustDrop;
     log(`Found ${formatNumber(dustDrop)} Dust.`);
     
-    if(Math.random() > 0.5) state.iron++;
-    if(Math.random() > 0.8) state.core++;
+    // Materials
+    if(Math.random() > 0.5) { state.iron++; stageRewards.iron++; }
+    if(Math.random() > 0.8) { state.core++; stageRewards.core++; }
 
-    if (state.stage % 10 === 0 && state.wave === 3) state.sats += 10;
+    // BOSS SATS LOGIC (Fixed to prevent farming)
+    if (state.stage % 10 === 0 && state.wave === 3) {
+        let bossKey = `boss_${state.world}_${state.stage}`;
+        if (!state.satsClaimed[bossKey]) {
+            state.sats += 10;
+            state.satsClaimed[bossKey] = true;
+            log('First Boss Clear! +10 Sats!', 'log-kill');
+        }
+    }
 
     state.wave++;
     if (state.wave > 3) {
-        // STAGE CLEARED - INTERCEPT AUTO LOOP
+        // STAGE CLEARED - SHOW MODAL
         state.clearCounts[stageKey] = clearCount + 1; 
         state.wave = 1;
-        
         isBattling = false; // Pause combat
         
-        // Show Victory Modal
+        // Populate Modal Data
+        document.getElementById('modal-stage').innerText = formatNumber(state.stage);
+        document.getElementById('modal-level').innerText = formatNumber(state.level);
+        document.getElementById('modal-hp').innerText = formatNumber(state.stats.maxHp);
+        document.getElementById('modal-atk').innerText = formatNumber(state.stats.atk);
+        document.getElementById('modal-def').innerText = formatNumber(state.stats.def);
+        document.getElementById('modal-crit').innerText = formatNumber(state.stats.crit);
+        
+        document.getElementById('modal-dust').innerText = formatNumber(stageRewards.dust);
+        document.getElementById('modal-xp').innerText = formatNumber(stageRewards.xp);
+        document.getElementById('modal-iron').innerText = formatNumber(stageRewards.iron);
+        document.getElementById('modal-core').innerText = formatNumber(stageRewards.core);
+
+        // Configure Next Button text
         let nextCost = getStageCost(state.stage + 1);
         let nextBtn = document.getElementById('btn-next-stage');
         if (nextCost > 0) {
@@ -253,34 +285,113 @@ function enemyDefeated() {
             nextBtn.innerText = `Proceed to Stage ${state.stage + 1} (Free)`;
         }
         
-        document.getElementById('next-stage-error').innerText = ''; // Clear old errors
-        document.getElementById('stage-clear-modal').classList.remove('hidden');
+        // Reset Mini-game UI
+        document.getElementById('modal-minigame-ui').classList.add('hidden');
+        document.getElementById('modal-normal-actions').classList.remove('hidden');
+        document.getElementById('next-stage-error').innerText = ''; 
         
+        document.getElementById('stage-clear-modal').classList.remove('hidden');
         saveGame();
-        return; // Stops spawnEnemy from running
+        return; // Stops spawnEnemy from running immediately
     }
     
     saveGame();
     setTimeout(spawnEnemy, 1000);
 }
 
-// --- NEW STAGE / HUB NAVIGATION CONTROLS ---
+// --- MINI-GAME LOGIC ---
+let mgAnim;
+let mgPos = 0;
+let mgDir = 2; // Speed
+let mgProgress = 0;
 
+function startMiniGame() {
+    document.getElementById('modal-normal-actions').classList.add('hidden');
+    document.getElementById('modal-minigame-ui').classList.remove('hidden');
+    document.getElementById('mg-feedback').innerText = "Wait for the Green Zone...";
+    document.getElementById('mg-feedback').style.color = "#ccc";
+    mgProgress = 0;
+    document.getElementById('mg-progress-fill').style.width = '0%';
+    mgPos = 0;
+    mgDir = 2 + (Math.random() * 1.5); // Randomize initial speed
+    mgLoop();
+}
+
+function mgLoop() {
+    mgPos += mgDir;
+    if (mgPos > 98) { mgPos = 98; mgDir *= -1; }
+    if (mgPos < 0) { mgPos = 0; mgDir *= -1; }
+    document.getElementById('mg-cursor').style.left = mgPos + '%';
+    mgAnim = requestAnimationFrame(mgLoop);
+}
+
+function mgTap() {
+    // Green Zone is exactly between 40% and 60%
+    if (mgPos >= 40 && mgPos <= 60) {
+        mgProgress += 34; // Needs 3 hits to hit 100
+        document.getElementById('mg-progress-fill').style.width = mgProgress + '%';
+        document.getElementById('mg-feedback').innerText = "NICE HIT!";
+        document.getElementById('mg-feedback').style.color = "#4caf50";
+        
+        // Make it slightly faster/harder on success
+        mgDir = (Math.abs(mgDir) + 0.8) * Math.sign(mgDir);
+
+        if (mgProgress >= 100) {
+            mgWin();
+        }
+    } else {
+        document.getElementById('mg-feedback').innerText = "MISS! Try Again!";
+        document.getElementById('mg-feedback').style.color = "#ff3b3b";
+    }
+}
+
+function mgWin() {
+    cancelAnimationFrame(mgAnim);
+    let multi = Math.floor(Math.random() * 4) + 2; // Random multiplier 2x to 5x
+    
+    // Apply Bonus (Stage Rewards * (multi - 1) because they already got the base 1x)
+    let bonusDust = stageRewards.dust * (multi - 1);
+    let bonusXp = stageRewards.xp * (multi - 1);
+    let bonusIron = stageRewards.iron * (multi - 1);
+    let bonusCore = stageRewards.core * (multi - 1);
+
+    state.goldDust += bonusDust;
+    state.xp += bonusXp;
+    state.iron += bonusIron;
+    state.core += bonusCore;
+    
+    checkLevelUp(); // If bonus XP levels them up
+    updateDOM();
+
+    document.getElementById('mg-feedback').innerText = `SUCCESS! ${multi}X REWARDS CLAIMED!`;
+    document.getElementById('mg-feedback').style.color = "#f9a826";
+    log(`Mini-Game Win! Gained ${multi}x Multiplier!`, 'log-boss');
+    
+    saveGame();
+
+    // Auto-advance logic after 2 seconds
+    setTimeout(() => {
+        document.getElementById('stage-clear-modal').classList.add('hidden');
+        let nextCost = getStageCost(state.stage + 1);
+        
+        if (state.goldDust >= nextCost) {
+            handleNextStage();
+        } else {
+            handleReplayStage();
+        }
+    }, 2000);
+}
+
+// --- NAVIGATION CONTROLS ---
 function handleNextStage() {
     let nextCost = getStageCost(state.stage + 1);
-    
     if (state.goldDust >= nextCost) {
         if (nextCost > 0) state.goldDust -= nextCost;
-        
         state.stage++;
         if (state.stage > state.highestStage) state.highestStage = state.stage;
         
         document.getElementById('stage-clear-modal').classList.add('hidden');
-        
-        if (state.stage > 50) {
-            triggerWorldTransition();
-            return;
-        }
+        if (state.stage > 50) { triggerWorldTransition(); return; }
         
         isBattling = true;
         spawnEnemy();
@@ -299,7 +410,7 @@ function goToHub() {
     document.getElementById('stage-clear-modal').classList.add('hidden');
     document.getElementById('game-container').classList.add('hub-mode');
     document.getElementById('hub-nav').classList.remove('hidden');
-    isBattling = false; // Stay paused
+    isBattling = false; 
 }
 
 function returnFromHub() {
@@ -309,12 +420,10 @@ function returnFromHub() {
     spawnEnemy();
 }
 
-// --- MAP & WORLDS ---
 function showMap() {
     document.getElementById('map-view').classList.remove('hidden');
     document.getElementById('map-world').innerText = formatNumber(state.world);
     document.getElementById('map-dust').innerText = formatNumber(state.goldDust);
-    
     const grid = document.getElementById('map-grid');
     grid.innerHTML = '';
     
@@ -322,7 +431,6 @@ function showMap() {
         let node = document.createElement('div');
         node.className = 'map-node';
         node.innerText = i;
-        
         if (i < state.highestStage) node.classList.add('node-cleared');
         else if (i === state.highestStage) node.classList.add('node-active');
         else node.classList.add('node-locked');
@@ -332,25 +440,18 @@ function showMap() {
                 state.stage = i;
                 state.wave = 1;
                 closeMap();
-                returnFromHub(); // Ensures we jump right into battle from map
+                returnFromHub(); 
             };
         }
         grid.appendChild(node);
     }
 }
 
-function closeMap() {
-    document.getElementById('map-view').classList.add('hidden');
-    // We do NOT set isBattling=true here, because they might be looking at the map from the Hub.
-}
+function closeMap() { document.getElementById('map-view').classList.add('hidden'); }
 
 function triggerWorldTransition() {
     isBattling = false;
-    state.world++;
-    state.stage = 1;
-    state.highestStage = 1;
-    state.wave = 1;
-    
+    state.world++; state.stage = 1; state.highestStage = 1; state.wave = 1;
     document.getElementById('trans-world-num').innerText = formatNumber(state.world);
     const transDiv = document.getElementById('falling-transition');
     transDiv.classList.remove('hidden');
@@ -363,19 +464,18 @@ function triggerWorldTransition() {
     }, 3000);
 }
 
-// --- CRAFTING / UPGRADES ---
+// --- CRAFTING ---
 const upgradesData = [
-    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 0.02, baseIron: 2, scale: 1.5, boost: 5 },
-    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 0.1, baseIron: 2, scale: 1.5, boost: 20 },
-    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 0.15, baseIron: 5, scale: 1.6, boost: 2 },
-    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 0.15, baseCore: 1, scale: 2.0, boost: 1 }, 
-    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 0.2, baseCore: 2, scale: 1.8, boost: 1 }
+    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 0.5, baseIron: 2, scale: 1.5, boost: 5 },
+    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 0.5, baseIron: 2, scale: 1.5, boost: 20 },
+    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 0.5, baseIron: 5, scale: 1.6, boost: 2 },
+    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 1, baseCore: 1, scale: 2.0, boost: 1 }, 
+    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 2, baseCore: 2, scale: 1.8, boost: 1 }
 ];
 
 function renderCrafting() {
     const list = document.getElementById('crafting-list');
     list.innerHTML = '';
-    
     upgradesData.forEach(u => {
         let level = state.upgrades[u.id];
         let costDust = u.baseDust * Math.pow(u.scale, level);
@@ -408,18 +508,13 @@ window.buyUpgrade = function(id) {
     let costCore = u.baseCore ? Math.floor(u.baseCore * Math.pow(1.2, level)) : 0;
 
     if (state.goldDust >= costDust && state.iron >= costIron && state.core >= costCore) {
-        state.goldDust -= costDust;
-        state.iron -= costIron;
-        state.core -= costCore;
-        
+        state.goldDust -= costDust; state.iron -= costIron; state.core -= costCore;
         state.upgrades[id]++;
-        
         if (id === 'atk') state.stats.atk += u.boost;
         if (id === 'hp') state.stats.maxHp += u.boost;
         if (id === 'def') state.stats.def += u.boost;
         if (id === 'crit') state.stats.crit += u.boost;
         if (id === 'regen') state.stats.regen += u.boost;
-        
         log(`Upgraded ${u.stat}!`, 'log-loot');
         updateDOM();
         saveGame();
@@ -428,7 +523,6 @@ window.buyUpgrade = function(id) {
     }
 }
 
-// FX
 function spawnText(target, text, cssClass) {
     const el = document.createElement('div');
     el.className = `floating-text ${cssClass}`;
@@ -439,11 +533,8 @@ function spawnText(target, text, cssClass) {
     setTimeout(() => el.remove(), 1000);
 }
 
-// --- INIT ---
 loadGame();
-if (document.getElementById('offline-modal').classList.contains('hidden')) {
-    isBattling = true; 
-}
+if (document.getElementById('offline-modal').classList.contains('hidden')) isBattling = true; 
 spawnEnemy();
 setInterval(combatTick, 2000); 
 setInterval(saveGame, 10000);
