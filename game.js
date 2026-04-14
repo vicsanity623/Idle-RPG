@@ -229,7 +229,7 @@ function enemyDefeated() {
         checkLevelUp();
     }
     
-    let dustDrop = 0.5 * Math.pow(1.5, state.world - 1) * Math.pow(1.1, state.stage);
+    let dustDrop = 0.75 * Math.pow(1.5, state.world - 1) * Math.pow(1.1, state.stage);
     state.goldDust += dustDrop;
     log(`Found ${formatNumber(dustDrop)} Dust.`);
     
@@ -367,11 +367,11 @@ function triggerWorldTransition() {
 
 // --- CRAFTING / UPGRADES ---
 const upgradesData = [
-    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 2, baseIron: 2, scale: 1.5, boost: 5 },
-    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 2, baseIron: 2, scale: 1.5, boost: 20 },
-    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 3, baseIron: 5, scale: 1.6, boost: 2 },
-    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 4, baseCore: 1, scale: 2.0, boost: 1 }, 
-    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 5, baseCore: 2, scale: 1.8, boost: 1 }
+    { id: 'atk', name: 'Sharpen Weapon', stat: 'ATK', baseDust: 0.02, baseIron: 2, scale: 1.5, boost: 5 },
+    { id: 'hp', name: 'Fortify Armor', stat: 'Max HP', baseDust: 0.1, baseIron: 2, scale: 1.5, boost: 20 },
+    { id: 'def', name: 'Thick Plating', stat: 'DEF', baseDust: 0.15, baseIron: 5, scale: 1.6, boost: 2 },
+    { id: 'crit', name: 'Focus Lens', stat: 'CRIT', baseDust: 0.15, baseCore: 1, scale: 2.0, boost: 1 }, 
+    { id: 'regen', name: 'Healing Aura', stat: 'REGEN', baseDust: 0.2, baseCore: 2, scale: 1.8, boost: 1 }
 ];
 
 function renderCrafting() {
