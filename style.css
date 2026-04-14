@@ -101,6 +101,33 @@ body {
 @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 100% { transform: translate(1px, -2px) rotate(1deg); } }
 
 /* Combat Fx & Modals */
+.approved-modal {
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.9); 
+    z-index: 300; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+}
+.approved-modal-content {
+    background: #1e1e28; 
+    padding: 40px; 
+    border: 2px solid #d4af37; 
+    border-radius: 10px; 
+    text-align: center;
+}
+.approved-modal-content h2 {
+    color: #d4af37; 
+    margin-bottom: 20px;
+}
+.approved-modal-content p {
+    margin-bottom: 10px; 
+    font-size: 18px;
+}
 #fx-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; }
 .floating-text { position: absolute; font-size: 22px; font-weight: bold; text-shadow: 2px 2px 0 #000; animation: floatUp 1s ease-out forwards; }
 .dmg-player { color: #ff3b3b; } .dmg-enemy { color: #ffeb3b; } .heal-text { color: #4caf50; }
