@@ -176,8 +176,7 @@ function combatTick() {
 
     let isCrit = Math.random() * 100 < state.stats.crit;
     let rawDamage = (state.stats.atk * (isCrit ? 2 : 1)) - enemy.def;
-    let maxAllowedDmg = enemy.maxHp * 0.33;
-    let actualDamage = Math.max(1, Math.min(rawDamage, maxAllowedDmg));
+    let actualDamage = Math.max(1, rawDamage);
 
     enemy.hp -= actualDamage;
     spawnText('enemy', `-${formatNumber(actualDamage)}${isCrit ? '!' : ''}`, 'dmg-enemy');
@@ -196,8 +195,7 @@ function combatTick() {
         setTimeout(() => { eSprite.classList.remove('attack-left'); pSprite.classList.remove('take-damage'); }, 300);
 
         let eRawDamage = enemy.atk - state.stats.def;
-        let eMaxAllowed = state.stats.maxHp * 0.33;
-        let eActualDamage = Math.max(1, Math.min(eRawDamage, eMaxAllowed));
+        let eActualDamage = Math.max(1, eRawDamage);
 
         currentHp -= eActualDamage;
         spawnText('player', `-${formatNumber(eActualDamage)}`, 'dmg-player');
