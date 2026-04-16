@@ -2,166 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>X Chronicles</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f0f15">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+    <title>IdleRPG Engine Builder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { background: #1a1a1a; color: white; font-family: sans-serif; display: flex; }
+        #sidebar { width: 300px; padding: 20px; background: #222; height: 100vh; overflow-y: auto; }
+        #preview { flex-grow: 1; border: 5px solid #444; margin: 20px; }
+        .control-group { margin-bottom: 20px; padding: 10px; border: 1px solid #333; }
+    </style>
 </head>
 <body>
-    <div id="falling-transition" class="hidden">
-        <div class="speed-lines"></div>
-        <h1 class="drop-text">DESCENDING TO WORLD <span id="trans-world-num">2</span>...</h1>
+    <div id="sidebar">
+        <h2>RPG Builder</h2>
+        <div class="control-group">
+            <label>Game Title</label>
+            <input type="text" id="gameTitle" value="My RPG">
+        </div>
+        <div class="control-group">
+            <label>Perspective</label>
+            <select id="viewType">
+                <option value="topdown">Top-Down (Pokemon Style)</option>
+                <option value="side">Side View (2.5D Layered)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <button onclick="exportGame()">Build & Export (.zip)</button>
+        </div>
+    </div>
+    <div id="preview">
+        <!-- Live Editor Preview Canvas would go here -->
     </div>
 
-    <div id="map-view" class="hidden">
-        <header class="map-header">
-            <h2>World <span id="map-world">1</span> Map</h2>
-            <div class="map-wallet">✨ Gold Dust: <span id="map-dust">0</span></div>
-            <button class="close-map-btn" onclick="closeMap()">Back</button>
-        </header>
-        <div id="map-grid"></div>
-    </div>
+    <script>
+        async function exportGame() {
+            const zip = new JSZip();
+            const config = {
+                title: document.getElementById('gameTitle').value,
+                view: document.getElementById('viewType').value
+            };
 
-    <!-- Enhanced Stage Cleared Modal with Mini-Game -->
-    <div id="stage-clear-modal" class="hidden">
-        <div class="modal-content" style="width: 95%; max-width: 500px;">
-            <h2 style="color: #4caf50; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px;">Victory! Stage <span id="modal-stage"></span> Cleared</h2>
+            // Inject config into our engine template
+            const engineCode = `const config = ${JSON.stringify(config)}; 
+            // ... engine runtime logic ...`;
+
+            zip.file("index.html", "<html><body><div id='game'></div><script src='engine.js'><\/script><\/body></html>");
+            zip.file("engine.js", engineCode);
             
-            <div class="modal-stats-container">
-                <!-- Hero Stats Column -->
-                <div class="modal-col" style="border-right: 1px solid #333;">
-                    <h3 style="color: #d4af37; font-size: 15px; margin-bottom: 5px;">Hero Progression</h3>
-                    <p>Level: <span id="modal-level" class="stat-highlight"></span></p>
-                    <p>Max HP: <span id="modal-hp"></span></p>
-                    <p>ATK: <span id="modal-atk"></span></p>
-                    <p>DEF: <span id="modal-def"></span></p>
-                    <p>CRIT: <span id="modal-crit"></span>%</p>
-                </div>
-                <!-- Rewards Column -->
-                <div class="modal-col">
-                    <h3 style="color: #4caf50; font-size: 15px; margin-bottom: 5px;">Stage Rewards</h3>
-                    <p>✨ Dust: <span id="modal-dust"></span></p>
-                    <p>📘 XP: <span id="modal-xp"></span></p>
-                    <p>⚙️ Iron: <span id="modal-iron"></span></p>
-                    <p>🔮 Cores: <span id="modal-core"></span></p>
-                </div>
-            </div>
-
-            <!-- Standard Modal Buttons -->
-            <div id="modal-normal-actions" class="modal-buttons" style="margin-top: 15px;">
-                <button onclick="startMiniGame()" class="craft-btn pulse-btn" style="background: linear-gradient(to bottom, #f9a826, #e65100); color: white; padding: 15px; font-size: 16px;">🎯 Launch Multiplier Mini-Game</button>
-                <div style="display: flex; gap: 10px;">
-                    <button id="btn-next-stage" onclick="handleNextStage()" class="craft-btn" style="flex: 1; background: linear-gradient(to bottom, #4caf50, #2e7d32); color: white;">Next Stage</button>
-                    <button onclick="handleReplayStage()" class="craft-btn" style="flex: 1;">Replay Stage</button>
-                </div>
-                <button onclick="goToHub()" class="craft-btn" style="background: linear-gradient(to bottom, #3a7bd5, #00d2ff);">🏕️ Go to Main Hub</button>
-            </div>
-
-            <!-- Mini-Game UI (Hidden by default) -->
-            <div id="modal-minigame-ui" class="hidden" style="margin-top: 20px;">
-                <h3 style="color: #f9a826; margin-bottom: 10px; font-family: 'Cinzel', serif;">Tap in the Green Zone!</h3>
-                <div id="mg-bar">
-                    <div id="mg-target"></div>
-                    <div id="mg-cursor"></div>
-                </div>
-                <div id="mg-progress-bg">
-                    <div id="mg-progress-fill"></div>
-                </div>
-                <button onclick="mgTap()" class="craft-btn" style="width: 100%; padding: 15px; font-size: 20px; background: linear-gradient(to bottom, #4caf50, #2e7d32); color: white;">TAP!</button>
-                <p id="mg-feedback">Ready...</p>
-            </div>
-
-            <p id="next-stage-error" style="color: #ff3b3b; font-size: 14px; margin-top: 10px;"></p>
-        </div>
-    </div>
-
-    <!-- Offline Modal -->
-    <div id="offline-modal" class="hidden">
-        <div class="modal-content">
-            <h2>Welcome Back!</h2>
-            <p>You were gone for <span id="offline-time">0</span> minutes.</p>
-            <p>Your heroes gathered <span id="offline-dust" style="color: gold; font-weight: bold;">0</span> ✨ Gold Dust while you rested.</p>
-            <button onclick="closeOfflineModal()" class="craft-btn">Claim</button>
-        </div>
-    </div>
-
-    <div id="game-container">
-        <!-- Top Bar -->
-        <header id="top-bar">
-            <div class="title-section">
-                <h1>X Chronicles</h1>
-                <p class="subtitle">World <span id="world-display">1</span></p>
-            </div>
-            <div class="treasury-section">
-                <div class="wallet-box" style="margin-bottom: 5px;">
-                    <span class="wallet-icon">✨</span>
-                    <span id="dust-balance">0</span> Dust
-                </div>
-                <div class="wallet-box" style="border-color: #f9a826;">
-                    <span class="wallet-icon">💎</span>
-                    <span id="sats-balance">0</span> Sats
-                </div>
-            </div>
-        </header>
-
-        <!-- Hub Navigation -->
-        <div id="hub-nav" class="hidden">
-            <h2 style="color: #d4af37; font-family: 'Cinzel', serif;">Main Camp</h2>
-            <div>
-                <button onclick="showMap()" class="craft-btn">🗺️ World Map</button>
-                <button onclick="returnFromHub()" class="craft-btn" style="background: linear-gradient(to bottom, #4caf50, #2e7d32); color: white; margin-left: 10px;">⚔️ Return to Battle</button>
-            </div>
-        </div>
-
-        <main id="battle-scene">
-            <div class="stage-info">
-                <h2>Stage <span id="stage-display">1</span></h2>
-                <p>Wave <span id="wave-display">1</span>/3 | Next Cost: <span id="next-cost">0</span> ✨</p>
-            </div>
-            <div id="fx-container"></div>
-            <div id="characters-container">
-                <div id="player-wrapper" class="character-wrapper">
-                    <div class="health-bar-container"><div id="player-hp-fill" class="health-bar-fill"></div></div>
-                    <div class="xp-bar-container"><div id="player-xp-fill" class="xp-bar-fill"></div></div>
-                    <div class="hp-text"><span id="player-hp">100</span> / <span id="player-max-hp">100</span></div>
-                    <div id="player-sprite" class="sprite"><div class="sprite-name">Hero (Lv.<span id="player-level">1</span>)</div></div>
-                </div>
-                <div id="enemy-wrapper" class="character-wrapper">
-                    <div class="health-bar-container" style="margin-bottom: 13px;"><div id="enemy-hp-fill" class="health-bar-fill enemy-fill"></div></div>
-                    <div class="hp-text"><span id="enemy-hp">30</span> / <span id="enemy-max-hp">30</span></div>
-                    <div id="enemy-sprite" class="sprite"><div id="enemy-name" class="sprite-name">Slime</div></div>
-                </div>
-            </div>
-            <div class="ground"></div>
-        </main>
-
-        <footer id="ui-panels">
-            <div class="panel log-panel">
-                <h3>Battle Log</h3>
-                <div id="combat-log"></div>
-            </div>
-            <div class="panel inventory-panel">
-                <h3>Hero Stats & Bag</h3>
-                <div class="stats-box">
-                    <p>❤️ Max HP: <span id="stat-maxhp" class="stat-highlight">100</span></p>
-                    <p>⚔️ ATK: <span id="stat-atk" class="stat-highlight">10</span></p>
-                    <p>🛡️ DEF: <span id="stat-def" class="stat-highlight">2</span></p>
-                    <p>⚡ CRIT: <span id="stat-crit" class="stat-highlight">5</span>%</p>
-                    <p>💖 REGEN: <span id="stat-regen" class="stat-highlight">1</span>/turn</p>
-                </div>
-                <ul id="inventory-list">
-                    <li><div class="item-icon">⚙️</div><div class="item-info">Scrap Iron <br><span id="inv-iron">0</span></div></li>
-                    <li><div class="item-icon">🔮</div><div class="item-info">Monster Core <br><span id="inv-core">0</span></div></li>
-                </ul>
-            </div>
-            <div class="panel craft-panel">
-                <h3>Enhance Stats</h3>
-                <div id="crafting-list"></div>
-            </div>
-        </footer>
-    </div>
-    <script src="game.js"></script>
+            const content = await zip.generateAsync({type:"blob"});
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "my-rpg.zip";
+            a.click();
+        }
+    </script>
 </body>
 </html>
