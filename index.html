@@ -2,59 +2,102 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>IdleRPG Engine Builder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web RPG Maker Engine</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- JSZip for exporting the game as a zip file -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <style>
-        body { background: #1a1a1a; color: white; font-family: sans-serif; display: flex; }
-        #sidebar { width: 300px; padding: 20px; background: #222; height: 100vh; overflow-y: auto; }
-        #preview { flex-grow: 1; border: 5px solid #444; margin: 20px; }
-        .control-group { margin-bottom: 20px; padding: 10px; border: 1px solid #333; }
-    </style>
+    <!-- FileSaver for triggering the download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
-    <div id="sidebar">
-        <h2>RPG Builder</h2>
-        <div class="control-group">
-            <label>Game Title</label>
-            <input type="text" id="gameTitle" value="My RPG">
-        </div>
-        <div class="control-group">
-            <label>Perspective</label>
-            <select id="viewType">
-                <option value="topdown">Top-Down (Pokemon Style)</option>
-                <option value="side">Side View (2.5D Layered)</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <button onclick="exportGame()">Build & Export (.zip)</button>
-        </div>
+    <div id="app">
+        <aside id="sidebar">
+            <div class="logo">RPG Builder Pro</div>
+            <nav>
+                <button class="tab-btn active" data-tab="general">General & View</button>
+                <button class="tab-btn" data-tab="menu">Menu & HUD</button>
+                <button class="tab-btn" data-tab="map">Map Editor</button>
+                <button class="tab-btn" data-tab="player">Player & Controls</button>
+            </nav>
+            <div class="export-section">
+                <button id="btn-export" class="action-btn success">Export Game (.zip)</button>
+            </div>
+        </aside>
+
+        <main id="workspace">
+            <!-- General Settings -->
+            <section id="general" class="tab-content active">
+                <h2>Game Settings</h2>
+                <label>Game Title: <input type="text" id="game-title" value="My Epic RPG"></label>
+                <label>Perspective Mode:
+                    <select id="game-view">
+                        <option value="topdown">Top-Down 2D</option>
+                        <option value="sideview">Layered Side View (2.5D)</option>
+                    </select>
+                </label>
+                <label>Camera Follow Player: <input type="checkbox" id="cam-follow" checked></label>
+            </section>
+
+            <!-- Menu & HUD -->
+            <section id="menu" class="tab-content">
+                <h2>Menu & HUD Design</h2>
+                <div class="split-panel">
+                    <div>
+                        <h3>Main Menu</h3>
+                        <label>Background Color: <input type="color" id="menu-bg" value="#222222"></label>
+                        <label>Button Color: <input type="color" id="menu-btn" value="#4CAF50"></label>
+                        <label>Title Text Color: <input type="color" id="menu-text" value="#ffffff"></label>
+                    </div>
+                    <div>
+                        <h3>In-Game HUD</h3>
+                        <label>HP Bar Color: <input type="color" id="hud-hp" value="#ff3333"></label>
+                        <label>XP Bar Color: <input type="color" id="hud-xp" value="#33ccff"></label>
+                        <label>Show Action Buttons: <input type="checkbox" id="hud-action" checked></label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Map Editor -->
+            <section id="map" class="tab-content">
+                <h2>World Builder</h2>
+                <div class="toolbar">
+                    <label>Map Size: 
+                        <select id="map-size">
+                            <option value="20">20x20</option>
+                            <option value="60">60x60 (Large)</option>
+                            <option value="100">100x100 (MMO Scale)</option>
+                        </select>
+                    </label>
+                    <button id="btn-generate-map" class="action-btn">Procedural Generation</button>
+                </div>
+                <div class="palette">
+                    <button class="brush active" data-type="1" style="background: #4CAF50">Grass</button>
+                    <button class="brush" data-type="2" style="background: #795548">Dirt</button>
+                    <button class="brush" data-type="3" style="background: #2196F3">Water (Solid)</button>
+                    <button class="brush" data-type="4" style="background: #607D8B">Wall (Solid)</button>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="map-canvas" width="600" height="600"></canvas>
+                </div>
+            </section>
+
+            <!-- Player Settings -->
+            <section id="player" class="tab-content">
+                <h2>Player Settings</h2>
+                <label>Player Speed: <input type="number" id="player-speed" value="4"></label>
+                <label>Player Shape Color: <input type="color" id="player-color" value="#ffeb3b"></label>
+                <label>Controls:
+                    <select id="player-controls">
+                        <option value="joystick">Virtual Joystick (Mobile/PC)</option>
+                        <option value="wasd">WASD / Arrows Only</option>
+                        <option value="tap">Tap to Move (Pathfinding)</option>
+                    </select>
+                </label>
+                <label>Auto-Attack when near enemies: <input type="checkbox" id="auto-attack" checked></label>
+            </section>
+        </main>
     </div>
-    <div id="preview">
-        <!-- Live Editor Preview Canvas would go here -->
-    </div>
-
-    <script>
-        async function exportGame() {
-            const zip = new JSZip();
-            const config = {
-                title: document.getElementById('gameTitle').value,
-                view: document.getElementById('viewType').value
-            };
-
-            // Inject config into our engine template
-            const engineCode = `const config = ${JSON.stringify(config)}; 
-            // ... engine runtime logic ...`;
-
-            zip.file("index.html", "<html><body><div id='game'></div><script src='engine.js'><\/script><\/body></html>");
-            zip.file("engine.js", engineCode);
-            
-            const content = await zip.generateAsync({type:"blob"});
-            const url = URL.createObjectURL(content);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "my-rpg.zip";
-            a.click();
-        }
-    </script>
+    <script src="builder.js"></script>
 </body>
 </html>
