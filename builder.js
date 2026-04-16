@@ -5,11 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
         activeLayer: 'terrain', activeTool: 'draw', activeId: '1',
         camera: { x: 0, y: 0, zoom: 1 },
         hudLayout: {
-            avatar: { x: 10, y: 10, show: true },
-            hp: { x: 30, y: 10, show: true },
-            xp: { x: 30, y: 18, show: true },
-            inv: { x: 80, y: 10, show: true },
-            joy: { x: 10, y: 60, show: true }
+            avatar: { x: 10, y: 10, show: true }, hp: { x: 30, y: 10, show: true }, xp: { x: 30, y: 18, show: true },
+            inv: { x: 80, y: 10, show: true }, joy: { x: 10, y: 60, show: true }
         }
     };
 
@@ -19,16 +16,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const wrapper = document.getElementById("canvas-wrapper");
 
     function resize() {
-        canvas.width = wrapper.clientWidth;
-        canvas.height = wrapper.clientHeight;
-        renderEditor();
+        canvas.width = wrapper.clientWidth; canvas.height = wrapper.clientHeight; renderEditor();
     }
     window.addEventListener('resize', resize);
 
     function initMap() {
         state.mapData = Array(state.mapSize).fill(0).map(() => Array(state.mapSize).fill(1));
-        state.entities = []; state.camera.x = 0; state.camera.y = 0;
-        renderEditor();
+        state.entities = []; state.camera.x = 0; state.camera.y = 0; renderEditor();
     }
 
     function drawTile(context, x, y, type, size) {
@@ -42,10 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderEditor() {
         ctx.fillStyle = "#1e1e24"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        ctx.translate(canvas.width/2, canvas.height/2);
-        ctx.scale(state.camera.zoom, state.camera.zoom);
-        ctx.translate(-canvas.width/2 - state.camera.x, -canvas.height/2 - state.camera.y);
+        ctx.save(); ctx.translate(canvas.width/2, canvas.height/2); ctx.scale(state.camera.zoom, state.camera.zoom); ctx.translate(-canvas.width/2 - state.camera.x, -canvas.height/2 - state.camera.y);
 
         let startX = Math.max(0, Math.floor((state.camera.x - canvas.width/state.camera.zoom/2) / state.tileSize));
         let startY = Math.max(0, Math.floor((state.camera.y - canvas.height/state.camera.zoom/2) / state.tileSize));
@@ -69,40 +60,53 @@ document.addEventListener("DOMContentLoaded", () => {
             if(ent.type === 'orc') ctx.fillStyle = "#e67e22";
             ctx.fill(); ctx.strokeStyle = "#fff"; ctx.stroke();
         });
-        ctx.strokeStyle = "#ff0000"; ctx.lineWidth = 2; ctx.strokeRect(0, 0, state.mapSize * state.tileSize, state.mapSize * state.tileSize);
         ctx.restore();
     }
 
-    // --- MOBILE/PC UNIFIED CANVAS INTERACTION (POINTER EVENTS) ---
-    let isDragging = false; let lastMouse = {x: 0, y: 0};
-    function getTileFromMouse(e) {
-        const rect = canvas.getBoundingClientRect(); 
-        const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
-        const worldX = (mouseX - canvas.width/2) / state.camera.zoom + canvas.width/2 + state.camera.x;
-        const worldY = (mouseY - canvas.height/2) / state.camera.zoom + canvas.height/2 + state.camera.y;
-        return { tx: Math.floor(worldX / state.tileSize), ty: Math.floor(worldY / state.tileSize) };
+    // --- BULLETPROOF INPUT NORMALIZATION ---
+    function getEventPos(e) {
+        if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
     }
 
-    wrapper.addEventListener("pointerdown", (e) => {
+    let isDragging = false; let lastMouse = {x: 0, y: 0};
+
+    function handleMapStart(e) {
         if(document.getElementById("hud-editor-layer").style.display === "block") return;
-        wrapper.setPointerCapture(e.pointerId); // Crucial for mobile drawing!
-        isDragging = true; lastMouse = {x: e.clientX, y: e.clientY};
-        if(state.activeTool === 'draw') applyTool(e);
-    });
+        e.preventDefault(); // CRITICAL for iOS
+        isDragging = true;
+        lastMouse = getEventPos(e);
+        if(state.activeTool === 'draw') applyTool(lastMouse.x, lastMouse.y);
+    }
 
-    wrapper.addEventListener("pointermove", (e) => {
+    function handleMapMove(e) {
         if(!isDragging || document.getElementById("hud-editor-layer").style.display === "block") return;
+        e.preventDefault();
+        let pos = getEventPos(e);
         if(state.activeTool === 'pan') {
-            state.camera.x -= (e.clientX - lastMouse.x) / state.camera.zoom; state.camera.y -= (e.clientY - lastMouse.y) / state.camera.zoom;
-            lastMouse = {x: e.clientX, y: e.clientY}; renderEditor();
-        } else if(state.activeTool === 'draw' && state.activeLayer === 'terrain') applyTool(e);
-    });
+            state.camera.x -= (pos.x - lastMouse.x) / state.camera.zoom; state.camera.y -= (pos.y - lastMouse.y) / state.camera.zoom;
+            lastMouse = pos; renderEditor();
+        } else if(state.activeTool === 'draw' && state.activeLayer === 'terrain') {
+            applyTool(pos.x, pos.y);
+        }
+    }
 
-    wrapper.addEventListener("pointerup", (e) => { isDragging = false; wrapper.releasePointerCapture(e.pointerId); });
-    wrapper.addEventListener("pointercancel", (e) => { isDragging = false; wrapper.releasePointerCapture(e.pointerId); });
+    function handleMapEnd(e) { isDragging = false; }
 
-    function applyTool(e) {
-        const {tx, ty} = getTileFromMouse(e);
+    wrapper.addEventListener("mousedown", handleMapStart, {passive: false});
+    wrapper.addEventListener("touchstart", handleMapStart, {passive: false});
+    window.addEventListener("mousemove", handleMapMove, {passive: false});
+    window.addEventListener("touchmove", handleMapMove, {passive: false});
+    window.addEventListener("mouseup", handleMapEnd);
+    window.addEventListener("touchend", handleMapEnd);
+
+    function applyTool(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect(); 
+        const mouseX = clientX - rect.left; const mouseY = clientY - rect.top;
+        const worldX = (mouseX - canvas.width/2) / state.camera.zoom + canvas.width/2 + state.camera.x;
+        const worldY = (mouseY - canvas.height/2) / state.camera.zoom + canvas.height/2 + state.camera.y;
+        const tx = Math.floor(worldX / state.tileSize); const ty = Math.floor(worldY / state.tileSize);
+
         if(tx >= 0 && tx < state.mapSize && ty >= 0 && ty < state.mapSize) {
             if(state.activeLayer === 'terrain') state.mapData[ty][tx] = parseInt(state.activeId);
             else if(state.activeLayer === 'entity') {
@@ -116,50 +120,40 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- MOBILE/PC HUD DRAG & DROP (POINTER EVENTS) ---
-    let draggedHudElement = null;
-    let hudOffset = {x:0, y:0};
+    // --- HUD DRAG & DROP FIX ---
+    let draggedHudElement = null; let hudOffset = {x:0, y:0};
 
+    function startHudDrag(e) {
+        e.preventDefault();
+        draggedHudElement = e.currentTarget;
+        let pos = getEventPos(e);
+        let rect = draggedHudElement.getBoundingClientRect();
+        hudOffset.x = pos.x - rect.left; hudOffset.y = pos.y - rect.top;
+    }
     document.querySelectorAll(".hud-edit-element").forEach(el => {
-        el.addEventListener("pointerdown", (e) => {
-            draggedHudElement = e.currentTarget;
-            let rect = draggedHudElement.getBoundingClientRect();
-            hudOffset.x = e.clientX - rect.left;
-            hudOffset.y = e.clientY - rect.top;
-            draggedHudElement.setPointerCapture(e.pointerId); // Locks drag to element on mobile
-        });
+        el.addEventListener("mousedown", startHudDrag, {passive: false});
+        el.addEventListener("touchstart", startHudDrag, {passive: false});
     });
 
-    document.getElementById("hud-editor-layer").addEventListener("pointermove", (e) => {
+    function moveHudDrag(e) {
         if(!draggedHudElement) return;
+        e.preventDefault();
+        let pos = getEventPos(e);
         let layerRect = document.getElementById("hud-editor-layer").getBoundingClientRect();
-        
-        let newLeft = e.clientX - layerRect.left - hudOffset.x;
-        let newTop = e.clientY - layerRect.top - hudOffset.y;
-        
-        let percentX = (newLeft / layerRect.width) * 100;
-        let percentY = (newTop / layerRect.height) * 100;
+        let percentX = ((pos.x - layerRect.left - hudOffset.x) / layerRect.width) * 100;
+        let percentY = ((pos.y - layerRect.top - hudOffset.y) / layerRect.height) * 100;
 
-        draggedHudElement.style.left = percentX + "%";
-        draggedHudElement.style.top = percentY + "%";
+        draggedHudElement.style.left = percentX + "%"; draggedHudElement.style.top = percentY + "%";
+        state.hudLayout[draggedHudElement.dataset.id].x = percentX; state.hudLayout[draggedHudElement.dataset.id].y = percentY;
+    }
+    
+    document.getElementById("hud-editor-layer").addEventListener("mousemove", moveHudDrag, {passive: false});
+    document.getElementById("hud-editor-layer").addEventListener("touchmove", moveHudDrag, {passive: false});
 
-        let id = draggedHudElement.dataset.id;
-        state.hudLayout[id].x = percentX; state.hudLayout[id].y = percentY;
-    });
+    window.addEventListener("mouseup", () => draggedHudElement = null);
+    window.addEventListener("touchend", () => draggedHudElement = null);
 
-    window.addEventListener("pointerup", () => { if(draggedHudElement) draggedHudElement = null; });
-    window.addEventListener("pointercancel", () => { if(draggedHudElement) draggedHudElement = null; });
-
-    // Toggles
-    document.querySelectorAll(".hud-toggle").forEach(cb => {
-        cb.addEventListener("change", (e) => {
-            let el = document.getElementById(e.currentTarget.dataset.target);
-            state.hudLayout[el.dataset.id].show = e.currentTarget.checked;
-            el.style.display = e.currentTarget.checked ? "flex" : "none";
-        });
-    });
-
-    // --- UI BINDINGS ---
+    // --- BUTTON BINDINGS ---
     document.querySelectorAll(".tool-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
             document.querySelectorAll(".tool-btn").forEach(b => b.classList.remove("active"));
@@ -171,23 +165,13 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    document.getElementById("tool-pan").addEventListener("click", function() {
-        state.activeTool = 'pan';
-        document.getElementById("tool-draw").classList.remove("active");
-        this.classList.add("active");
-    });
-    
-    document.getElementById("tool-draw").addEventListener("click", function() {
-        state.activeTool = 'draw';
-        document.getElementById("tool-pan").classList.remove("active");
-        this.classList.add("active");
-    });
+    document.getElementById("tool-pan").addEventListener("click", function() { state.activeTool = 'pan'; document.getElementById("tool-draw").classList.remove("active"); this.classList.add("active"); });
+    document.getElementById("tool-draw").addEventListener("click", function() { state.activeTool = 'draw'; document.getElementById("tool-pan").classList.remove("active"); this.classList.add("active"); });
     
     document.getElementById("btn-generate").addEventListener("click", () => {
         for(let y=0; y<state.mapSize; y++) {
             for(let x=0; x<state.mapSize; x++) {
-                let r = Math.random();
-                if(r < 0.05) state.mapData[y][x] = 4; else if(r < 0.15) state.mapData[y][x] = 3; else if(r < 0.3) state.mapData[y][x] = 2; else state.mapData[y][x] = 1;
+                let r = Math.random(); if(r < 0.05) state.mapData[y][x] = 4; else if(r < 0.15) state.mapData[y][x] = 3; else if(r < 0.3) state.mapData[y][x] = 2; else state.mapData[y][x] = 1;
             }
         }
         renderEditor();
@@ -200,6 +184,14 @@ document.addEventListener("DOMContentLoaded", () => {
             e.currentTarget.classList.add("active");
             document.getElementById(e.currentTarget.dataset.target).classList.add("active");
             document.getElementById("hud-editor-layer").style.display = (e.currentTarget.dataset.target === 'prop-hud') ? "block" : "none";
+        });
+    });
+
+    document.querySelectorAll(".hud-toggle").forEach(cb => {
+        cb.addEventListener("change", (e) => {
+            let el = document.getElementById(e.currentTarget.dataset.target);
+            state.hudLayout[el.dataset.id].show = e.currentTarget.checked;
+            el.style.display = e.currentTarget.checked ? "flex" : "none";
         });
     });
 
@@ -238,10 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         applyHUD() {
             const l = this.config.hud.layout;
-            const apply = (id, obj) => {
-                let el = document.getElementById(id);
-                if(el) { el.style.display = obj.show ? "flex" : "none"; el.style.left = obj.x + "%"; el.style.top = obj.y + "%"; }
-            };
+            const apply = (id, obj) => { let el = document.getElementById(id); if(el) { el.style.display = obj.show ? "flex" : "none"; el.style.left = obj.x + "%"; el.style.top = obj.y + "%"; } };
             apply("rt-avatar", l.avatar); apply("rt-hp", l.hp); apply("rt-xp", l.xp); apply("rt-inv", l.inv); apply("rt-joy", l.joy);
             document.getElementById("hp-fill").style.background = this.config.hud.hpColor; document.getElementById("xp-fill").style.background = this.config.hud.xpColor;
 
@@ -258,7 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
             this.keydown = e => this.keys[e.key.toLowerCase()] = true; this.keyup = e => this.keys[e.key.toLowerCase()] = false; this.resizer = () => this.resize();
             window.addEventListener("keydown", this.keydown); window.addEventListener("keyup", this.keyup); window.addEventListener("resize", this.resizer);
 
-            const stick = document.getElementById("joystick-stick"); const base = document.getElementById("joystick-base");
+            const stick = document.getElementById("joystick-stick"); const base = document.getElementById("rt-joy");
             if(base) {
                 this.touchMove = (e) => {
                     if(!this.joystick.active) return;
@@ -271,7 +260,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
                 this.touchStart = e => { this.joystick.active = true; this.touchMove(e); };
                 this.touchEnd = () => { this.joystick.active = false; this.joystick.x = 0; this.joystick.y = 0; if(stick) stick.style.transform = \`translate(0px, 0px)\`; };
-                base.addEventListener("touchstart", this.touchStart, {passive: false}); window.addEventListener("touchmove", this.touchMove, {passive: false}); window.addEventListener("touchend", this.touchEnd);
+                base.addEventListener("mousedown", this.touchStart, {passive: false}); base.addEventListener("touchstart", this.touchStart, {passive: false});
+                window.addEventListener("mousemove", this.touchMove, {passive: false}); window.addEventListener("touchmove", this.touchMove, {passive: false});
+                window.addEventListener("mouseup", this.touchEnd); window.addEventListener("touchend", this.touchEnd);
             }
         }
 
@@ -397,13 +388,13 @@ document.addEventListener("DOMContentLoaded", () => {
     <title>${c.title}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; font-family: sans-serif; }
         body { background: #000; overflow: hidden; touch-action: none; }
         #main-menu { position: fixed; width: 100vw; height: 100vh; background: #1a1a24; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
         #main-menu h1 { color: #fff; font-size: 2rem; margin-bottom: 2rem; text-align: center; }
         #start-btn { padding: 15px 40px; font-size: 1.5rem; background: #fff; color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         #game-ui { display: none; width: 100vw; height: 100vh; position: relative; }
-        canvas { display: block; width: 100%; height: 100%; }
+        canvas { display: block; width: 100%; height: 100%; touch-action: none; }
         #game-ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 505; }
         .rt-ui-element { position: absolute; pointer-events: auto; }
         #rt-avatar { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 30px; background: #333; border: 2px solid #fff; border-radius: 50%; color: white; }
@@ -413,8 +404,8 @@ document.addEventListener("DOMContentLoaded", () => {
         .bar-text { position: absolute; width: 100%; text-align: center; top: 3px; color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 1px #000; }
         #rt-inv { width: 50px; height: 50px; font-size: 20px; background: #555; border: 2px solid #fff; border-radius: 12px; color: white; cursor: pointer; }
         #rt-joy { width: 120px; height: 120px; }
-        #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-        #joystick-stick { width: 40px; height: 40px; background: rgba(255,255,255,0.6); border-radius: 50%; }
+        .joy-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+        .joy-stick { width: 40px; height: 40px; background: rgba(255,255,255,0.6); border-radius: 50%; }
         #rt-inventory-modal { display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; background: rgba(30, 30, 36, 0.95); border: 2px solid #555; border-radius: 8px; z-index: 600; pointer-events: auto; padding: 10px; }
         .inv-header { display: flex; justify-content: space-between; align-items: center; color: white; font-weight: bold; margin-bottom: 15px; font-size: 18px; border-bottom: 1px solid #555; padding-bottom: 5px; }
         #close-inv { background: #e74c3c; border: none; color: white; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
@@ -431,7 +422,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div id="rt-hp" class="rt-ui-element"><div class="bar-wrap"><div id="hp-fill" class="bar-fill"></div><div class="bar-text">HP</div></div></div>
             <div id="rt-xp" class="rt-ui-element"><div class="bar-wrap"><div id="xp-fill" class="bar-fill"></div><div class="bar-text">XP <span id="lvl-text">(L1)</span></div></div></div>
             <button id="rt-inv" class="rt-ui-element"><i class="fa-solid fa-backpack"></i></button>
-            <div id="rt-joy" class="rt-ui-element"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
+            <div id="rt-joy" class="rt-ui-element"><div class="joy-base"><div id="joystick-stick" class="joy-stick"></div></div></div>
         </div>
         <div id="rt-inventory-modal">
             <div class="inv-header">Inventory <button id="close-inv">X</button></div>
