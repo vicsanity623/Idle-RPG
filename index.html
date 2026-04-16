@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RPG Studio Pro V5 - Mobile Fix</title>
+    <title>RPG Studio Pro V6 - The Final Fix</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -12,15 +12,14 @@
 <body>
     <div id="editor-ui">
         <header class="top-nav">
-            <div class="logo"><i class="fa-solid fa-dragon"></i> RPG Studio</div>
+            <div class="logo"><i class="fa-solid fa-gamepad"></i> RPG Maker</div>
             <div class="nav-actions">
                 <button id="btn-playtest" class="nav-btn play"><i class="fa-solid fa-play"></i> Play</button>
-                <button id="btn-export" class="nav-btn export"><i class="fa-solid fa-box-archive"></i> ZIP</button>
+                <button id="btn-export" class="nav-btn export"><i class="fa-solid fa-download"></i> ZIP</button>
             </div>
         </header>
 
         <div class="ide-container">
-            <!-- LEFT PANEL -->
             <aside class="panel left-panel">
                 <div class="panel-header">Assets & Tools</div>
                 <div class="tools-container">
@@ -36,24 +35,20 @@
                         <button class="tool-btn" data-type="entity" data-id="player"><i class="fa-solid fa-user text-blue"></i> Player Spawn</button>
                         <button class="tool-btn" data-type="entity" data-id="slime"><i class="fa-solid fa-ghost text-green"></i> Slime Enemy</button>
                         <button class="tool-btn" data-type="entity" data-id="orc"><i class="fa-solid fa-khanda text-orange"></i> Orc Enemy</button>
-                        <button class="tool-btn eraser" data-type="entity" data-id="erase"><i class="fa-solid fa-eraser"></i> Erase</button>
+                        <button class="tool-btn eraser" data-type="entity" data-id="erase"><i class="fa-solid fa-eraser text-red"></i> Erase</button>
                     </div>
                 </div>
             </aside>
 
-            <!-- CENTER VIEWPORT -->
             <main class="viewport">
                 <div class="viewport-toolbar">
-                    <button id="tool-draw" class="active" title="Draw"><i class="fa-solid fa-pen"></i> Draw</button>
-                    <button id="tool-pan" title="Pan"><i class="fa-solid fa-hand"></i> Pan</button>
-                    <span class="divider"></span>
-                    <button id="btn-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Gen</button>
+                    <button id="tool-draw" class="active"><i class="fa-solid fa-pen"></i> Draw</button>
+                    <button id="tool-pan"><i class="fa-solid fa-hand"></i> Pan</button>
+                    <button id="btn-generate" style="margin-left: auto;"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Gen</button>
                 </div>
                 
                 <div class="canvas-wrapper" id="canvas-wrapper">
                     <canvas id="editor-canvas"></canvas>
-                    
-                    <!-- HUD DRAG AND DROP EDITOR -->
                     <div id="hud-editor-layer" style="display: none;">
                         <div class="hud-notice">Drag UI elements anywhere!</div>
                         <div class="hud-edit-element" id="hud-avatar" data-id="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
@@ -65,7 +60,6 @@
                 </div>
             </main>
 
-            <!-- RIGHT PANEL -->
             <aside class="panel right-panel">
                 <div class="tabs">
                     <button class="prop-tab active" data-target="prop-game">World</button>
@@ -82,16 +76,14 @@
                             </select>
                         </label>
                     </div>
-
                     <div id="prop-player" class="prop-pane">
                         <label>Body Color <input type="color" id="cfg-pcolor" value="#00a8ff"></label>
                         <label>Weapon Color <input type="color" id="cfg-wcolor" value="#c23616"></label>
                         <hr>
                         <label>Max HP <input type="number" id="cfg-php" value="100"></label>
-                        <label>Attack Damage <input type="number" id="cfg-patk" value="15"></label>
-                        <label>Move Speed <input type="number" id="cfg-pspeed" value="200"></label>
+                        <label>Attack Dmg <input type="number" id="cfg-patk" value="15"></label>
+                        <label>Speed <input type="number" id="cfg-pspeed" value="200"></label>
                     </div>
-
                     <div id="prop-hud" class="prop-pane">
                         <label><input type="checkbox" class="hud-toggle" data-target="hud-avatar" checked> Show Avatar</label>
                         <label><input type="checkbox" class="hud-toggle" data-target="hud-hp" checked> Show HP</label>
@@ -99,8 +91,8 @@
                         <label><input type="checkbox" class="hud-toggle" data-target="hud-inv" checked> Show Backpack</label>
                         <label><input type="checkbox" class="hud-toggle" data-target="hud-joy" checked> Show Joystick</label>
                         <hr>
-                        <label>HP Bar Color <input type="color" id="cfg-hpcolor" value="#e74c3c"></label>
-                        <label>XP Bar Color <input type="color" id="cfg-xpcolor" value="#9b59b6"></label>
+                        <label>HP Color <input type="color" id="cfg-hpcolor" value="#e74c3c"></label>
+                        <label>XP Color <input type="color" id="cfg-xpcolor" value="#9b59b6"></label>
                     </div>
                 </div>
             </aside>
@@ -113,12 +105,11 @@
         <canvas id="game-canvas"></canvas>
         <div id="game-ui-layer">
             <div id="rt-avatar" class="rt-ui-element"><i class="fa-solid fa-user-astronaut"></i></div>
-            <div id="rt-hp" class="rt-ui-element"><div class="bar-wrap"><div id="hp-fill" class="bar-fill hp"></div><div class="bar-text">HP</div></div></div>
-            <div id="rt-xp" class="rt-ui-element"><div class="bar-wrap"><div id="xp-fill" class="bar-fill xp"></div><div class="bar-text">XP <span id="lvl-text">(L1)</span></div></div></div>
+            <div id="rt-hp" class="rt-ui-element"><div class="bar-wrap"><div id="hp-fill" class="bar-fill" style="background:#e74c3c; width:100%;"></div><div class="bar-text">HP</div></div></div>
+            <div id="rt-xp" class="rt-ui-element"><div class="bar-wrap"><div id="xp-fill" class="bar-fill" style="background:#9b59b6; width:0%;"></div><div class="bar-text">XP <span id="lvl-text">(L1)</span></div></div></div>
             <button id="rt-inv" class="rt-ui-element"><i class="fa-solid fa-backpack"></i></button>
-            <div id="rt-joy" class="rt-ui-element"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
+            <div id="rt-joy" class="rt-ui-element"><div class="joy-base"><div id="joystick-stick" class="joy-stick"></div></div></div>
         </div>
-        
         <div id="rt-inventory-modal" style="display:none;">
             <div class="inv-header">Inventory <button id="close-inv">X</button></div>
             <div class="inv-grid"><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div></div>
