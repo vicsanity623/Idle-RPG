@@ -2,14 +2,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- STATE ---
     let state = {
         mapSize: 60, tileSize: 64, mapData: [], entities: [],
-        activeLayer: 'terrain', activeTool: 'draw', activeId: '1', showGrid: true,
+        activeLayer: 'terrain', activeTool: 'draw', activeId: '1',
         camera: { x: 0, y: 0, zoom: 1 },
-        hudLayout: { // Stored in Percentages to scale properly
-            avatar: { x: 5, y: 5, show: true },
-            hp: { x: 15, y: 5, show: true },
-            xp: { x: 15, y: 12, show: true },
-            inv: { x: 80, y: 5, show: true },
-            joy: { x: 10, y: 70, show: true }
+        hudLayout: {
+            avatar: { x: 10, y: 10, show: true },
+            hp: { x: 30, y: 10, show: true },
+            xp: { x: 30, y: 18, show: true },
+            inv: { x: 80, y: 10, show: true },
+            joy: { x: 10, y: 60, show: true }
         }
     };
 
@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
             for(let x = 0; x < state.mapSize; x++) {
                 if(x >= startX && x <= endX && y >= startY && y <= endY) {
                     drawTile(ctx, x, y, state.mapData[y][x], state.tileSize);
-                    if(state.showGrid) { ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.strokeRect(x * state.tileSize, y * state.tileSize, state.tileSize, state.tileSize); }
+                    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.strokeRect(x * state.tileSize, y * state.tileSize, state.tileSize, state.tileSize);
                 }
             }
         }
@@ -73,34 +73,33 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.restore();
     }
 
-    // --- MAP EDITOR INTERACTION ---
+    // --- MOBILE/PC UNIFIED CANVAS INTERACTION (POINTER EVENTS) ---
     let isDragging = false; let lastMouse = {x: 0, y: 0};
     function getTileFromMouse(e) {
-        const rect = canvas.getBoundingClientRect(); const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
+        const rect = canvas.getBoundingClientRect(); 
+        const mouseX = e.clientX - rect.left; const mouseY = e.clientY - rect.top;
         const worldX = (mouseX - canvas.width/2) / state.camera.zoom + canvas.width/2 + state.camera.x;
         const worldY = (mouseY - canvas.height/2) / state.camera.zoom + canvas.height/2 + state.camera.y;
         return { tx: Math.floor(worldX / state.tileSize), ty: Math.floor(worldY / state.tileSize) };
     }
 
-    wrapper.addEventListener("mousedown", (e) => {
-        if(document.getElementById("hud-editor-layer").style.display === "block") return; // Ignore if HUD editor is open
+    wrapper.addEventListener("pointerdown", (e) => {
+        if(document.getElementById("hud-editor-layer").style.display === "block") return;
+        wrapper.setPointerCapture(e.pointerId); // Crucial for mobile drawing!
         isDragging = true; lastMouse = {x: e.clientX, y: e.clientY};
-        if(state.activeTool === 'draw' && e.button !== 1) applyTool(e);
+        if(state.activeTool === 'draw') applyTool(e);
     });
 
-    window.addEventListener("mouseup", () => isDragging = false);
-    wrapper.addEventListener("mousemove", (e) => {
+    wrapper.addEventListener("pointermove", (e) => {
         if(!isDragging || document.getElementById("hud-editor-layer").style.display === "block") return;
-        if(state.activeTool === 'pan' || e.buttons === 4) {
+        if(state.activeTool === 'pan') {
             state.camera.x -= (e.clientX - lastMouse.x) / state.camera.zoom; state.camera.y -= (e.clientY - lastMouse.y) / state.camera.zoom;
             lastMouse = {x: e.clientX, y: e.clientY}; renderEditor();
         } else if(state.activeTool === 'draw' && state.activeLayer === 'terrain') applyTool(e);
     });
 
-    wrapper.addEventListener("wheel", (e) => {
-        if(document.getElementById("hud-editor-layer").style.display === "block") return;
-        e.preventDefault(); state.camera.zoom *= e.deltaY > 0 ? 0.9 : 1.1; renderEditor();
-    });
+    wrapper.addEventListener("pointerup", (e) => { isDragging = false; wrapper.releasePointerCapture(e.pointerId); });
+    wrapper.addEventListener("pointercancel", (e) => { isDragging = false; wrapper.releasePointerCapture(e.pointerId); });
 
     function applyTool(e) {
         const {tx, ty} = getTileFromMouse(e);
@@ -117,53 +116,48 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- UI/HUD DRAG AND DROP LOGIC ---
+    // --- MOBILE/PC HUD DRAG & DROP (POINTER EVENTS) ---
     let draggedHudElement = null;
     let hudOffset = {x:0, y:0};
 
     document.querySelectorAll(".hud-edit-element").forEach(el => {
-        el.addEventListener("mousedown", (e) => {
+        el.addEventListener("pointerdown", (e) => {
             draggedHudElement = e.currentTarget;
             let rect = draggedHudElement.getBoundingClientRect();
             hudOffset.x = e.clientX - rect.left;
             hudOffset.y = e.clientY - rect.top;
+            draggedHudElement.setPointerCapture(e.pointerId); // Locks drag to element on mobile
         });
     });
 
-    document.getElementById("hud-editor-layer").addEventListener("mousemove", (e) => {
+    document.getElementById("hud-editor-layer").addEventListener("pointermove", (e) => {
         if(!draggedHudElement) return;
         let layerRect = document.getElementById("hud-editor-layer").getBoundingClientRect();
         
         let newLeft = e.clientX - layerRect.left - hudOffset.x;
         let newTop = e.clientY - layerRect.top - hudOffset.y;
         
-        // Convert pixel to percentage for scaling
         let percentX = (newLeft / layerRect.width) * 100;
         let percentY = (newTop / layerRect.height) * 100;
 
         draggedHudElement.style.left = percentX + "%";
         draggedHudElement.style.top = percentY + "%";
 
-        // Save to state
         let id = draggedHudElement.dataset.id;
-        state.hudLayout[id].x = percentX;
-        state.hudLayout[id].y = percentY;
+        state.hudLayout[id].x = percentX; state.hudLayout[id].y = percentY;
     });
 
-    window.addEventListener("mouseup", () => draggedHudElement = null);
+    window.addEventListener("pointerup", () => { if(draggedHudElement) draggedHudElement = null; });
+    window.addEventListener("pointercancel", () => { if(draggedHudElement) draggedHudElement = null; });
 
     // Toggles
     document.querySelectorAll(".hud-toggle").forEach(cb => {
         cb.addEventListener("change", (e) => {
-            let targetId = e.currentTarget.dataset.target;
-            let el = document.getElementById(targetId);
-            let stateId = el.dataset.id;
-            
-            state.hudLayout[stateId].show = e.currentTarget.checked;
+            let el = document.getElementById(e.currentTarget.dataset.target);
+            state.hudLayout[el.dataset.id].show = e.currentTarget.checked;
             el.style.display = e.currentTarget.checked ? "flex" : "none";
         });
     });
-
 
     // --- UI BINDINGS ---
     document.querySelectorAll(".tool-btn").forEach(btn => {
@@ -172,7 +166,21 @@ document.addEventListener("DOMContentLoaded", () => {
             e.currentTarget.classList.add("active");
             state.activeLayer = e.currentTarget.dataset.type; state.activeId = e.currentTarget.dataset.id;
             state.activeTool = 'draw';
+            document.getElementById("tool-pan").classList.remove("active");
+            document.getElementById("tool-draw").classList.add("active");
         });
+    });
+
+    document.getElementById("tool-pan").addEventListener("click", function() {
+        state.activeTool = 'pan';
+        document.getElementById("tool-draw").classList.remove("active");
+        this.classList.add("active");
+    });
+    
+    document.getElementById("tool-draw").addEventListener("click", function() {
+        state.activeTool = 'draw';
+        document.getElementById("tool-pan").classList.remove("active");
+        this.classList.add("active");
     });
     
     document.getElementById("btn-generate").addEventListener("click", () => {
@@ -191,30 +199,21 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll(".prop-pane").forEach(p => p.classList.remove("active"));
             e.currentTarget.classList.add("active");
             document.getElementById(e.currentTarget.dataset.target).classList.add("active");
-
-            // TOGGLE HUD EDITOR MODE
-            if(e.currentTarget.dataset.target === 'prop-hud') {
-                document.getElementById("hud-editor-layer").style.display = "block";
-            } else {
-                document.getElementById("hud-editor-layer").style.display = "none";
-            }
+            document.getElementById("hud-editor-layer").style.display = (e.currentTarget.dataset.target === 'prop-hud') ? "block" : "none";
         });
     });
 
-    document.getElementById("btn-help").addEventListener("click", () => document.getElementById("guide-modal").style.display = "flex");
-    document.getElementById("btn-close-guide").addEventListener("click", () => document.getElementById("guide-modal").style.display = "none");
-
-    resize(); initMap();
+    setTimeout(() => { resize(); initMap(); }, 100);
 
     // =====================================================================
-    // --- THE GAME ENGINE (USED FOR PLAYTEST AND EXPORT) ---
+    // --- RUNTIME ENGINE ---
     // =====================================================================
 
     function generateGameConfig() {
         return {
             title: document.getElementById("cfg-title").value, tileSize: state.tileSize, mapSize: state.mapSize, mapData: state.mapData, entities: state.entities,
             player: { color: document.getElementById("cfg-pcolor").value, weaponColor: document.getElementById("cfg-wcolor").value, hp: parseInt(document.getElementById("cfg-php").value), atk: parseInt(document.getElementById("cfg-patk").value), speed: parseInt(document.getElementById("cfg-pspeed").value) },
-            hud: { hpColor: document.getElementById("cfg-hpcolor").value, xpColor: document.getElementById("cfg-xpcolor").value, menuBg: document.getElementById("cfg-menubg").value, layout: state.hudLayout }
+            hud: { hpColor: document.getElementById("cfg-hpcolor").value, xpColor: document.getElementById("cfg-xpcolor").value, layout: state.hudLayout }
         };
     }
 
@@ -234,29 +233,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 if(ent.type !== 'player') this.enemies.push({ x: ent.x * this.config.tileSize, y: ent.y * this.config.tileSize, radius: this.config.tileSize * 0.4, type: ent.type, hp: ent.type === 'orc' ? 50 : 20, maxHp: ent.type === 'orc' ? 50 : 20, speed: ent.type === 'orc' ? 50 : 80, atk: ent.type === 'orc' ? 5 : 2, cooldown: 0 });
             });
 
-            this.applyHUD();
-            this.bindEvents();
-            this.resize();
-            this.loop(performance.now());
+            this.applyHUD(); this.bindEvents(); this.resize(); this.loop(performance.now());
         }
 
         applyHUD() {
             const l = this.config.hud.layout;
             const apply = (id, obj) => {
                 let el = document.getElementById(id);
-                if(el) {
-                    el.style.display = obj.show ? "flex" : "none";
-                    el.style.left = obj.x + "%"; el.style.top = obj.y + "%";
-                }
+                if(el) { el.style.display = obj.show ? "flex" : "none"; el.style.left = obj.x + "%"; el.style.top = obj.y + "%"; }
             };
             apply("rt-avatar", l.avatar); apply("rt-hp", l.hp); apply("rt-xp", l.xp); apply("rt-inv", l.inv); apply("rt-joy", l.joy);
-            
-            document.getElementById("hp-fill").style.background = this.config.hud.hpColor;
-            document.getElementById("xp-fill").style.background = this.config.hud.xpColor;
+            document.getElementById("hp-fill").style.background = this.config.hud.hpColor; document.getElementById("xp-fill").style.background = this.config.hud.xpColor;
 
-            // Inventory Logic
-            let invBtn = document.getElementById("rt-inv");
-            let invModal = document.getElementById("rt-inventory-modal");
+            let invBtn = document.getElementById("rt-inv"); let invModal = document.getElementById("rt-inventory-modal");
             if(invBtn && invModal) {
                 invBtn.onclick = () => invModal.style.display = invModal.style.display === "none" ? "block" : "none";
                 document.getElementById("close-inv").onclick = () => invModal.style.display = "none";
@@ -296,7 +285,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if(this.joystick.active) { dx = this.joystick.x; dy = this.joystick.y; }
 
             let len = Math.sqrt(dx*dx + dy*dy); if(len > 0) { dx /= len; dy /= len; }
-
             let nx = this.player.x + dx * this.player.speed * dt; let ny = this.player.y + dy * this.player.speed * dt;
 
             let tx = Math.floor(nx / this.config.tileSize); let ty = Math.floor(ny / this.config.tileSize);
@@ -306,14 +294,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             this.camera.x = this.player.x - this.canvas.width/2; this.camera.y = this.player.y - this.canvas.height/2;
-
             if(this.player.cooldown > 0) this.player.cooldown -= dt;
             
             for(let i = this.enemies.length - 1; i >= 0; i--) {
                 let e = this.enemies[i]; let edx = this.player.x - e.x; let edy = this.player.y - e.y; let dist = Math.sqrt(edx*edx + edy*edy);
 
                 if(dist < 400 && dist > this.player.radius * 2) { e.x += (edx/dist) * e.speed * dt; e.y += (edy/dist) * e.speed * dt; }
-
                 if(e.cooldown > 0) e.cooldown -= dt;
                 if(dist <= this.player.radius * 2.5 && e.cooldown <= 0) { this.player.hp -= e.atk; this.spawnText("-" + e.atk, this.player.x, this.player.y - 30, "#ff0000"); e.cooldown = 1.5; }
 
@@ -382,11 +368,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- PLAYTEST / EXPORT ---
     document.getElementById("btn-playtest").addEventListener("click", () => {
         let spawn = state.entities.find(e => e.type === 'player');
-        if(!spawn) { alert("You must place a Player Spawn (Blue icon) on the map first!"); return; }
-        
+        if(!spawn) { alert("Place a Player Spawn (Blue icon) on the map first!"); return; }
         document.getElementById("editor-ui").style.display = "none";
         document.getElementById("live-game-ui").style.display = "block";
         currentGameInstance = new RuntimeEngine(generateGameConfig());
@@ -414,36 +398,32 @@ document.addEventListener("DOMContentLoaded", () => {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: sans-serif; }
-        body { background: #000; overflow: hidden; }
-        #main-menu { position: fixed; width: 100vw; height: 100vh; background: ${c.hud.menuBg}; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
-        #main-menu h1 { color: #fff; font-size: 3rem; margin-bottom: 2rem; }
+        body { background: #000; overflow: hidden; touch-action: none; }
+        #main-menu { position: fixed; width: 100vw; height: 100vh; background: #1a1a24; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
+        #main-menu h1 { color: #fff; font-size: 2rem; margin-bottom: 2rem; text-align: center; }
         #start-btn { padding: 15px 40px; font-size: 1.5rem; background: #fff; color: #000; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         #game-ui { display: none; width: 100vw; height: 100vh; position: relative; }
         canvas { display: block; width: 100%; height: 100%; }
-        
-        /* HUD Layers */
         #game-ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 505; }
         .rt-ui-element { position: absolute; pointer-events: auto; }
         #rt-avatar { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 30px; background: #333; border: 2px solid #fff; border-radius: 50%; color: white; }
-        #rt-hp, #rt-xp { width: 200px; height: 25px; }
+        #rt-hp, #rt-xp { width: 150px; height: 25px; }
         .bar-wrap { background: rgba(0,0,0,0.7); border: 2px solid #fff; height: 100%; border-radius: 12px; overflow: hidden; position: relative; }
         .bar-fill { height: 100%; transition: width 0.2s; }
         .bar-text { position: absolute; width: 100%; text-align: center; top: 3px; color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 1px #000; }
-        #rt-inv { width: 60px; height: 60px; font-size: 24px; background: #555; border: 2px solid #fff; border-radius: 12px; color: white; cursor: pointer; }
+        #rt-inv { width: 50px; height: 50px; font-size: 20px; background: #555; border: 2px solid #fff; border-radius: 12px; color: white; cursor: pointer; }
         #rt-joy { width: 120px; height: 120px; }
         #joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-        #joystick-stick { width: 50px; height: 50px; background: rgba(255,255,255,0.6); border-radius: 50%; }
-
-        /* Inventory Modal */
-        #rt-inventory-modal { display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(30, 30, 36, 0.95); border: 2px solid #555; border-radius: 8px; z-index: 600; pointer-events: auto; padding: 10px; }
+        #joystick-stick { width: 40px; height: 40px; background: rgba(255,255,255,0.6); border-radius: 50%; }
+        #rt-inventory-modal { display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; background: rgba(30, 30, 36, 0.95); border: 2px solid #555; border-radius: 8px; z-index: 600; pointer-events: auto; padding: 10px; }
         .inv-header { display: flex; justify-content: space-between; align-items: center; color: white; font-weight: bold; margin-bottom: 15px; font-size: 18px; border-bottom: 1px solid #555; padding-bottom: 5px; }
-        #close-inv { background: #e74c3c; border: none; color: white; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+        #close-inv { background: #e74c3c; border: none; color: white; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
         .inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .inv-slot { width: 100%; padding-top: 100%; background: rgba(0,0,0,0.5); border: 1px solid #777; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div id="main-menu"><h1>${c.title}</h1><button id="start-btn">PLAY GAME</button></div>
+    <div id="main-menu"><h1>${c.title}</h1><button id="start-btn">PLAY</button></div>
     <div id="game-ui">
         <canvas id="game-canvas"></canvas>
         <div id="game-ui-layer">
@@ -466,6 +446,6 @@ document.addEventListener("DOMContentLoaded", () => {
         
         zip.file("index.html", htmlStr);
         zip.file("engine.js", jsStr);
-        zip.generateAsync({ type: "blob" }).then(content => saveAs(content, "MyCustomGame.zip"));
+        zip.generateAsync({ type: "blob" }).then(content => saveAs(content, "MyGame.zip"));
     });
 });
