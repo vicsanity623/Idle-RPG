@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG Studio Pro V4 - HUD Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RPG Studio Pro V5 - Mobile Fix</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -12,42 +12,42 @@
 <body>
     <div id="editor-ui">
         <header class="top-nav">
-            <div class="logo"><i class="fa-solid fa-dragon"></i> RPG Studio Pro</div>
+            <div class="logo"><i class="fa-solid fa-dragon"></i> RPG Studio</div>
             <div class="nav-actions">
-                <button id="btn-help" class="nav-btn"><i class="fa-solid fa-circle-question"></i> Guide</button>
-                <button id="btn-playtest" class="nav-btn play"><i class="fa-solid fa-play"></i> Playtest</button>
-                <button id="btn-export" class="nav-btn export"><i class="fa-solid fa-box-archive"></i> Export .ZIP</button>
+                <button id="btn-playtest" class="nav-btn play"><i class="fa-solid fa-play"></i> Play</button>
+                <button id="btn-export" class="nav-btn export"><i class="fa-solid fa-box-archive"></i> ZIP</button>
             </div>
         </header>
 
         <div class="ide-container">
+            <!-- LEFT PANEL -->
             <aside class="panel left-panel">
                 <div class="panel-header">Assets & Tools</div>
                 <div class="tools-container">
                     <div class="tool-group">
-                        <h4><i class="fa-solid fa-layer-group"></i> Terrain (Layer 0)</h4>
+                        <h4><i class="fa-solid fa-layer-group"></i> Terrain</h4>
                         <button class="tool-btn active" data-type="terrain" data-id="1"><div class="color-box" style="background:#4CAF50"></div> Grass</button>
                         <button class="tool-btn" data-type="terrain" data-id="2"><div class="color-box" style="background:#795548"></div> Dirt Path</button>
-                        <button class="tool-btn" data-type="terrain" data-id="3"><div class="color-box" style="background:#2196F3"></div> Deep Water (Solid)</button>
-                        <button class="tool-btn" data-type="terrain" data-id="4"><div class="color-box" style="background:#607D8B"></div> Stone Wall (Solid)</button>
+                        <button class="tool-btn" data-type="terrain" data-id="3"><div class="color-box" style="background:#2196F3"></div> Deep Water</button>
+                        <button class="tool-btn" data-type="terrain" data-id="4"><div class="color-box" style="background:#607D8B"></div> Stone Wall</button>
                     </div>
                     <div class="tool-group">
-                        <h4><i class="fa-solid fa-users"></i> Entities (Layer 1)</h4>
+                        <h4><i class="fa-solid fa-users"></i> Entities</h4>
                         <button class="tool-btn" data-type="entity" data-id="player"><i class="fa-solid fa-user text-blue"></i> Player Spawn</button>
                         <button class="tool-btn" data-type="entity" data-id="slime"><i class="fa-solid fa-ghost text-green"></i> Slime Enemy</button>
                         <button class="tool-btn" data-type="entity" data-id="orc"><i class="fa-solid fa-khanda text-orange"></i> Orc Enemy</button>
-                        <button class="tool-btn eraser" data-type="entity" data-id="erase"><i class="fa-solid fa-eraser"></i> Erase Entity</button>
+                        <button class="tool-btn eraser" data-type="entity" data-id="erase"><i class="fa-solid fa-eraser"></i> Erase</button>
                     </div>
                 </div>
             </aside>
 
+            <!-- CENTER VIEWPORT -->
             <main class="viewport">
                 <div class="viewport-toolbar">
-                    <button id="tool-draw" class="active" title="Draw Tool"><i class="fa-solid fa-pen"></i> Draw</button>
-                    <button id="tool-pan" title="Pan Camera"><i class="fa-solid fa-hand"></i> Pan</button>
+                    <button id="tool-draw" class="active" title="Draw"><i class="fa-solid fa-pen"></i> Draw</button>
+                    <button id="tool-pan" title="Pan"><i class="fa-solid fa-hand"></i> Pan</button>
                     <span class="divider"></span>
-                    <button id="tool-grid" class="active" title="Toggle Grid"><i class="fa-solid fa-border-all"></i> Grid</button>
-                    <button id="btn-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate World</button>
+                    <button id="btn-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Gen</button>
                 </div>
                 
                 <div class="canvas-wrapper" id="canvas-wrapper">
@@ -55,6 +55,7 @@
                     
                     <!-- HUD DRAG AND DROP EDITOR -->
                     <div id="hud-editor-layer" style="display: none;">
+                        <div class="hud-notice">Drag UI elements anywhere!</div>
                         <div class="hud-edit-element" id="hud-avatar" data-id="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
                         <div class="hud-edit-element" id="hud-hp" data-id="hp"><div class="hud-bar bg-red">HP</div></div>
                         <div class="hud-edit-element" id="hud-xp" data-id="xp"><div class="hud-bar bg-purple">XP</div></div>
@@ -64,16 +65,17 @@
                 </div>
             </main>
 
+            <!-- RIGHT PANEL -->
             <aside class="panel right-panel">
                 <div class="tabs">
                     <button class="prop-tab active" data-target="prop-game">World</button>
-                    <button class="prop-tab" data-target="prop-player">Player</button>
-                    <button class="prop-tab" data-target="prop-hud">UI / HUD</button>
+                    <button class="prop-tab" data-target="prop-player">Stats</button>
+                    <button class="prop-tab" data-target="prop-hud">UI Layout</button>
                 </div>
                 <div class="prop-content">
                     <div id="prop-game" class="prop-pane active">
-                        <label>Game Title <input type="text" id="cfg-title" value="My Epic Adventure"></label>
-                        <label>Map Size (Tiles) 
+                        <label>Game Title <input type="text" id="cfg-title" value="My Adventure"></label>
+                        <label>Map Size
                             <select id="cfg-mapsize">
                                 <option value="30">30x30 (Small)</option>
                                 <option value="60" selected>60x60 (Medium)</option>
@@ -90,30 +92,24 @@
                         <label>Move Speed <input type="number" id="cfg-pspeed" value="200"></label>
                     </div>
 
-                    <!-- NEW HUD PROPERTIES -->
                     <div id="prop-hud" class="prop-pane">
-                        <div class="hud-notice"><i class="fa-solid fa-arrows-up-down-left-right"></i> Drag elements in the viewport to position your HUD!</div>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-avatar" checked> Show Avatar</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-hp" checked> Show HP</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-xp" checked> Show XP</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-inv" checked> Show Backpack</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-joy" checked> Show Joystick</label>
                         <hr>
-                        <h4>Toggle Elements</h4>
-                        <label><input type="checkbox" class="hud-toggle" data-target="hud-avatar" checked> Show Player Avatar</label>
-                        <label><input type="checkbox" class="hud-toggle" data-target="hud-hp" checked> Show HP Bar</label>
-                        <label><input type="checkbox" class="hud-toggle" data-target="hud-xp" checked> Show XP Bar</label>
-                        <label><input type="checkbox" class="hud-toggle" data-target="hud-inv" checked> Show Inventory Button</label>
-                        <label><input type="checkbox" class="hud-toggle" data-target="hud-joy" checked> Show Mobile Joystick</label>
-                        <hr>
-                        <h4>Colors</h4>
                         <label>HP Bar Color <input type="color" id="cfg-hpcolor" value="#e74c3c"></label>
                         <label>XP Bar Color <input type="color" id="cfg-xpcolor" value="#9b59b6"></label>
-                        <label>Menu BG <input type="color" id="cfg-menubg" value="#1a1a24"></label>
                     </div>
                 </div>
             </aside>
         </div>
     </div>
 
-    <!-- THE LIVE GAME UI -->
+    <!-- LIVE GAME UI -->
     <div id="live-game-ui" style="display: none;">
-        <button id="btn-stop-playtest"><i class="fa-solid fa-circle-xmark"></i> Stop Playtest</button>
+        <button id="btn-stop-playtest"><i class="fa-solid fa-circle-xmark"></i> Stop Test</button>
         <canvas id="game-canvas"></canvas>
         <div id="game-ui-layer">
             <div id="rt-avatar" class="rt-ui-element"><i class="fa-solid fa-user-astronaut"></i></div>
@@ -123,25 +119,9 @@
             <div id="rt-joy" class="rt-ui-element"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
         </div>
         
-        <!-- Inventory Modal in Game -->
         <div id="rt-inventory-modal" style="display:none;">
             <div class="inv-header">Inventory <button id="close-inv">X</button></div>
-            <div class="inv-grid">
-                <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
-                <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
-                <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- GUIDE MODAL -->
-    <div id="guide-modal" style="display: none;">
-        <div class="modal-box">
-            <h2>Welcome to RPG Studio!</h2>
-            <p><b>1. Map:</b> Draw your world. Must place a Player Spawn!</p>
-            <p><b>2. HUD Editor:</b> Click the "UI / HUD" tab to enter layout mode. Drag the bars, joystick, and buttons around the screen to build your interface!</p>
-            <p><b>3. Playtest:</b> Instantly play your game. WASD to move. Click Inventory to see your backpack!</p>
-            <button id="btn-close-guide">Got it!</button>
+            <div class="inv-grid"><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div></div>
         </div>
     </div>
 
