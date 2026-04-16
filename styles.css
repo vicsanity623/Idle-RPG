@@ -26,8 +26,7 @@ body { background: var(--bg-main); color: var(--text); height: 100vh; overflow: 
 .tool-btn:hover { background: rgba(255,255,255,0.05); }
 .tool-btn.active { background: rgba(0, 168, 255, 0.1); border: 1px solid var(--accent); color: var(--accent); }
 .color-box { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #000; }
-.eraser { color: #e84118; }
-.text-blue { color: #00a8ff; } .text-green { color: #2ecc71; } .text-orange { color: #e67e22; }
+.eraser { color: #e84118; } .text-blue { color: #00a8ff; } .text-green { color: #2ecc71; } .text-orange { color: #e67e22; }
 
 /* Viewport */
 .viewport { flex: 1; display: flex; flex-direction: column; background: #0a0a0c; position: relative; }
@@ -36,7 +35,6 @@ body { background: var(--bg-main); color: var(--text); height: 100vh; overflow: 
 .viewport-toolbar button:hover { color: #fff; background: rgba(255,255,255,0.1); }
 .viewport-toolbar button.active { color: var(--accent); background: rgba(0, 168, 255, 0.1); }
 .divider { width: 1px; height: 20px; background: var(--border); margin: 0 5px; }
-#btn-generate { margin-left: auto; border: 1px solid var(--border); }
 .canvas-wrapper { flex: 1; overflow: hidden; position: relative; cursor: crosshair; }
 canvas { display: block; }
 
@@ -52,23 +50,49 @@ canvas { display: block; }
 .prop-pane input[type="color"] { border: none; background: none; width: 35px; height: 35px; cursor: pointer; float: right; }
 hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
-/* Modal */
+/* HUD EDITOR LAYER */
+#hud-editor-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10; overflow: hidden; }
+.hud-notice { background: rgba(0, 168, 255, 0.2); padding: 10px; border: 1px solid var(--accent); border-radius: 4px; font-size: 0.85rem; color: #fff; line-height: 1.4; }
+.hud-edit-element { position: absolute; cursor: grab; background: rgba(255,255,255,0.1); border: 2px dashed #fff; border-radius: 4px; padding: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+.hud-edit-element:active { cursor: grabbing; border-color: var(--accent); background: rgba(0, 168, 255, 0.2); }
+
+#hud-avatar { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 30px; background: #333; border-radius: 50%; top: 5%; left: 5%; }
+#hud-hp { width: 200px; height: 30px; top: 5%; left: 15%; }
+#hud-xp { width: 200px; height: 30px; top: 12%; left: 15%; }
+#hud-inv { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 24px; background: #555; border-radius: 12px; top: 5%; left: 80%; }
+#hud-joy { width: 120px; height: 120px; border-radius: 50%; top: 70%; left: 10%; }
+.hud-bar { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; text-shadow: 1px 1px 1px #000; border: 1px solid #fff; }
+.bg-red { background: #e74c3c; } .bg-purple { background: #9b59b6; }
+.joy-base { width: 100%; height: 100%; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+.joy-stick { width: 40px; height: 40px; background: rgba(255,255,255,0.6); border-radius: 50%; }
+
+/* Live Game UI */
+#live-game-ui { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 500; }
+#btn-stop-playtest { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 510; background: #e74c3c; color: #fff; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+#game-ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 505; }
+.rt-ui-element { position: absolute; pointer-events: auto; }
+
+#rt-avatar { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; font-size: 30px; background: #333; border: 2px solid #fff; border-radius: 50%; color: white; }
+#rt-hp, #rt-xp { width: 200px; height: 25px; }
+.bar-wrap { background: rgba(0,0,0,0.7); border: 2px solid #fff; height: 100%; border-radius: 12px; overflow: hidden; position: relative; }
+.bar-fill { height: 100%; transition: width 0.2s; }
+.bar-fill.hp { background: #e74c3c; width: 100%; }
+.bar-fill.xp { background: #9b59b6; width: 0%; }
+.bar-text { position: absolute; width: 100%; text-align: center; top: 3px; color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 1px #000; }
+#rt-inv { width: 60px; height: 60px; font-size: 24px; background: #555; border: 2px solid #fff; border-radius: 12px; color: white; cursor: pointer; }
+#rt-inv:active { transform: scale(0.95); }
+#rt-joy { width: 120px; height: 120px; }
+
+/* Inventory Modal */
+#rt-inventory-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(30, 30, 36, 0.95); border: 2px solid #555; border-radius: 8px; z-index: 600; pointer-events: auto; padding: 10px; }
+.inv-header { display: flex; justify-content: space-between; align-items: center; color: white; font-weight: bold; margin-bottom: 15px; font-size: 18px; border-bottom: 1px solid #555; padding-bottom: 5px; }
+#close-inv { background: #e74c3c; border: none; color: white; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.inv-slot { width: 100%; padding-top: 100%; background: rgba(0,0,0,0.5); border: 1px solid #777; border-radius: 4px; position: relative; }
+
+/* Guide Modal */
 #guide-modal { position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; }
 .modal-box { background: var(--bg-panel); border: 1px solid var(--border); padding: 30px; border-radius: 8px; width: 400px; }
 .modal-box h2 { color: var(--accent); margin-bottom: 15px; }
 .modal-box p { margin-bottom: 10px; line-height: 1.5; color: #ccc; }
 #btn-close-guide { width: 100%; padding: 10px; margin-top: 20px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-
-/* Live Game UI (Playtest) */
-#live-game-ui { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; z-index: 500; }
-#btn-stop-playtest { position: absolute; top: 20px; right: 20px; z-index: 510; background: #e74c3c; color: #fff; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 1.1rem; }
-#hud { position: absolute; top: 20px; left: 20px; width: 250px; z-index: 510; pointer-events: none; }
-#lvl-text { color: white; font-size: 24px; font-weight: bold; margin-bottom: 5px; text-shadow: 2px 2px 0 #000; }
-.bar-wrap { background: rgba(0,0,0,0.7); border: 2px solid #fff; height: 25px; margin-bottom: 10px; border-radius: 12px; overflow: hidden; position: relative; }
-.bar-fill { height: 100%; transition: width 0.2s; }
-.bar-fill.hp { background: #e74c3c; width: 100%; }
-.bar-fill.xp { background: #9b59b6; width: 0%; }
-.bar-text { position: absolute; width: 100%; text-align: center; top: 3px; color: white; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 1px #000; }
-#joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 150px; height: 150px; z-index: 520; }
-#joystick-base { width: 100%; height: 100%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; }
-#joystick-stick { width: 60px; height: 60px; background: rgba(255,255,255,0.6); border-radius: 50%; }
