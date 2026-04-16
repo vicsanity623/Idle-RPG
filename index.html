@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RPG Studio Pro V3</title>
+    <title>RPG Studio Pro V4 - HUD Editor</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
-    <!-- THE EDITOR INTERFACE -->
     <div id="editor-ui">
         <header class="top-nav">
             <div class="logo"><i class="fa-solid fa-dragon"></i> RPG Studio Pro</div>
@@ -22,19 +21,18 @@
         </header>
 
         <div class="ide-container">
-            <!-- LEFT PANEL -->
             <aside class="panel left-panel">
                 <div class="panel-header">Assets & Tools</div>
                 <div class="tools-container">
                     <div class="tool-group">
-                        <h4><i class="fa-solid fa-layer-group"></i> Terrain (Click to Draw)</h4>
+                        <h4><i class="fa-solid fa-layer-group"></i> Terrain (Layer 0)</h4>
                         <button class="tool-btn active" data-type="terrain" data-id="1"><div class="color-box" style="background:#4CAF50"></div> Grass</button>
                         <button class="tool-btn" data-type="terrain" data-id="2"><div class="color-box" style="background:#795548"></div> Dirt Path</button>
                         <button class="tool-btn" data-type="terrain" data-id="3"><div class="color-box" style="background:#2196F3"></div> Deep Water (Solid)</button>
                         <button class="tool-btn" data-type="terrain" data-id="4"><div class="color-box" style="background:#607D8B"></div> Stone Wall (Solid)</button>
                     </div>
                     <div class="tool-group">
-                        <h4><i class="fa-solid fa-users"></i> Entities (Click to Place)</h4>
+                        <h4><i class="fa-solid fa-users"></i> Entities (Layer 1)</h4>
                         <button class="tool-btn" data-type="entity" data-id="player"><i class="fa-solid fa-user text-blue"></i> Player Spawn</button>
                         <button class="tool-btn" data-type="entity" data-id="slime"><i class="fa-solid fa-ghost text-green"></i> Slime Enemy</button>
                         <button class="tool-btn" data-type="entity" data-id="orc"><i class="fa-solid fa-khanda text-orange"></i> Orc Enemy</button>
@@ -43,26 +41,34 @@
                 </div>
             </aside>
 
-            <!-- CENTER VIEWPORT -->
             <main class="viewport">
                 <div class="viewport-toolbar">
                     <button id="tool-draw" class="active" title="Draw Tool"><i class="fa-solid fa-pen"></i> Draw</button>
-                    <button id="tool-pan" title="Pan Camera"><i class="fa-solid fa-hand"></i> Pan (or Middle Click)</button>
+                    <button id="tool-pan" title="Pan Camera"><i class="fa-solid fa-hand"></i> Pan</button>
                     <span class="divider"></span>
                     <button id="tool-grid" class="active" title="Toggle Grid"><i class="fa-solid fa-border-all"></i> Grid</button>
                     <button id="btn-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Generate World</button>
                 </div>
+                
                 <div class="canvas-wrapper" id="canvas-wrapper">
                     <canvas id="editor-canvas"></canvas>
+                    
+                    <!-- HUD DRAG AND DROP EDITOR -->
+                    <div id="hud-editor-layer" style="display: none;">
+                        <div class="hud-edit-element" id="hud-avatar" data-id="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                        <div class="hud-edit-element" id="hud-hp" data-id="hp"><div class="hud-bar bg-red">HP</div></div>
+                        <div class="hud-edit-element" id="hud-xp" data-id="xp"><div class="hud-bar bg-purple">XP</div></div>
+                        <div class="hud-edit-element" id="hud-inv" data-id="inv"><i class="fa-solid fa-backpack"></i></div>
+                        <div class="hud-edit-element" id="hud-joy" data-id="joy"><div class="joy-base"><div class="joy-stick"></div></div></div>
+                    </div>
                 </div>
             </main>
 
-            <!-- RIGHT PANEL -->
             <aside class="panel right-panel">
                 <div class="tabs">
                     <button class="prop-tab active" data-target="prop-game">World</button>
                     <button class="prop-tab" data-target="prop-player">Player</button>
-                    <button class="prop-tab" data-target="prop-hud">HUD</button>
+                    <button class="prop-tab" data-target="prop-hud">UI / HUD</button>
                 </div>
                 <div class="prop-content">
                     <div id="prop-game" class="prop-pane active">
@@ -71,10 +77,8 @@
                             <select id="cfg-mapsize">
                                 <option value="30">30x30 (Small)</option>
                                 <option value="60" selected>60x60 (Medium)</option>
-                                <option value="100">100x100 (Large)</option>
                             </select>
                         </label>
-                        <p style="font-size: 12px; color: #888; margin-top: 10px;">Warning: Changing map size clears the current map.</p>
                     </div>
 
                     <div id="prop-player" class="prop-pane">
@@ -84,33 +88,49 @@
                         <label>Max HP <input type="number" id="cfg-php" value="100"></label>
                         <label>Attack Damage <input type="number" id="cfg-patk" value="15"></label>
                         <label>Move Speed <input type="number" id="cfg-pspeed" value="200"></label>
-                        <label><input type="checkbox" id="cfg-autoattack" checked> Enable Auto-Attack</label>
                     </div>
 
+                    <!-- NEW HUD PROPERTIES -->
                     <div id="prop-hud" class="prop-pane">
-                        <label>Menu Background <input type="color" id="cfg-menubg" value="#1a1a24"></label>
-                        <label>Menu Text <input type="color" id="cfg-menutxt" value="#f1c40f"></label>
+                        <div class="hud-notice"><i class="fa-solid fa-arrows-up-down-left-right"></i> Drag elements in the viewport to position your HUD!</div>
                         <hr>
+                        <h4>Toggle Elements</h4>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-avatar" checked> Show Player Avatar</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-hp" checked> Show HP Bar</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-xp" checked> Show XP Bar</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-inv" checked> Show Inventory Button</label>
+                        <label><input type="checkbox" class="hud-toggle" data-target="hud-joy" checked> Show Mobile Joystick</label>
+                        <hr>
+                        <h4>Colors</h4>
                         <label>HP Bar Color <input type="color" id="cfg-hpcolor" value="#e74c3c"></label>
                         <label>XP Bar Color <input type="color" id="cfg-xpcolor" value="#9b59b6"></label>
-                        <label><input type="checkbox" id="cfg-joystick" checked> Mobile Joystick on Export</label>
+                        <label>Menu BG <input type="color" id="cfg-menubg" value="#1a1a24"></label>
                     </div>
                 </div>
             </aside>
         </div>
     </div>
 
-    <!-- THE LIVE GAME UI (Hidden until Playtest is clicked) -->
+    <!-- THE LIVE GAME UI -->
     <div id="live-game-ui" style="display: none;">
         <button id="btn-stop-playtest"><i class="fa-solid fa-circle-xmark"></i> Stop Playtest</button>
         <canvas id="game-canvas"></canvas>
-        <div id="hud">
-            <div id="lvl-text">LVL 1</div>
-            <div class="bar-wrap"><div id="hp-fill" class="bar-fill hp"></div><div class="bar-text">HEALTH</div></div>
-            <div class="bar-wrap"><div id="xp-fill" class="bar-fill xp"></div><div class="bar-text">XP</div></div>
+        <div id="game-ui-layer">
+            <div id="rt-avatar" class="rt-ui-element"><i class="fa-solid fa-user-astronaut"></i></div>
+            <div id="rt-hp" class="rt-ui-element"><div class="bar-wrap"><div id="hp-fill" class="bar-fill hp"></div><div class="bar-text">HP</div></div></div>
+            <div id="rt-xp" class="rt-ui-element"><div class="bar-wrap"><div id="xp-fill" class="bar-fill xp"></div><div class="bar-text">XP <span id="lvl-text">(L1)</span></div></div></div>
+            <button id="rt-inv" class="rt-ui-element"><i class="fa-solid fa-backpack"></i></button>
+            <div id="rt-joy" class="rt-ui-element"><div id="joystick-base"><div id="joystick-stick"></div></div></div>
         </div>
-        <div id="joystick-zone">
-            <div id="joystick-base"><div id="joystick-stick"></div></div>
+        
+        <!-- Inventory Modal in Game -->
+        <div id="rt-inventory-modal" style="display:none;">
+            <div class="inv-header">Inventory <button id="close-inv">X</button></div>
+            <div class="inv-grid">
+                <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
+                <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
+                <div class="inv-slot"></div><div class="inv-slot"></div><div class="inv-slot"></div>
+            </div>
         </div>
     </div>
 
@@ -118,10 +138,9 @@
     <div id="guide-modal" style="display: none;">
         <div class="modal-box">
             <h2>Welcome to RPG Studio!</h2>
-            <p><b>1. Drawing:</b> Select a Terrain block on the left. Click and drag on the grid to draw the world.</p>
-            <p><b>2. Placing Enemies:</b> Click the "Entities" tab on the left. Click on the map to place Spawns, Slimes, or Orcs. <i>You must place 1 Player Spawn to play!</i></p>
-            <p><b>3. Moving the Camera:</b> Click the "Pan" tool at the top, OR hold the Middle Mouse Button and drag to move around the large map. Use your Scroll Wheel to zoom.</p>
-            <p><b>4. Playtesting:</b> Click the green "Playtest" button to instantly play your game. Use WASD or Arrows to move. Auto-attack handles combat.</p>
+            <p><b>1. Map:</b> Draw your world. Must place a Player Spawn!</p>
+            <p><b>2. HUD Editor:</b> Click the "UI / HUD" tab to enter layout mode. Drag the bars, joystick, and buttons around the screen to build your interface!</p>
+            <p><b>3. Playtest:</b> Instantly play your game. WASD to move. Click Inventory to see your backpack!</p>
             <button id="btn-close-guide">Got it!</button>
         </div>
     </div>
