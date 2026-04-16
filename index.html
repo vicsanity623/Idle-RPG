@@ -3,101 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web RPG Maker Engine</title>
+    <title>RPG Studio Pro V2</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- JSZip for exporting the game as a zip file -->
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JSZip & FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- FileSaver for triggering the download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
-    <div id="app">
-        <aside id="sidebar">
-            <div class="logo">RPG Builder Pro</div>
-            <nav>
-                <button class="tab-btn active" data-tab="general">General & View</button>
-                <button class="tab-btn" data-tab="menu">Menu & HUD</button>
-                <button class="tab-btn" data-tab="map">Map Editor</button>
-                <button class="tab-btn" data-tab="player">Player & Controls</button>
-            </nav>
-            <div class="export-section">
-                <button id="btn-export" class="action-btn success">Export Game (.zip)</button>
+    <header class="top-nav">
+        <div class="logo"><i class="fa-solid fa-dragon"></i> RPG Studio Pro</div>
+        <div class="nav-actions">
+            <button id="btn-playtest" class="nav-btn play"><i class="fa-solid fa-play"></i> Playtest</button>
+            <button id="btn-export" class="nav-btn export"><i class="fa-solid fa-box-archive"></i> Export Game</button>
+        </div>
+    </header>
+
+    <div class="ide-container">
+        <!-- LEFT PANEL: Assets & Hierarchy -->
+        <aside class="panel left-panel">
+            <div class="panel-header">Terrain & Entities</div>
+            <div class="tools-container">
+                <div class="tool-group">
+                    <h4><i class="fa-solid fa-layer-group"></i> Terrain (Layer 0)</h4>
+                    <button class="tool-btn active" data-type="terrain" data-id="1"><div class="color-box" style="background:#4CAF50"></div> Grass</button>
+                    <button class="tool-btn" data-type="terrain" data-id="2"><div class="color-box" style="background:#795548"></div> Dirt Path</button>
+                    <button class="tool-btn" data-type="terrain" data-id="3"><div class="color-box" style="background:#2196F3"></div> Deep Water</button>
+                    <button class="tool-btn" data-type="terrain" data-id="4"><div class="color-box" style="background:#607D8B"></div> Stone Wall</button>
+                    <button class="tool-btn" data-type="terrain" data-id="5"><div class="color-box" style="background:#FFC107"></div> Sand</button>
+                </div>
+                <div class="tool-group">
+                    <h4><i class="fa-solid fa-users"></i> Entities (Layer 1)</h4>
+                    <button class="tool-btn" data-type="entity" data-id="player"><i class="fa-solid fa-user"></i> Player Spawn</button>
+                    <button class="tool-btn" data-type="entity" data-id="slime"><i class="fa-solid fa-ghost"></i> Slime Enemy</button>
+                    <button class="tool-btn" data-type="entity" data-id="orc"><i class="fa-solid fa-khanda"></i> Orc Enemy</button>
+                    <button class="tool-btn eraser" data-type="entity" data-id="erase"><i class="fa-solid fa-eraser"></i> Erase Entity</button>
+                </div>
             </div>
         </aside>
 
-        <main id="workspace">
-            <!-- General Settings -->
-            <section id="general" class="tab-content active">
-                <h2>Game Settings</h2>
-                <label>Game Title: <input type="text" id="game-title" value="My Epic RPG"></label>
-                <label>Perspective Mode:
-                    <select id="game-view">
-                        <option value="topdown">Top-Down 2D</option>
-                        <option value="sideview">Layered Side View (2.5D)</option>
-                    </select>
-                </label>
-                <label>Camera Follow Player: <input type="checkbox" id="cam-follow" checked></label>
-            </section>
+        <!-- CENTER: Viewport -->
+        <main class="viewport">
+            <div class="viewport-toolbar">
+                <button id="tool-pan" title="Pan Camera"><i class="fa-solid fa-hand"></i></button>
+                <button id="tool-draw" class="active" title="Draw Tool"><i class="fa-solid fa-pen"></i></button>
+                <button id="tool-fill" title="Bucket Fill"><i class="fa-solid fa-fill-drip"></i></button>
+                <span class="divider"></span>
+                <button id="tool-grid" class="active" title="Toggle Grid"><i class="fa-solid fa-border-all"></i></button>
+                <button id="btn-generate"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Terrain</button>
+            </div>
+            <div class="canvas-wrapper" id="canvas-wrapper">
+                <canvas id="editor-canvas"></canvas>
+            </div>
+        </main>
 
-            <!-- Menu & HUD -->
-            <section id="menu" class="tab-content">
-                <h2>Menu & HUD Design</h2>
-                <div class="split-panel">
-                    <div>
-                        <h3>Main Menu</h3>
-                        <label>Background Color: <input type="color" id="menu-bg" value="#222222"></label>
-                        <label>Button Color: <input type="color" id="menu-btn" value="#4CAF50"></label>
-                        <label>Title Text Color: <input type="color" id="menu-text" value="#ffffff"></label>
-                    </div>
-                    <div>
-                        <h3>In-Game HUD</h3>
-                        <label>HP Bar Color: <input type="color" id="hud-hp" value="#ff3333"></label>
-                        <label>XP Bar Color: <input type="color" id="hud-xp" value="#33ccff"></label>
-                        <label>Show Action Buttons: <input type="checkbox" id="hud-action" checked></label>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Map Editor -->
-            <section id="map" class="tab-content">
-                <h2>World Builder</h2>
-                <div class="toolbar">
-                    <label>Map Size: 
-                        <select id="map-size">
-                            <option value="20">20x20</option>
-                            <option value="60">60x60 (Large)</option>
-                            <option value="100">100x100 (MMO Scale)</option>
+        <!-- RIGHT PANEL: Properties / Settings -->
+        <aside class="panel right-panel">
+            <div class="tabs">
+                <button class="prop-tab active" data-target="prop-game">Game</button>
+                <button class="prop-tab" data-target="prop-player">Player Stats</button>
+                <button class="prop-tab" data-target="prop-hud">HUD Design</button>
+            </div>
+            <div class="prop-content">
+                <div id="prop-game" class="prop-pane active">
+                    <label>Game Title <input type="text" id="cfg-title" value="Legacy of The Web"></label>
+                    <label>Map Size (Tiles) 
+                        <select id="cfg-mapsize">
+                            <option value="30">30x30 (Small)</option>
+                            <option value="60" selected>60x60 (Medium)</option>
+                            <option value="120">120x120 (MMO Scale)</option>
                         </select>
                     </label>
-                    <button id="btn-generate-map" class="action-btn">Procedural Generation</button>
+                    <label>Camera Mode 
+                        <select id="cfg-camera">
+                            <option value="topdown">True Top-Down</option>
+                            <option value="iso">Simulated 2.5D Layering</option>
+                        </select>
+                    </label>
+                    <label>Base Tile Size (px) <input type="number" id="cfg-tilesize" value="64"></label>
                 </div>
-                <div class="palette">
-                    <button class="brush active" data-type="1" style="background: #4CAF50">Grass</button>
-                    <button class="brush" data-type="2" style="background: #795548">Dirt</button>
-                    <button class="brush" data-type="3" style="background: #2196F3">Water (Solid)</button>
-                    <button class="brush" data-type="4" style="background: #607D8B">Wall (Solid)</button>
-                </div>
-                <div class="canvas-container">
-                    <canvas id="map-canvas" width="600" height="600"></canvas>
-                </div>
-            </section>
 
-            <!-- Player Settings -->
-            <section id="player" class="tab-content">
-                <h2>Player Settings</h2>
-                <label>Player Speed: <input type="number" id="player-speed" value="4"></label>
-                <label>Player Shape Color: <input type="color" id="player-color" value="#ffeb3b"></label>
-                <label>Controls:
-                    <select id="player-controls">
-                        <option value="joystick">Virtual Joystick (Mobile/PC)</option>
-                        <option value="wasd">WASD / Arrows Only</option>
-                        <option value="tap">Tap to Move (Pathfinding)</option>
-                    </select>
-                </label>
-                <label>Auto-Attack when near enemies: <input type="checkbox" id="auto-attack" checked></label>
-            </section>
-        </main>
+                <div id="prop-player" class="prop-pane">
+                    <h4>Shape Composer</h4>
+                    <div class="shape-composer">
+                        <label>Base Color <input type="color" id="cfg-pcolor" value="#00a8ff"></label>
+                        <label>Weapon Color <input type="color" id="cfg-wcolor" value="#c23616"></label>
+                    </div>
+                    <hr>
+                    <h4>Combat Stats</h4>
+                    <label>Max HP <input type="number" id="cfg-php" value="100"></label>
+                    <label>Attack Damage <input type="number" id="cfg-patk" value="15"></label>
+                    <label>Move Speed <input type="number" id="cfg-pspeed" value="250"></label>
+                    <label>Auto-Attack Range <input type="number" id="cfg-prange" value="90"></label>
+                    <label><input type="checkbox" id="cfg-autoattack" checked> Enable Auto-Attack</label>
+                </div>
+
+                <div id="prop-hud" class="prop-pane">
+                    <label>Menu Background <input type="color" id="cfg-menubg" value="#111111"></label>
+                    <label>Menu Text <input type="color" id="cfg-menutxt" value="#f1c40f"></label>
+                    <hr>
+                    <label>HP Bar Color <input type="color" id="cfg-hpcolor" value="#e74c3c"></label>
+                    <label>XP Bar Color <input type="color" id="cfg-xpcolor" value="#9b59b6"></label>
+                    <label>UI Layout 
+                        <select id="cfg-uistyle">
+                            <option value="classic">Classic Top-Left</option>
+                            <option value="mmo">MMO Bottom-Center</option>
+                        </select>
+                    </label>
+                    <label><input type="checkbox" id="cfg-joystick" checked> Enable Virtual Joystick</label>
+                </div>
+            </div>
+        </aside>
     </div>
+
+    <!-- Playtest Modal Overlay -->
+    <div id="playtest-modal" style="display:none;">
+        <div class="modal-header">
+            <span>Live Playtest</span>
+            <button id="close-playtest">Close & Return to Editor X</button>
+        </div>
+        <iframe id="playtest-frame"></iframe>
+    </div>
+
     <script src="builder.js"></script>
 </body>
 </html>
