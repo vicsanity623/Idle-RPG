@@ -1,26 +1,29 @@
 const UI = {
+    // Shared joystick data for entities.js
     joystick: { active: false, vector: { x: 0, y: 0 } },
 
     init() {
-        this.populateInventory();
-        this.populateStats();
         this.setupJoystick();
         
-        document.getElementById('btn-auto').addEventListener('click', () => {
-            Game.player.autoAttack = !Game.player.autoAttack;
-            document.getElementById('auto-status').innerText = Game.player.autoAttack ? "ON" : "OFF";
-            document.getElementById('btn-auto').style.borderColor = Game.player.autoAttack ? "#0f0" : "#b89947";
-        });
+        // Setup Attack Button (Action Bar)
+        const atkBtn = document.getElementById('btn-attack');
+        if (atkBtn) {
+            atkBtn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                if (Game.player) Game.player.forceAttack();
+            });
+        }
 
-        // Trigger action-based attack animation
-        document.getElementById('btn-attack').addEventListener('pointerdown', () => {
-            Game.player.forceAttack();
-        });
+        // Note: Inventory tabs and Auto-Quest buttons are now handled 
+        // via 'onclick' attributes in the HTML and logic in engine.js
     },
 
+    // Handles the virtual joystick for mobile movement
     setupJoystick() {
         const base = document.getElementById('joystick-base');
         const knob = document.getElementById('joystick-knob');
+        if (!base || !knob) return;
+
         let rect = base.getBoundingClientRect();
         let maxRadius = rect.width / 2;
         let pointerId = null;
@@ -43,18 +46,25 @@ const UI = {
         };
 
         base.addEventListener('pointerdown', (e) => {
-            pointerId = e.pointerId; this.joystick.active = true;
-            updateKnob(e.clientX, e.clientY); base.setPointerCapture(pointerId);
+            pointerId = e.pointerId; 
+            this.joystick.active = true;
+            updateKnob(e.clientX, e.clientY); 
+            base.setPointerCapture(pointerId);
         });
+
         base.addEventListener('pointermove', (e) => {
-            if (this.joystick.active && e.pointerId === pointerId) updateKnob(e.clientX, e.clientY);
+            if (this.joystick.active && e.pointerId === pointerId) {
+                updateKnob(e.clientX, e.clientY);
+            }
         });
 
         const resetJoy = (e) => {
             if (e.pointerId === pointerId) {
-                this.joystick.active = false; this.joystick.vector = { x: 0, y: 0 };
+                this.joystick.active = false; 
+                this.joystick.vector = { x: 0, y: 0 };
                 knob.style.transform = `translate(-50%, -50%)`;
-                base.releasePointerCapture(pointerId); pointerId = null;
+                base.releasePointerCapture(pointerId); 
+                pointerId = null;
             }
         };
 
@@ -62,20 +72,20 @@ const UI = {
         base.addEventListener('pointercancel', resetJoy);
     },
 
-    toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); },
-    updatePlayerStats(player) {
-        document.getElementById('hp-fill').style.width = Math.max(0, (player.hp / player.maxHp) * 100) + '%';
-        document.getElementById('hp-text').innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
-        document.getElementById('quest-count').innerText = Game.kills;
-    },
-    populateInventory() {
-        const grid = document.getElementById('inv-grid');
-        for (let i = 0; i < 40; i++) { grid.appendChild(Object.assign(document.createElement('div'), {className: 'inv-slot'})); }
-    },
-    populateStats() {
-        const stats = { "ATK": 1420, "DEF": 850, "Max HP": 1000, "Crit Rate": "15%" };
-        for (const [k, v] of Object.entries(stats)) document.getElementById('stats-list').innerHTML += `<div class="stat-row"><span>${k}</span><span style="color:#fff">${v}</span></div>`;
+    // Toggles visibility for Inventory, Stats, and Skills modals
+    toggleModal(id) { 
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.toggle('hidden'); 
+            // If opening inventory, refresh it to show current items
+            if (id === 'inventory-modal' && !modal.classList.contains('hidden')) {
+                if (typeof this.updateInventory === 'function') {
+                    this.updateInventory(Game.player);
+                }
+            }
+        }
     }
 };
 
+// Start UI logic when page loads
 window.addEventListener('DOMContentLoaded', () => UI.init());
