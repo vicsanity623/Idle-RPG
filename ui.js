@@ -20,9 +20,12 @@ const UI = {
 
     // Handles the virtual joystick for mobile movement
     setupJoystick() {
-        const base = document.getElementById('joystick-base');
-        const knob = document.getElementById('joystick-knob');
-        if (!base || !knob) return;
+const base = document.getElementById('joystick-base');
+const knob = document.getElementById('joystick-knob');
+if (!base || !knob) {
+  console.error('Joystick elements not found');
+  return;
+}
 
         let rect = base.getBoundingClientRect();
         let maxRadius = rect.width / 2;
