@@ -8,6 +8,16 @@ const Game = {
     player: null, enemies: [], npcs: [], lootItems: [], projectiles: [], damageTexts: [], 
     kills: 0, images: {},
     
+    // --- NEW: REPEATABLE QUEST SYSTEM ---
+    activeQuest: null,
+    questList: [
+        { title: "[Battle] Ghost Hunter", obj: "Kill Sleepless Ghost", target: 10, g: 100, xp: 200 },
+        { title: "[Battle] Exorcist", obj: "Kill Sleepless Ghost", target: 20, g: 300, xp: 500 },
+        { title: "[Battle] Spirit Bane", obj: "Kill Sleepless Ghost", target: 40, g: 600, xp: 1000 },
+        { title: "[Battle] The Cleansing", obj: "Kill Sleepless Ghost", target: 60, g: 1000, xp: 2000 },
+        { title: "[Battle] Ghost King's Fall", obj: "Kill Sleepless Ghost", target: 100, g: 2500, xp: 5000 }
+    ],
+    
     init() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d', { alpha: false });
@@ -38,13 +48,11 @@ const Game = {
         this.loadAsset('bg', 'assets/grass.png');
         this.loadAsset('ghost', 'assets/sleepless_ghost.png');
 
-        // NEW: Load saved data before starting loop
         this.loadGame();
 
         requestAnimationFrame((t) => this.loop(t));
     },
 
-    // --- NEW: PERSISTENT SAVE SYSTEM ---
     saveGame() {
         const saveData = {
             level: this.player.level,
@@ -53,7 +61,8 @@ const Game = {
             gold: this.player.gold,
             inventory: this.player.inventory,
             equipment: this.player.equipment,
-            kills: this.kills
+            kills: this.kills,
+            activeQuest: this.activeQuest // Save active quest
         };
         localStorage.setItem('mmo_save_data', JSON.stringify(saveData));
     },
@@ -62,11 +71,10 @@ const Game = {
         const saved = localStorage.getItem('mmo_save_data');
         if (saved) {
             const data = JSON.parse(saved);
-            // Deep merge saved data into player object
             Object.assign(this.player, data);
-            this.kills = data.kills;
+            this.kills = data.kills || 0;
+            this.activeQuest = data.activeQuest || null; // Load active quest
             
-            // Re-sync UI immediately
             UI.updateInventory(this.player);
             UI.updatePlayerStats(this.player);
             UI.showLootNotification("Progress Loaded", "rarity-legendary");
@@ -88,12 +96,25 @@ const Game = {
 
     handleScreenTap(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const worldX = (e.clientX - rect.left) + this.camera.x;
-        const worldY = (e.clientY - rect.top) + this.camera.y;
+        // Support for both mouse clicks and touch events
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const worldX = (clientX - rect.left) + this.camera.x;
+        const worldY = (clientY - rect.top) + this.camera.y;
 
+        // --- NEW: NPC QUEST GIVER LOGIC ---
         for (let npc of this.npcs) {
             if (Math.hypot(npc.x - worldX, npc.y - worldY) < 60) {
-                UI.showLootNotification(`${npc.name}: "The ghosts are restless today..."`, "rarity-legendary");
+                if (!this.activeQuest) {
+                    // Give a new random quest
+                    this.activeQuest = this.questList[Math.floor(Math.random() * this.questList.length)];
+                    this.kills = 0; 
+                    UI.showLootNotification(`Quest Accepted: ${this.activeQuest.title}`, "rarity-epic");
+                    UI.updatePlayerStats(this.player);
+                    this.saveGame();
+                } else {
+                    UI.showLootNotification(`${npc.name}: "Finish your task first!"`, "rarity-common");
+                }
                 return;
             }
         }
@@ -147,14 +168,12 @@ const Game = {
         UI.updatePlayerStats(this.player);
         UI.updateXpBar(this.player);
 
-        // Auto-Save logic (roughly every 10 seconds)
         if (Math.random() < 0.002) this.saveGame();
     },
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Background logic
         const startCol = Math.max(0, Math.floor(this.camera.x / this.TILE_SIZE));
         const endCol = Math.min(this.WORLD_SIZE / this.TILE_SIZE, startCol + (this.camera.width / this.TILE_SIZE) + 1);
         const startRow = Math.max(0, Math.floor(this.camera.y / this.TILE_SIZE));
@@ -173,7 +192,6 @@ const Game = {
             }
         }
 
-        // Draw Loot
         this.lootItems.forEach(item => {
             const sx = item.x - this.camera.x; const sy = item.y - this.camera.y;
             let color = item.rarity === 'legendary' ? "#f1c40f" : item.rarity === 'epic' ? "#9b59b6" : item.rarity === 'rare' ? "#3498db" : "#fff";
@@ -182,7 +200,6 @@ const Game = {
             this.ctx.restore();
         });
 
-        // Draw NPCs
         this.npcs.forEach(n => {
             const sx = n.x - this.camera.x; const sy = n.y - this.camera.y;
             this.ctx.fillStyle = "#f1c40f"; this.ctx.beginPath(); this.ctx.arc(sx, sy, 25, 0, Math.PI*2); this.ctx.fill();
@@ -191,7 +208,6 @@ const Game = {
             this.ctx.fillStyle = "#f1c40f"; this.ctx.font = "bold 30px sans-serif"; this.ctx.fillText("!", sx, sy - 60);
         });
 
-        // Draw Projectiles
         this.projectiles.forEach(p => {
             p.trail.forEach(t => {
                 this.ctx.fillStyle = `rgba(255, 69, 0, ${t.alpha})`;
@@ -201,7 +217,6 @@ const Game = {
             this.ctx.beginPath(); this.ctx.arc(p.x - this.camera.x, p.y - this.camera.y, 12, 0, Math.PI*2); this.ctx.fill();
         });
 
-        // Draw Enemies
         this.enemies.forEach(e => {
             const sx = e.x - this.camera.x; const sy = e.y - this.camera.y;
             if (this.images['ghost'] && this.images['ghost'].complete) {
@@ -214,7 +229,6 @@ const Game = {
             this.ctx.fillStyle = '#f00'; this.ctx.fillRect(sx - 15, sy - e.radius - 10, 30 * (e.hp / e.maxHp), 4);
         });
 
-        // Draw Player
         if (!this.player.isDead) {
             const pScreenX = Math.round(this.player.x - this.camera.x);
             const pScreenY = Math.round(this.player.y - this.camera.y);
@@ -227,7 +241,6 @@ const Game = {
             }
         }
 
-        // Draw Damage Text
         this.ctx.font = "bold 20px sans-serif"; this.ctx.textAlign = "center";
         this.damageTexts.forEach(dtxt => {
             const sx = dtxt.x - this.camera.x; const sy = dtxt.y - this.camera.y;
@@ -236,7 +249,6 @@ const Game = {
             this.ctx.fillText(dtxt.text, sx, sy); this.ctx.globalAlpha = 1.0;
         });
 
-        // Death Overlay
         if (this.player.isDead) {
             this.ctx.fillStyle = "rgba(0,0,0,0.7)";
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -267,7 +279,6 @@ const Game = {
     }
 };
 
-// --- PROJECTILE CLASS ---
 class Projectile {
     constructor(x, y, target, damage) {
         this.x = x; this.y = y; this.target = target; this.damage = damage;
@@ -314,8 +325,24 @@ if (typeof UI !== 'undefined') {
             const slot = document.createElement('div');
             slot.className = `inv-slot rarity-${item.rarity} slot-icon`;
             slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; 
-            slot.onclick = () => this.handleItemClick(item);
             if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
+            
+            // --- NEW: LONG PRESS TOOLTIP LOGIC ---
+            slot.onpointerdown = (e) => {
+                this.isLongPress = false;
+                this.pressTimer = setTimeout(() => {
+                    this.isLongPress = true;
+                    this.showTooltip(item, e);
+                }, 400); 
+            };
+            slot.onpointerup = (e) => {
+                clearTimeout(this.pressTimer);
+                this.hideTooltip();
+                if (!this.isLongPress) this.handleItemClick(item);
+            };
+            slot.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
+            slot.oncontextmenu = (e) => e.preventDefault(); // Stop mobile menu popup
+            
             grid.appendChild(slot);
         });
 
@@ -324,7 +351,7 @@ if (typeof UI !== 'undefined') {
             const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
             const item = player.equipment[slotName];
             if (el) {
-                el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''}`;
+                el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''} slot-icon`;
                 el.innerHTML = item ? `<div class="item-label">${item.name[0]}</div>` : '';
                 if (item) equipAtk += (item.stats.attack || 0);
             }
@@ -342,18 +369,57 @@ if (typeof UI !== 'undefined') {
             Game.player.equipment[item.slot] = item;
             Game.player.inventory = Game.player.inventory.filter(i => i !== item);
             if (oldItem) Game.player.inventory.push(oldItem);
+            
+            // --- NEW: FLOATING STAT TEXT ---
+            let statText = item.stats.attack ? `ATK +${item.stats.attack}` : `DEF +${item.stats.defense}`;
+            Game.spawnDamageText(Game.player.x, Game.player.y - 50, statText, "#f1c40f");
             this.showLootNotification(`Equipped ${item.name}`, 'rarity-epic');
+            
         } else if (item.name.includes("Health Potion")) {
             Game.player.hp = Math.min(Game.player.maxHp, Game.player.hp + 200);
+            Game.spawnDamageText(Game.player.x, Game.player.y - 50, "HP +200", "#2ecc71"); // Floating Text
             item.count--;
             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
+            
         } else if (item.name.includes("Mana Potion")) {
             Game.player.mp = Math.min(Game.player.maxMp, Game.player.mp + 100);
+            Game.spawnDamageText(Game.player.x, Game.player.y - 50, "MP +100", "#3498db"); // Floating Text
             item.count--;
             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
         }
         this.updateInventory(Game.player);
-        Game.saveGame(); // Save state on item change
+        Game.saveGame(); 
+    };
+
+    // --- NEW: TOOLTIP RENDERERS ---
+    UI.showTooltip = function(item, event) {
+        const tt = document.getElementById('item-tooltip');
+        if (!tt) return;
+        document.getElementById('tt-name').innerText = item.name;
+        document.getElementById('tt-name').className = `rarity-${item.rarity}`;
+        document.getElementById('tt-rarity').innerText = item.rarity + " " + (item.slot || item.type);
+        
+        let statStr = "";
+        if (item.stats) {
+            if (item.stats.attack) statStr += `Attack: +${item.stats.attack}<br>`;
+            if (item.stats.defense) statStr += `Defense: +${item.stats.defense}`;
+        } else if (item.type === 'potion') {
+            statStr = "Consumable Buff";
+        } else if (item.type === 'rune') {
+            statStr = "Mysterious Material";
+        }
+        document.getElementById('tt-stats').innerHTML = statStr;
+        
+        let x = event.touches ? event.touches[0].clientX : event.clientX;
+        let y = event.touches ? event.touches[0].clientY : event.clientY;
+        tt.style.left = x + 'px';
+        tt.style.top = y + 'px';
+        tt.classList.remove('hidden');
+    };
+
+    UI.hideTooltip = function() {
+        const tt = document.getElementById('item-tooltip');
+        if (tt) tt.classList.add('hidden');
     };
 
     UI.startAutoQuest = function() {
@@ -394,19 +460,35 @@ if (typeof UI !== 'undefined') {
                 <div class="stat-row"><span>Combat Power</span><span style="color:#f1c40f">${cp}</span></div>
                 <div class="stat-row"><span>Health</span><span>${Math.floor(player.hp)} / ${player.maxHp}</span></div>
                 <div class="stat-row"><span>Mana</span><span>${Math.floor(player.mp)} / ${player.maxMp}</span></div>
+                <div class="stat-row"><span>Base Attack</span><span>${player.level * 10}</span></div>
+                <div class="stat-row"><span>Gear Attack</span><span style="color:#2ecc71">+${equipAtk}</span></div>
             </div>
         `;
     };
 
+    // --- NEW: UPDATED HUD BRIDGE FOR REPEATABLE QUESTS ---
     UI.updatePlayerStats = function(player) {
-        const countEl = document.getElementById('quest-count');
         const questBox = document.getElementById('quest-tracker');
-        if (countEl && Game.kills < 40) countEl.innerText = Game.kills;
-
-        if (Game.kills >= 40) {
-            questBox.classList.add('quest-complete-glow');
-            questBox.innerHTML = `<h4 class="quest-title">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: 500 Gold & 1000 XP</p>`;
-            questBox.onclick = () => UI.claimQuest(player);
+        
+        if (!Game.activeQuest) {
+            if (questBox) questBox.style.display = 'none';
+        } else {
+            if (questBox) {
+                questBox.style.display = 'block';
+                const qTitle = questBox.querySelector('.quest-title');
+                const qObj = questBox.querySelector('.quest-obj');
+                if (qTitle) qTitle.innerText = Game.activeQuest.title;
+                if (qObj) qObj.innerHTML = `${Game.activeQuest.obj} (<span id="quest-count">${Game.kills}</span>/${Game.activeQuest.target})`;
+                
+                if (Game.kills >= Game.activeQuest.target) {
+                    questBox.classList.add('quest-complete-glow');
+                    questBox.innerHTML = `<h4 class="quest-title">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: ${Game.activeQuest.g} Gold & ${Game.activeQuest.xp} XP</p>`;
+                    questBox.onclick = () => UI.claimQuest(player);
+                } else {
+                    questBox.classList.remove('quest-complete-glow');
+                    questBox.onclick = () => UI.startAutoQuest();
+                }
+            }
         }
 
         const hpPot = player.inventory.find(i => i.name === "Health Potion");
@@ -428,14 +510,20 @@ if (typeof UI !== 'undefined') {
     };
 
     UI.claimQuest = function(player) {
-        player.gainXp(1000);
-        player.gold += 500;
+        if (!Game.activeQuest) return;
+        
+        player.gainXp(Game.activeQuest.xp);
+        player.gold += Game.activeQuest.g;
         Game.kills = 0; 
+        
+        this.showLootNotification(`Quest Complete! +${Game.activeQuest.g} Gold`, "rarity-legendary");
+        
+        Game.activeQuest = null; 
         const questBox = document.getElementById('quest-tracker');
-        questBox.style.display = 'none';
-        this.showLootNotification("Quest Complete!", "rarity-legendary");
+        if (questBox) questBox.style.display = 'none';
+        
         this.updateInventory(player);
-        Game.saveGame(); // Force Save
+        Game.saveGame(); 
     };
 }
 
