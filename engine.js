@@ -5,7 +5,7 @@ const Game = {
     camera: { x: 0, y: 0, width: 0, height: 0 },
     
     WORLD_SIZE: 3000, TILE_SIZE: 100,
-    player: null, enemies: [], damageTexts: [],
+    player: null, enemies: [], lootItems: [], damageTexts: [], // Added lootItems
     kills: 0, images: {},
     
     init() {
@@ -21,10 +21,11 @@ const Game = {
         this.player = new Player(this.WORLD_SIZE/2, this.WORLD_SIZE/2);
         for(let i=0; i<30; i++) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
 
-        // LOAD ASSETS: 
-        // Note: Player assets are now automatically loaded inside entities.js!
+        // LOAD ASSETS
         this.loadAsset('bg', 'assets/grass.png');
         this.loadAsset('ghost', 'assets/sleepless_ghost.png');
+        // Pre-load common icons for loot if needed
+        this.loadAsset('gold_icon', 'assets/potion_mp.png'); // Fallback icon
 
         requestAnimationFrame((t) => this.loop(t));
     },
@@ -36,6 +37,11 @@ const Game = {
 
     loadAsset(key, src) {
         const img = new Image(); img.src = src; this.images[key] = img;
+    },
+
+    // --- NEW: LOOT SPAWNING ---
+    spawnLoot(x, y, type) {
+        this.lootItems.push(new LootItem(x, y, type));
     },
 
     handleScreenTap(e) {
@@ -63,11 +69,25 @@ const Game = {
         this.enemies.forEach(e => e.update(dt, this.player));
         this.enemies = this.enemies.filter(e => !e.isDead);
 
+        // --- NEW: LOOT PICKUP LOGIC ---
+        this.lootItems.forEach(item => {
+            item.life -= dt;
+            // Check if player is close enough to "vacuum" the loot
+            if (this.player.distanceTo(item) < 40) {
+                this.player.pickUpItem(item);
+                item.isPickedUp = true;
+            }
+        });
+        // Remove picked up or expired items
+        this.lootItems = this.lootItems.filter(item => !item.isPickedUp && item.life > 0);
+
         this.damageTexts.forEach(dtxt => { dtxt.y -= 30 * dt; dtxt.life -= dt; });
         this.damageTexts = this.damageTexts.filter(dtxt => dtxt.life > 0);
 
         if (this.enemies.length < 30) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
+        
         UI.updatePlayerStats(this.player);
+        UI.updateXpBar(this.player); // Keep XP bar in sync
     },
 
     draw() {
@@ -92,6 +112,27 @@ const Game = {
             }
         }
 
+        // --- NEW: DRAW LOOT ON THE GROUND ---
+        this.lootItems.forEach(item => {
+            const sx = item.x - this.camera.x; const sy = item.y - this.camera.y;
+            if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
+
+            // Draw Rarity Glow
+            let color = "#ffffff";
+            if (item.rarity === 'rare') color = "#3498db";
+            if (item.rarity === 'epic') color = "#9b59b6";
+            if (item.rarity === 'legendary') color = "#f1c40f";
+
+            this.ctx.save();
+            this.ctx.shadowBlur = 15;
+            this.ctx.shadowColor = color;
+            this.ctx.fillStyle = color;
+            this.ctx.beginPath();
+            this.ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+        });
+
         // Draw Enemies
         this.enemies.forEach(e => {
             const sx = e.x - this.camera.x; const sy = e.y - this.camera.y;
@@ -107,50 +148,27 @@ const Game = {
             this.ctx.fillStyle = '#f00'; this.ctx.fillRect(sx - 15, sy - e.radius - 10, 30 * (e.hp / e.maxHp), 4);
         });
 
-        // ----------------------------------------------------
-        // DRAW PLAYER (USING NEW IMAGE SEQUENCE)
-        // ----------------------------------------------------
+        // Draw Player
         const pScreenX = Math.round(this.player.x - this.camera.x);
         const pScreenY = Math.round(this.player.y - this.camera.y);
 
-        // Draw target circle
         if (this.player.target) {
             this.ctx.beginPath();
             this.ctx.ellipse(this.player.target.x - this.camera.x, this.player.target.y - this.camera.y + 10, 20, 10, 0, 0, Math.PI*2);
             this.ctx.strokeStyle = '#f00'; this.ctx.lineWidth = 2; this.ctx.stroke();
         }
 
-        // Get the current animation frame and sizes from entities.js
         let pDraw = this.player.getDrawInfo();
-
         if (pDraw && pDraw.image) {
             this.ctx.save();
-            
-            // Move canvas origin to the player's exact foot location on screen
             this.ctx.translate(pScreenX, pScreenY); 
-            
-            // Flip the canvas horizontally if facing left
-            if (!this.player.facingRight) {
-                this.ctx.scale(-1, 1); 
-            }
-
-            // Draw image relative to the translated origin.
-            // Anchored Center-X (-width/2) and Bottom-Y (-height)
-            this.ctx.drawImage(
-                pDraw.image, 
-                -pDraw.drawWidth / 2, 
-                -pDraw.drawHeight, 
-                pDraw.drawWidth, 
-                pDraw.drawHeight
-            );
-            
-            this.ctx.restore(); // Restore canvas so rest of game isn't drawn backwards
+            if (!this.player.facingRight) this.ctx.scale(-1, 1); 
+            this.ctx.drawImage(pDraw.image, -pDraw.drawWidth/2, -pDraw.drawHeight, pDraw.drawWidth, pDraw.drawHeight);
+            this.ctx.restore(); 
         } else {
-            // Fallback blue circle if images haven't loaded over the network yet
             this.ctx.beginPath(); this.ctx.arc(pScreenX, pScreenY, this.player.radius, 0, Math.PI * 2);
             this.ctx.fillStyle = '#00f'; this.ctx.fill();
         }
-        // ----------------------------------------------------
 
         // Draw Damage Text
         this.ctx.font = "bold 20px sans-serif"; this.ctx.textAlign = "center";
@@ -183,5 +201,35 @@ const Game = {
         requestAnimationFrame((t) => this.loop(t));
     }
 };
+
+// --- PATCHING THE UI OBJECT TO HANDLE NEW ELEMENTS ---
+// This ensures that the calls from entities.js actually find their targets in index.html
+if (typeof UI !== 'undefined') {
+    UI.updateXpBar = function(player) {
+        const fill = document.getElementById('exp-fill');
+        const text = document.getElementById('exp-text');
+        const levelBadge = document.getElementById('player-level');
+        
+        if (fill) {
+            const pct = (player.xp / player.maxXp) * 100;
+            fill.style.width = pct + "%";
+            if (text) text.innerText = `EXP ${pct.toFixed(3)}%`;
+        }
+        if (levelBadge) levelBadge.innerText = player.level;
+    };
+
+    UI.showLootNotification = function(message, rarityClass) {
+        const container = document.getElementById('loot-notification-container');
+        if (!container) return;
+
+        const el = document.createElement('div');
+        el.className = `loot-msg ${rarityClass}`;
+        el.innerText = message;
+        container.appendChild(el);
+
+        // Auto-remove the element after the CSS animation ends (3.5s)
+        setTimeout(() => el.remove(), 3500);
+    };
+}
 
 window.addEventListener('load', () => Game.init());
