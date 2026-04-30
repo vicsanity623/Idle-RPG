@@ -1,0 +1,19 @@
+/* Item Tooltip Styles */
+#item-tooltip {
+    position: fixed; /* Fixed to screen coordinates */
+    background: rgba(15, 15, 20, 0.95);
+    border: 2px solid #b89947;
+    border-radius: 4px;
+    padding: 10px;
+    color: #fff;
+    z-index: 9999;
+    pointer-events: none;
+    width: 160px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.9);
+    text-shadow: 1px 1px 0 #000;
+    transform: translate(-50%, -110%); /* Centers above finger */
+}
+#item-tooltip.hidden { display: none; }
+#tt-name { font-size: 14px; margin-bottom: 2px; }
+#tt-rarity { font-size: 10px; font-style: italic; margin-bottom: 5px; text-transform: capitalize; border-bottom: 1px solid #444; padding-bottom: 3px; }
+#tt-stats { font-size: 11px; color: #2ecc71; font-weight: bold; }
