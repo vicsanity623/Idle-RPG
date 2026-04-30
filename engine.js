@@ -7,7 +7,7 @@ const Game = {
     WORLD_SIZE: 3000, TILE_SIZE: 100,
     player: null, enemies: [], npcs: [], lootItems: [], projectiles: [], damageTexts: [], 
     kills: 0, images: {},
-    
+
     // --- NEW: REPEATABLE QUEST SYSTEM ---
     activeQuest: null,
     questList: [
@@ -48,6 +48,7 @@ const Game = {
         this.loadAsset('bg', 'assets/grass.png');
         this.loadAsset('ghost', 'assets/sleepless_ghost.png');
 
+        // Load saved data before starting loop
         this.loadGame();
 
         requestAnimationFrame((t) => this.loop(t));
@@ -109,6 +110,13 @@ const Game = {
                     // Give a new random quest
                     this.activeQuest = this.questList[Math.floor(Math.random() * this.questList.length)];
                     this.kills = 0; 
+                    
+                    const questBox = document.getElementById('quest-tracker');
+                    if (questBox) {
+                        questBox.style.display = 'block';
+                        questBox.classList.remove('quest-complete-glow');
+                    }
+                    
                     UI.showLootNotification(`Quest Accepted: ${this.activeQuest.title}`, "rarity-epic");
                     UI.updatePlayerStats(this.player);
                     this.saveGame();
@@ -327,7 +335,7 @@ if (typeof UI !== 'undefined') {
             slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; 
             if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
             
-            // --- NEW: LONG PRESS TOOLTIP LOGIC ---
+            // --- NEW: LONG PRESS TOOLTIP FOR INVENTORY ---
             slot.onpointerdown = (e) => {
                 this.isLongPress = false;
                 this.pressTimer = setTimeout(() => {
@@ -341,7 +349,7 @@ if (typeof UI !== 'undefined') {
                 if (!this.isLongPress) this.handleItemClick(item);
             };
             slot.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
-            slot.oncontextmenu = (e) => e.preventDefault(); // Stop mobile menu popup
+            slot.oncontextmenu = (e) => e.preventDefault(); 
             
             grid.appendChild(slot);
         });
@@ -353,7 +361,28 @@ if (typeof UI !== 'undefined') {
             if (el) {
                 el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''} slot-icon`;
                 el.innerHTML = item ? `<div class="item-label">${item.name[0]}</div>` : '';
-                if (item) equipAtk += (item.stats.attack || 0);
+                
+                if (item) {
+                    equipAtk += (item.stats.attack || 0);
+                    // --- NEW: UNEQUIP AND TOOLTIPS FOR EQUIPPED ITEMS ---
+                    el.onpointerdown = (e) => {
+                        this.isLongPress = false;
+                        this.pressTimer = setTimeout(() => {
+                            this.isLongPress = true;
+                            this.showTooltip(item, e);
+                        }, 400); 
+                    };
+                    el.onpointerup = (e) => {
+                        clearTimeout(this.pressTimer);
+                        this.hideTooltip();
+                        if (!this.isLongPress) this.handleItemClick(item); // Triggers Unequip
+                    };
+                    el.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
+                    el.oncontextmenu = (e) => e.preventDefault();
+                } else {
+                    // Clear events if slot is empty
+                    el.onpointerdown = null; el.onpointerup = null; el.onpointerleave = null; el.oncontextmenu = null;
+                }
             }
         });
         
@@ -365,25 +394,35 @@ if (typeof UI !== 'undefined') {
 
     UI.handleItemClick = function(item) {
         if (item.type === 'equipment') {
-            const oldItem = Game.player.equipment[item.slot];
-            Game.player.equipment[item.slot] = item;
-            Game.player.inventory = Game.player.inventory.filter(i => i !== item);
-            if (oldItem) Game.player.inventory.push(oldItem);
+            // Is it equipped?
+            const isEquipped = Object.values(Game.player.equipment).includes(item);
             
-            // --- NEW: FLOATING STAT TEXT ---
-            let statText = item.stats.attack ? `ATK +${item.stats.attack}` : `DEF +${item.stats.defense}`;
-            Game.spawnDamageText(Game.player.x, Game.player.y - 50, statText, "#f1c40f");
-            this.showLootNotification(`Equipped ${item.name}`, 'rarity-epic');
-            
+            if (isEquipped) {
+                // Unequip Logic
+                Game.player.equipment[item.slot] = null;
+                Game.player.inventory.push(item);
+                this.showLootNotification(`Unequipped ${item.name}`, 'rarity-common');
+            } else {
+                // Equip Logic
+                const oldItem = Game.player.equipment[item.slot];
+                Game.player.equipment[item.slot] = item;
+                Game.player.inventory = Game.player.inventory.filter(i => i !== item);
+                if (oldItem) Game.player.inventory.push(oldItem); // Swap
+                
+                // Floating text for stats
+                let statText = item.stats.attack ? `ATK +${item.stats.attack}` : `DEF +${item.stats.defense}`;
+                Game.spawnDamageText(Game.player.x, Game.player.y - 50, statText, "#f1c40f");
+                this.showLootNotification(`Equipped ${item.name}`, 'rarity-epic');
+            }
         } else if (item.name.includes("Health Potion")) {
             Game.player.hp = Math.min(Game.player.maxHp, Game.player.hp + 200);
-            Game.spawnDamageText(Game.player.x, Game.player.y - 50, "HP +200", "#2ecc71"); // Floating Text
+            Game.spawnDamageText(Game.player.x, Game.player.y - 50, "HP +200", "#2ecc71"); 
             item.count--;
             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
             
         } else if (item.name.includes("Mana Potion")) {
             Game.player.mp = Math.min(Game.player.maxMp, Game.player.mp + 100);
-            Game.spawnDamageText(Game.player.x, Game.player.y - 50, "MP +100", "#3498db"); // Floating Text
+            Game.spawnDamageText(Game.player.x, Game.player.y - 50, "MP +100", "#3498db"); 
             item.count--;
             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
         }
@@ -466,7 +505,6 @@ if (typeof UI !== 'undefined') {
         `;
     };
 
-    // --- NEW: UPDATED HUD BRIDGE FOR REPEATABLE QUESTS ---
     UI.updatePlayerStats = function(player) {
         const questBox = document.getElementById('quest-tracker');
         
@@ -478,14 +516,18 @@ if (typeof UI !== 'undefined') {
                 const qTitle = questBox.querySelector('.quest-title');
                 const qObj = questBox.querySelector('.quest-obj');
                 if (qTitle) qTitle.innerText = Game.activeQuest.title;
+                
+                // Inject current kills vs target
                 if (qObj) qObj.innerHTML = `${Game.activeQuest.obj} (<span id="quest-count">${Game.kills}</span>/${Game.activeQuest.target})`;
                 
                 if (Game.kills >= Game.activeQuest.target) {
                     questBox.classList.add('quest-complete-glow');
                     // Target just the content, so we don't delete the auto-path indicator
-                    questBox.querySelector('#quest-content').innerHTML = `<h4 class="quest-title" style="color:#fff;">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: ${Game.activeQuest.g} Gold & ${Game.activeQuest.xp} XP</p>`;
+                    const qContent = questBox.querySelector('#quest-content');
+                    if (qContent) {
+                        qContent.innerHTML = `<h4 class="quest-title" style="color:#fff;">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: ${Game.activeQuest.g} Gold & ${Game.activeQuest.xp} XP</p>`;
+                    }
                     
-                    // Hide the auto-path indicator since the quest is done
                     const ind = document.getElementById('auto-quest-indicator');
                     if (ind) ind.classList.add('hidden');
                     
