@@ -40,9 +40,11 @@
                 <canvas id="minimapCanvas"></canvas>
             </div>
             <!-- Clickable Quest Tracker for Auto-Pathing -->
-            <div id="quest-tracker" onclick="UI.startAutoQuest()">
-                <h4 class="quest-title">[Battle] Level Achievement</h4>
-                <p class="quest-obj">Kill Sleepless Ghost (<span id="quest-count">0</span>/40)</p>
+            <div id="quest-tracker" style="display: none;">
+                <div id="quest-content">
+                    <h4 class="quest-title"></h4>
+                    <p class="quest-obj"></p>
+                </div>
                 <div id="auto-quest-indicator" class="hidden">Auto-Pathing...</div>
             </div>
         </div>
