@@ -52,11 +52,16 @@ const UI = {
             base.setPointerCapture(pointerId);
         });
 
-        base.addEventListener('pointermove', (e) => {
-            if (this.joystick.active && e.pointerId === pointerId) {
-                updateKnob(e.clientX, e.clientY);
-            }
-        });
+let lastUpdate = 0;
+base.addEventListener('pointermove', (e) => {
+    if (this.joystick.active && e.pointerId === pointerId) {
+        const now = performance.now();
+        if (now - lastUpdate > 16) { // 16ms = 60fps
+            updateKnob(e.clientX, e.clientY);
+            lastUpdate = now;
+        }
+    }
+});
 
         const resetJoy = (e) => {
             if (e.pointerId === pointerId) {
