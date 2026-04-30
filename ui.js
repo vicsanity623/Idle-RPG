@@ -2,7 +2,7 @@ const UI = {
     joystick: { active: false, vector: { x: 0, y: 0 } },
 
     init() {
-        this.populateInventory();
+        InventoryManager.init(); // Inventory management moved to InventoryManager.js
         this.populateStats();
         this.setupJoystick();
         
@@ -67,10 +67,6 @@ const UI = {
         document.getElementById('hp-fill').style.width = Math.max(0, (player.hp / player.maxHp) * 100) + '%';
         document.getElementById('hp-text').innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
         document.getElementById('quest-count').innerText = Game.kills;
-    },
-    populateInventory() {
-        const grid = document.getElementById('inv-grid');
-        for (let i = 0; i < 40; i++) { grid.appendChild(Object.assign(document.createElement('div'), {className: 'inv-slot'})); }
     },
     populateStats() {
         const stats = { "ATK": 1420, "DEF": 850, "Max HP": 1000, "Crit Rate": "15%" };
