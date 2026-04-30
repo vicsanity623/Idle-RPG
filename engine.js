@@ -121,7 +121,13 @@ const Game = {
                     UI.updatePlayerStats(this.player);
                     this.saveGame();
                 } else {
-                    UI.showLootNotification(`${npc.name}: "Finish your task first!"`, "rarity-common");
+                    // Allow abandoning the current quest
+                    UI.showLootNotification(`${npc.name}: "Quest abandoned: ${this.activeQuest.title}"`, "rarity-common");
+                    this.activeQuest = null;
+                    this.kills = 0; // Reset kills for the next quest
+                    const questBox = document.getElementById('quest-tracker');
+                    if (questBox) questBox.style.display = 'none';
+                    this.saveGame();
                 }
                 return;
             }
