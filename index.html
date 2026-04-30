@@ -23,7 +23,7 @@
             <!-- Updated to use the new ninja girl idle frame as her UI portrait -->
             <div class="portrait"><img src="assets/idle/idle00.png" alt="P" onerror="this.style.display='none'"></div>
             <div class="status-bars">
-                <div class="level-badge">40</div>
+                <div class="level-badge" id="player-level">1</div> <!-- Added ID for dynamic updates -->
                 <div class="bars-container">
                     <div class="bar hp-bar"><div id="hp-fill" class="fill"></div><span id="hp-text">1000/1000</span></div>
                     <div class="bar mp-bar"><div id="mp-fill" class="fill"></div></div>
@@ -65,6 +65,15 @@
             <div class="spacer"></div>
             <div class="action-slot skill" id="btn-attack"><img src="assets/skill_attack.png" onerror="this.style.display='none'"></div>
             <div class="action-slot toggle-btn" id="btn-auto">AUTO<br><span id="auto-status">OFF</span></div>
+        </div>
+
+        <!-- Loot Notification Log (New) -->
+        <div id="loot-notification-container"></div>
+
+        <!-- Bottom XP Bar (New: Matches reference video) -->
+        <div id="exp-bar-container">
+            <div id="exp-fill"></div>
+            <div id="exp-text">EXP 0.000%</div>
         </div>
 
         <!-- Floating Modals -->
