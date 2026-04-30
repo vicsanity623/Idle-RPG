@@ -303,7 +303,11 @@ class Projectile {
         this.life -= dt;
 
         if (Math.hypot(this.target.x - this.x, this.target.y - this.y) < 25) {
+            const wasDead = this.target.isDead;
             this.target.takeDamage(this.damage, Game.player);
+            if (!wasDead && this.target.isDead && Game.activeQuest && this.target.name === Game.activeQuest.obj.replace("Kill ", "")) {
+                Game.kills++;
+            }
             this.life = 0;
         }
     }
