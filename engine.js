@@ -482,7 +482,13 @@ if (typeof UI !== 'undefined') {
                 
                 if (Game.kills >= Game.activeQuest.target) {
                     questBox.classList.add('quest-complete-glow');
-                    questBox.innerHTML = `<h4 class="quest-title">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: ${Game.activeQuest.g} Gold & ${Game.activeQuest.xp} XP</p>`;
+                    // Target just the content, so we don't delete the auto-path indicator
+                    questBox.querySelector('#quest-content').innerHTML = `<h4 class="quest-title" style="color:#fff;">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: ${Game.activeQuest.g} Gold & ${Game.activeQuest.xp} XP</p>`;
+                    
+                    // Hide the auto-path indicator since the quest is done
+                    const ind = document.getElementById('auto-quest-indicator');
+                    if (ind) ind.classList.add('hidden');
+                    
                     questBox.onclick = () => UI.claimQuest(player);
                 } else {
                     questBox.classList.remove('quest-complete-glow');
