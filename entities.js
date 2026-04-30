@@ -305,25 +305,29 @@ class LootItem {
         else if (rarityRoll > 0.6) this.rarity = 'rare';
         else this.rarity = 'common';
 
-        switch(type) {
-            case 'gold': 
-                this.name = "Gold"; this.value = Math.floor(Math.random() * 50) + 10;
-                break;
-            case 'equipment':
-                const slots = ["head", "armor", "hands", "legs", "cape", "amulet", "ring1", "ring2"];
-                this.slot = slots[Math.floor(Math.random() * slots.length)];
-                this.name = this.rarity.charAt(0).toUpperCase() + this.rarity.slice(1) + " " + this.slot.toUpperCase();
-                this.stats = { attack: Math.floor(Math.random() * 20), defense: Math.floor(Math.random() * 10) };
-                this.stackable = false;
-                break;
-            case 'rune':
-                this.name = "Ancient Rune"; this.count = 1;
-                break;
-            case 'potion':
-                this.name = Math.random() > 0.5 ? "Health Potion" : "Mana Potion";
-                this.count = 1;
-                break;
-        }
+switch(type) {
+    case 'gold': 
+        this.name = "Gold"; this.value = Math.floor(Math.random() * 50) + 10; this.stats = { attack: 0, defense: 0 };
+        break;
+    case 'equipment':
+        const slots = ["head", "armor", "hands", "legs", "cape", "amulet", "ring1", "ring2"];
+        this.slot = slots[Math.floor(Math.random() * slots.length)];
+        this.name = this.rarity.charAt(0).toUpperCase() + this.rarity.slice(1) + " " + this.slot.toUpperCase();
+        this.stats = { attack: Math.floor(Math.random() * 20), defense: Math.floor(Math.random() * 10) };
+        this.stackable = false;
+        this.value = 0; // Assign a default value for equipment
+        break;
+    case 'rune':
+        this.name = "Ancient Rune"; this.count = 1; this.value = 10; this.stats = { attack: 0, defense: 0 };
+        break;
+    case 'potion':
+        this.name = Math.random() > 0.5 ? "Health Potion" : "Mana Potion";
+        this.count = 1; this.value = 5; this.stats = { attack: 0, defense: 0 };
+        break;
+    default:
+        this.value = 0; this.stats = { attack: 0, defense: 0 };
+        break;
+}
     }
 }
 
