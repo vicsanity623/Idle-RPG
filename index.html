@@ -136,10 +136,17 @@
 
         <div id="stats-modal" class="ui-modal hidden">
             <div class="modal-header">
-                <h3>Character Stats</h3>
+                <h3>Ongoing Effects & Stats</h3>
                 <button class="close-btn" onclick="UI.toggleModal('stats-modal')">X</button>
             </div>
             <div class="modal-body" id="stats-list"></div>
+        </div>
+
+        <!-- NEW: Item Tooltip for Long Press -->
+        <div id="item-tooltip" class="hidden">
+            <h4 id="tt-name">Item Name</h4>
+            <div id="tt-rarity">Rarity</div>
+            <div id="tt-stats">Stats</div>
         </div>
     </div>
 
