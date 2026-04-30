@@ -6,6 +6,7 @@ const ASSETS_TO_CACHE = [
   './ui.js',
   './entities.js',
   './engine.js',
+  './manifest.json'
 ];
 
 // Install Event: Cache files
