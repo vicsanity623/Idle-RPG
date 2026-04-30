@@ -120,6 +120,21 @@ body, html { width: 100%; height: 100%; background: #000; overflow: hidden; touc
 .item-label { color: #fff; font-weight: bold; font-size: 18px; text-shadow: 1px 1px 2px #000; }
 .eq-slot { display: flex; align-items: center; justify-content: center; }
 
+/* Quest Completion Glow Effect */
+.quest-complete-glow {
+    background: rgba(212, 175, 55, 0.3) !important;
+    border: 2px solid #f1c40f !important;
+    box-shadow: 0 0 15px #f1c40f;
+    animation: goldPulse 1.5s infinite;
+    cursor: pointer;
+}
+
+@keyframes goldPulse {
+    0% { box-shadow: 0 0 5px #f1c40f; }
+    50% { box-shadow: 0 0 20px #f1c40f; }
+    100% { box-shadow: 0 0 5px #f1c40f; }
+}
+
 @keyframes lootFadeIn {
     0% { transform: translateX(-20px); opacity: 0; }
     10% { transform: translateX(0); opacity: 1; }
