@@ -16,7 +16,7 @@ body, html { width: 100%; height: 100%; background: #000; overflow: hidden; touc
 .mp-bar .fill { background: linear-gradient(90deg, #00008b, #1e90ff); width: 100%; height: 100%; transition: width 0.2s; }
 #hp-text { position: absolute; width: 100%; text-align: center; top: 0; font-size: 10px; color: white; line-height: 14px; text-shadow: 1px 1px 0 #000; }
 .buffs { display: flex; gap: 2px; margin-top: 5px; }
-.buff-icon { width: 20px; height: 20px; border: 1px solid #666; }
+.buff-icon { width: 20px; height: 20px; border: 1px solid #666; background: #333; }
 
 #right-hud { position: absolute; top: 10px; right: 10px; z-index: 10; pointer-events: none; text-align: right; }
 #minimap-container { width: 150px; height: 150px; border: 2px solid #b89947; background: rgba(0,0,0,0.5); border-radius: 5px; overflow: hidden; margin-bottom: 10px; pointer-events: auto; }
@@ -26,16 +26,33 @@ body, html { width: 100%; height: 100%; background: #000; overflow: hidden; touc
 .quest-obj { font-size: 11px; }
 
 #menu-toggles { position: absolute; top: 180px; right: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 10; }
-.menu-btn { background: rgba(30, 30, 30, 0.8); border: 1px solid #666; color: #aaa; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-size: 12px; }
+.menu-btn { background: rgba(30, 30, 30, 0.8); border: 1px solid #666; color: #aaa; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-size: 12px; pointer-events: auto; }
 .menu-btn:hover { border-color: #b89947; color: #fff; }
+
+/* Fixed Virtual Joystick */
+#joystick-base {
+    position: absolute; bottom: 30px; left: 30px;
+    width: 130px; height: 130px;
+    background: radial-gradient(circle, rgba(50,50,50,0.6) 0%, rgba(10,10,10,0.8) 100%);
+    border: 2px solid rgba(184, 153, 71, 0.5);
+    border-radius: 50%; z-index: 50; touch-action: none;
+}
+#joystick-knob {
+    position: absolute; top: 50%; left: 50%;
+    width: 50px; height: 50px;
+    background: radial-gradient(circle, #ddd 0%, #777 100%);
+    border: 2px solid #333; border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
 
 /* Action Bar */
 #action-bar { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 10; }
-.action-slot { width: 50px; height: 50px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 8px; position: relative; cursor: pointer; }
-.action-slot img { width: 100%; height: 100%; border-radius: 6px; }
-.action-slot span { position: absolute; bottom: 2px; right: 4px; color: white; font-size: 10px; text-shadow: 1px 1px #000; }
-.spacer { width: 50px; }
-.toggle-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: bold; border-color: #b89947; background: rgba(100, 80, 20, 0.5); }
+.action-slot { width: 60px; height: 60px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 50%; position: relative; cursor: pointer; pointer-events: auto; }
+.action-slot img { width: 100%; height: 100%; border-radius: 50%; }
+.action-slot span { position: absolute; bottom: 2px; right: 10px; color: white; font-size: 12px; text-shadow: 1px 1px #000; font-weight: bold;}
+.spacer { width: 20px; }
+.toggle-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: bold; border-color: #b89947; background: rgba(100, 80, 20, 0.5); border-radius: 8px;}
 
 /* Modals */
 .ui-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; max-width: 800px; height: 70%; background: rgba(15, 15, 20, 0.95); border: 2px solid #b89947; box-shadow: 0 0 20px rgba(0,0,0,0.8); z-index: 100; display: flex; flex-direction: column; }
