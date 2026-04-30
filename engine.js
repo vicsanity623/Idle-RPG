@@ -21,9 +21,9 @@ const Game = {
         this.player = new Player(this.WORLD_SIZE/2, this.WORLD_SIZE/2);
         for(let i=0; i<30; i++) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
 
-        // LOAD ASSETS: Assure these names match your files in the /assets folder
+        // LOAD ASSETS: 
+        // Note: Player assets are now automatically loaded inside entities.js!
         this.loadAsset('bg', 'assets/grass.png');
-        this.loadAsset('player_sheet', 'assets/mango-full-sheet-sheet.png'); // <-- YOUR SPRITE SHEET
         this.loadAsset('ghost', 'assets/sleepless_ghost.png');
 
         requestAnimationFrame((t) => this.loop(t));
@@ -107,8 +107,9 @@ const Game = {
             this.ctx.fillStyle = '#f00'; this.ctx.fillRect(sx - 15, sy - e.radius - 10, 30 * (e.hp / e.maxHp), 4);
         });
 
-        // Draw Player with Canvas Flipping
-        const sheet = this.images['player_sheet'];
+        // ----------------------------------------------------
+        // DRAW PLAYER (USING NEW IMAGE SEQUENCE)
+        // ----------------------------------------------------
         const pScreenX = Math.round(this.player.x - this.camera.x);
         const pScreenY = Math.round(this.player.y - this.camera.y);
 
@@ -119,32 +120,37 @@ const Game = {
             this.ctx.strokeStyle = '#f00'; this.ctx.lineWidth = 2; this.ctx.stroke();
         }
 
-        if (sheet && sheet.complete && sheet.naturalWidth > 0) {
-            const conf = this.player.animConfig;
-            const anim = conf[this.player.state];
-            
-            const srcX = this.player.currentFrame * conf.frameWidth;
-            const srcY = anim.row * conf.frameHeight;
+        // Get the current animation frame and sizes from entities.js
+        let pDraw = this.player.getDrawInfo();
 
+        if (pDraw && pDraw.image) {
             this.ctx.save();
-            this.ctx.translate(pScreenX, pScreenY); // Move origin to player
             
+            // Move canvas origin to the player's exact foot location on screen
+            this.ctx.translate(pScreenX, pScreenY); 
+            
+            // Flip the canvas horizontally if facing left
             if (!this.player.facingRight) {
-                this.ctx.scale(-1, 1); // FLIP CANVAS HORIZONTALLY
+                this.ctx.scale(-1, 1); 
             }
 
-            // Draw relative to translated origin (-width/2 centers it)
+            // Draw image relative to the translated origin.
+            // Anchored Center-X (-width/2) and Bottom-Y (-height)
             this.ctx.drawImage(
-                sheet, 
-                srcX, srcY, conf.frameWidth, conf.frameHeight,
-                -conf.frameWidth / 2, -conf.frameHeight / 2, conf.frameWidth, conf.frameHeight
+                pDraw.image, 
+                -pDraw.drawWidth / 2, 
+                -pDraw.drawHeight, 
+                pDraw.drawWidth, 
+                pDraw.drawHeight
             );
             
             this.ctx.restore(); // Restore canvas so rest of game isn't drawn backwards
         } else {
+            // Fallback blue circle if images haven't loaded over the network yet
             this.ctx.beginPath(); this.ctx.arc(pScreenX, pScreenY, this.player.radius, 0, Math.PI * 2);
             this.ctx.fillStyle = '#00f'; this.ctx.fill();
         }
+        // ----------------------------------------------------
 
         // Draw Damage Text
         this.ctx.font = "bold 20px sans-serif"; this.ctx.textAlign = "center";
