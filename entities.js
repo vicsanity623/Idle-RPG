@@ -12,16 +12,24 @@ class Player extends Entity {
         this.hp = 1000; this.maxHp = 1000;
         this.attackRange = 120; 
         this.autoAttack = false;
+        this.autoQuest = false; // --- NEW: Auto-Pathing Toggle ---
 
-        // --- NEW: LEVELING & LOOT STATS ---
+        // --- NEW: LEVELING, GOLD & INVENTORY ---
         this.level = 1;
         this.xp = 0;
-        this.maxXp = 500; // XP needed for Level 2
+        this.maxXp = 500;
         this.gold = 0;
-        this.inventory = [];
+        this.inventory = []; // Stores stackable items and unequipped gear
+        
+        // --- NEW: EQUIPMENT SLOTS ---
+        this.equipment = {
+            head: null, cape: null, amulet: null,
+            armor: null, hands: null, legs: null,
+            ring1: null, ring2: null
+        };
 
-        // --- ANIMATION STATE MACHINE ---
-        this.state = 'idle'; // 'idle', 'run', 'attack'
+        // --- ANIMATION STATE ---
+        this.state = 'idle'; 
         this.facingRight = true; 
         this.spriteScale = 0.25; 
         
@@ -42,33 +50,46 @@ class Player extends Entity {
         this.attackFired = false;
     }
 
-    // --- NEW: PROGRESSION METHODS ---
+    // --- NEW: ITEM PICKUP WITH STACKING ---
+    pickUpItem(item) {
+        if (item.type === 'gold') {
+            this.gold += item.value;
+            UI.showLootNotification(`+${item.value} Gold`, 'rarity-legendary');
+        } else if (item.stackable) {
+            // Check if we already have this consumable
+            let existing = this.inventory.find(i => i.name === item.name);
+            if (existing) {
+                existing.count += (item.count || 1);
+            } else {
+                item.count = (item.count || 1);
+                this.inventory.push(item);
+            }
+            UI.showLootNotification(`Picked up ${item.name}`, `rarity-${item.rarity}`);
+        } else {
+            // Equipment or Unique items
+            this.inventory.push(item);
+            UI.showLootNotification(`Found ${item.name}`, `rarity-${item.rarity}`);
+        }
+        
+        // Trigger UI Refresh
+        UI.updateInventory(this);
+    }
+
+    // --- PROGRESSION ---
     gainXp(amount) {
         this.xp += amount;
-        if (this.xp >= this.maxXp) {
-            this.levelUp();
-        }
-        UI.updateXpBar(this); // We will define this in engine/ui
+        if (this.xp >= this.maxXp) this.levelUp();
+        UI.updateXpBar(this);
     }
 
     levelUp() {
         this.level++;
         this.xp -= this.maxXp;
-        this.maxXp = Math.floor(this.maxXp * 1.5); // Increase curve
+        this.maxXp = Math.floor(this.maxXp * 1.5);
         this.maxHp += 100;
-        this.hp = this.maxHp; // Heal on level up
+        this.hp = this.maxHp;
         Game.spawnDamageText(this.x, this.y - 50, "LEVEL UP!", "#f1c40f");
         UI.updatePlayerStats(this);
-    }
-
-    pickUpItem(item) {
-        if (item.type === 'gold') {
-            this.gold += item.value;
-            UI.showLootNotification(`Gained ${item.value} Gold`, 'rarity-legendary');
-        } else {
-            this.inventory.push(item);
-            UI.showLootNotification(`Found ${item.name}`, `rarity-${item.rarity}`);
-        }
     }
 
     loadFrames(folder, prefix, frameCount) {
@@ -104,13 +125,14 @@ class Player extends Entity {
         let currentTiming = this.animTimings[this.state];
         if (!currentAnimArray) return;
 
+        // 1. Animation Logic
         this.animTimer += dt;
         if (this.animTimer >= currentTiming.speed) {
             this.currentFrame++;
             this.animTimer = 0;
             if (this.currentFrame >= currentAnimArray.length) {
                 if (this.state === 'attack') {
-                    this.state = UI.joystick.active ? 'run' : 'idle';
+                    this.state = (UI.joystick.active || this.autoQuest) ? 'run' : 'idle';
                     this.attackFired = false; 
                     this.currentFrame = 0;
                 } else {
@@ -119,22 +141,25 @@ class Player extends Entity {
             }
         }
 
+        // 2. Movement Logic (Manual or Auto-Quest)
         if (this.state !== 'attack') {
             if (UI.joystick.active) {
+                this.autoQuest = false; // Manual input cancels auto-quest
                 this.state = 'run';
                 this.x += UI.joystick.vector.x * this.speed * dt;
                 this.y += UI.joystick.vector.y * this.speed * dt;
-                if (UI.joystick.vector.x > 0) this.facingRight = true;
-                if (UI.joystick.vector.x < 0) this.facingRight = false;
-                if (this.target && this.distanceTo(this.target) > this.attackRange + 50) this.target = null;
+                this.facingRight = UI.joystick.vector.x >= 0;
+            } else if (this.autoQuest) {
+                this.handleAutoQuestLogic(dt, enemies);
             } else {
                 this.state = 'idle';
             }
         }
 
-        if (this.autoAttack && !this.target && this.state !== 'attack') {
+        // 3. Combat logic
+        if ((this.autoAttack || this.autoQuest) && !this.target && this.state !== 'attack') {
             let closest = null; let minDist = Infinity;
-            enemies.forEach(e => { let d = this.distanceTo(e); if (d < 300 && d < minDist) { minDist = d; closest = e; } });
+            enemies.forEach(e => { let d = this.distanceTo(e); if (d < 400 && d < minDist) { minDist = d; closest = e; } });
             if (closest) this.target = closest;
         }
 
@@ -146,6 +171,7 @@ class Player extends Entity {
             }
         }
 
+        // 4. Damage Frame
         if (this.state === 'attack' && this.currentFrame === Math.floor(currentAnimArray.length / 2) && !this.attackFired) {
             this.attackFired = true; 
             enemies.forEach(e => {
@@ -160,18 +186,31 @@ class Player extends Entity {
         }
     }
 
+    // --- NEW: AUTO QUEST PATHING ---
+    handleAutoQuestLogic(dt, enemies) {
+        if (!this.target) {
+            // If no target, move toward a random spot in the world or stay idle
+            this.state = 'idle';
+            return;
+        }
+
+        this.state = 'run';
+        const dist = this.distanceTo(this.target);
+        if (dist > this.attackRange - 20) {
+            const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+            this.x += Math.cos(angle) * this.speed * dt;
+            this.y += Math.sin(angle) * this.speed * dt;
+            this.facingRight = Math.cos(angle) >= 0;
+        }
+    }
+
     forceAttack() {
         if (this.state === 'attack') return; 
         this.state = 'attack';
         this.currentFrame = 0;
         this.animTimer = 0;
         this.attackFired = false;
-        if (!UI.joystick.active && Game.enemies.length > 0) {
-            let closest = Game.enemies.reduce((p, c) => this.distanceTo(c) < this.distanceTo(p) ? c : p);
-            if (this.distanceTo(closest) < this.attackRange + 50) {
-                this.facingRight = (closest.x > this.x);
-            }
-        }
+        if (this.target) this.facingRight = this.target.x > this.x;
     }
 }
 
@@ -213,50 +252,52 @@ class Enemy extends Entity {
         if (this.hp <= 0 && !this.isDead) { 
             this.isDead = true; 
             Game.kills++; 
-            source.gainXp(100); // Reward player
+            source.gainXp(100); 
             this.dropLoot();
         }
     }
 
-    // --- NEW: LOOT DROP LOGIC ---
     dropLoot() {
         const roll = Math.random();
-        if (roll < 0.7) Game.spawnLoot(this.x, this.y, 'gold');
-        if (roll < 0.1) Game.spawnLoot(this.x, this.y, 'equipment');
-        if (roll < 0.05) Game.spawnLoot(this.x, this.y, 'rune');
-        if (roll < 0.15) Game.spawnLoot(this.x, this.y, 'potion');
+        if (roll < 0.8) Game.spawnLoot(this.x, this.y, 'gold');
+        if (roll < 0.15) Game.spawnLoot(this.x, this.y, 'equipment');
+        if (roll < 0.08) Game.spawnLoot(this.x, this.y, 'rune');
+        if (roll < 0.2) Game.spawnLoot(this.x, this.y, 'potion');
     }
 }
 
-// --- NEW CLASS: LOOT ITEM ---
+// --- NEW LOOT ITEM CONFIGURATION ---
 class LootItem {
     constructor(x, y, type) {
         this.x = x; this.y = y; this.type = type;
         this.radius = 15;
         this.isPickedUp = false;
-        this.life = 60; // Despawn after 60 seconds
+        this.life = 60;
+        this.stackable = (type === 'gold' || type === 'potion' || type === 'rune');
         
-        // Randomize Rarity & Values
         const rarityRoll = Math.random();
-        if (rarityRoll > 0.95) this.rarity = 'legendary';
-        else if (rarityRoll > 0.8) this.rarity = 'epic';
-        else if (rarityRoll > 0.5) this.rarity = 'rare';
+        if (rarityRoll > 0.98) this.rarity = 'legendary';
+        else if (rarityRoll > 0.85) this.rarity = 'epic';
+        else if (rarityRoll > 0.6) this.rarity = 'rare';
         else this.rarity = 'common';
 
         switch(type) {
             case 'gold': 
-                this.name = "Gold Pieces";
-                this.value = Math.floor(Math.random() * 50) + 10;
+                this.name = "Gold"; this.value = Math.floor(Math.random() * 50) + 10;
                 break;
             case 'equipment':
-                const items = ["Ninja Blade", "Shadow Tunic", "Swift Boots", "Iron Ring"];
-                this.name = items[Math.floor(Math.random()*items.length)];
+                const slots = ["head", "armor", "hands", "legs", "cape", "amulet", "ring1", "ring2"];
+                this.slot = slots[Math.floor(Math.random() * slots.length)];
+                this.name = this.rarity.charAt(0).toUpperCase() + this.rarity.slice(1) + " " + this.slot.toUpperCase();
+                this.stats = { attack: Math.floor(Math.random() * 20), defense: Math.floor(Math.random() * 10) };
+                this.stackable = false;
                 break;
             case 'rune':
-                this.name = "Mystic Rune";
+                this.name = "Ancient Rune"; this.count = 1;
                 break;
             case 'potion':
-                this.name = "Health Elixir";
+                this.name = Math.random() > 0.5 ? "Health Potion" : "Mana Potion";
+                this.count = 1;
                 break;
         }
     }
