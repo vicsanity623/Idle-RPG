@@ -4,15 +4,9 @@ const Game = {
     lastTime: 0,
     camera: { x: 0, y: 0, width: 0, height: 0 },
     
-    WORLD_SIZE: 3000,
-    TILE_SIZE: 100,
-    player: null,
-    enemies: [],
-    projectiles: [],
-    damageTexts: [],
-    kills: 0,
-    
-    images: {},
+    WORLD_SIZE: 3000, TILE_SIZE: 100,
+    player: null, enemies: [], damageTexts: [],
+    kills: 0, images: {},
     
     init() {
         this.canvas = document.getElementById('gameCanvas');
@@ -22,36 +16,26 @@ const Game = {
         
         this.resize();
         window.addEventListener('resize', () => this.resize());
-        
-        // Tapping screen is now purely for targeting enemies, movement is joystick-only
         this.canvas.addEventListener('pointerdown', (e) => this.handleScreenTap(e));
 
         this.player = new Player(this.WORLD_SIZE/2, this.WORLD_SIZE/2);
-        
-        for(let i=0; i<30; i++) {
-            this.enemies.push(new Enemy(Math.random() * this.WORLD_SIZE, Math.random() * this.WORLD_SIZE));
-        }
+        for(let i=0; i<30; i++) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
 
-        // LOAD ASSETS
+        // LOAD ASSETS: Assure these names match your files in the /assets folder
         this.loadAsset('bg', 'assets/grass.png');
-        this.loadAsset('player_spritesheet', 'assets/player_spritesheet.png');
+        this.loadAsset('player_sheet', 'assets/mango-full-sheet-sheet.png'); // <-- YOUR SPRITE SHEET
         this.loadAsset('ghost', 'assets/sleepless_ghost.png');
-        this.loadAsset('missile', 'assets/magic_missile.png');
 
         requestAnimationFrame((t) => this.loop(t));
     },
 
     resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.camera.width = this.canvas.width;
-        this.camera.height = this.canvas.height;
+        this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight;
+        this.camera.width = this.canvas.width; this.camera.height = this.canvas.height;
     },
 
     loadAsset(key, src) {
-        const img = new Image();
-        img.src = src;
-        this.images[key] = img;
+        const img = new Image(); img.src = src; this.images[key] = img;
     },
 
     handleScreenTap(e) {
@@ -62,51 +46,34 @@ const Game = {
         let clickedEnemy = null;
         for (let enemy of this.enemies) {
             if (!enemy.isDead && enemy.distanceTo({x: worldX, y: worldY}) < enemy.radius + 30) {
-                clickedEnemy = enemy;
-                break;
+                clickedEnemy = enemy; break;
             }
         }
-        // Set target, or clear target if clicking empty ground
         this.player.target = clickedEnemy; 
     },
 
-    fireProjectile(source, target, assetKey) {
-        this.projectiles.push(new Projectile(source, target, 600, assetKey));
-    },
-
-    spawnDamageText(x, y, text, color) {
-        this.damageTexts.push({ x, y, text, color, life: 1.0 });
-    },
+    spawnDamageText(x, y, text, color) { this.damageTexts.push({ x, y, text, color, life: 1.0 }); },
 
     update(dt) {
         this.player.update(dt, this.enemies);
         
-        // Follow Player
-        this.camera.x = this.player.x - this.camera.width / 2;
-        this.camera.y = this.player.y - this.camera.height / 2;
-        this.camera.x = Math.max(0, Math.min(this.camera.x, this.WORLD_SIZE - this.camera.width));
-        this.camera.y = Math.max(0, Math.min(this.camera.y, this.WORLD_SIZE - this.camera.height));
+        this.camera.x = Math.max(0, Math.min(this.player.x - this.camera.width / 2, this.WORLD_SIZE - this.camera.width));
+        this.camera.y = Math.max(0, Math.min(this.player.y - this.camera.height / 2, this.WORLD_SIZE - this.camera.height));
 
         this.enemies.forEach(e => e.update(dt, this.player));
         this.enemies = this.enemies.filter(e => !e.isDead);
 
-        this.projectiles.forEach(p => p.update(dt));
-        this.projectiles = this.projectiles.filter(p => !p.isDead);
-
         this.damageTexts.forEach(dtxt => { dtxt.y -= 30 * dt; dtxt.life -= dt; });
         this.damageTexts = this.damageTexts.filter(dtxt => dtxt.life > 0);
 
-        if (this.enemies.length < 30) {
-             this.enemies.push(new Enemy(Math.random() * this.WORLD_SIZE, Math.random() * this.WORLD_SIZE));
-        }
-
+        if (this.enemies.length < 30) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
         UI.updatePlayerStats(this.player);
     },
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw Culling Background
+        // Draw Background
         const startCol = Math.max(0, Math.floor(this.camera.x / this.TILE_SIZE));
         const endCol = Math.min(this.WORLD_SIZE / this.TILE_SIZE, startCol + (this.camera.width / this.TILE_SIZE) + 1);
         const startRow = Math.max(0, Math.floor(this.camera.y / this.TILE_SIZE));
@@ -125,72 +92,67 @@ const Game = {
             }
         }
 
-        // Standard Sprite Drawer (Enemies/Projectiles)
-        const drawStaticSprite = (entity, imgKey, fallbackColor, drawHP = false) => {
-            const sx = entity.x - this.camera.x;
-            const sy = entity.y - this.camera.y;
+        // Draw Enemies
+        this.enemies.forEach(e => {
+            const sx = e.x - this.camera.x; const sy = e.y - this.camera.y;
             if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
-
-            if (this.images[imgKey] && this.images[imgKey].complete && this.images[imgKey].naturalWidth > 0) {
-                this.ctx.drawImage(this.images[imgKey], sx - entity.radius, sy - entity.radius, entity.radius*2, entity.radius*2);
+            
+            if (this.images['ghost'] && this.images['ghost'].complete && this.images['ghost'].naturalWidth > 0) {
+                this.ctx.drawImage(this.images['ghost'], sx - e.radius, sy - e.radius, e.radius*2, e.radius*2);
             } else {
-                this.ctx.beginPath(); this.ctx.arc(sx, sy, entity.radius, 0, Math.PI * 2);
-                this.ctx.fillStyle = fallbackColor; this.ctx.fill();
+                this.ctx.beginPath(); this.ctx.arc(sx, sy, e.radius, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#888'; this.ctx.fill();
+            }
+            this.ctx.fillStyle = '#000'; this.ctx.fillRect(sx - 15, sy - e.radius - 10, 30, 4);
+            this.ctx.fillStyle = '#f00'; this.ctx.fillRect(sx - 15, sy - e.radius - 10, 30 * (e.hp / e.maxHp), 4);
+        });
+
+        // Draw Player with Canvas Flipping
+        const sheet = this.images['player_sheet'];
+        const pScreenX = Math.round(this.player.x - this.camera.x);
+        const pScreenY = Math.round(this.player.y - this.camera.y);
+
+        // Draw target circle
+        if (this.player.target) {
+            this.ctx.beginPath();
+            this.ctx.ellipse(this.player.target.x - this.camera.x, this.player.target.y - this.camera.y + 10, 20, 10, 0, 0, Math.PI*2);
+            this.ctx.strokeStyle = '#f00'; this.ctx.lineWidth = 2; this.ctx.stroke();
+        }
+
+        if (sheet && sheet.complete && sheet.naturalWidth > 0) {
+            const conf = this.player.animConfig;
+            const anim = conf[this.player.state];
+            
+            const srcX = this.player.currentFrame * conf.frameWidth;
+            const srcY = anim.row * conf.frameHeight;
+
+            this.ctx.save();
+            this.ctx.translate(pScreenX, pScreenY); // Move origin to player
+            
+            if (!this.player.facingRight) {
+                this.ctx.scale(-1, 1); // FLIP CANVAS HORIZONTALLY
             }
 
-            if (drawHP) {
-                this.ctx.fillStyle = '#000'; this.ctx.fillRect(sx - 15, sy - entity.radius - 10, 30, 4);
-                this.ctx.fillStyle = '#f00'; this.ctx.fillRect(sx - 15, sy - entity.radius - 10, 30 * (entity.hp / entity.maxHp), 4);
-            }
-        };
-
-        // Advanced Spritesheet Drawer (Player)
-        const drawPlayer = () => {
-            const px = this.player.x - this.camera.x;
-            const py = this.player.y - this.camera.y;
-            const sheet = this.images['player_spritesheet'];
-
-            // Target indicator ring under player
-            if (this.player.target) {
-                this.ctx.beginPath();
-                this.ctx.ellipse(this.player.target.x - this.camera.x, this.player.target.y - this.camera.y + 10, 20, 10, 0, 0, Math.PI*2);
-                this.ctx.strokeStyle = '#f00'; this.ctx.lineWidth = 2; this.ctx.stroke();
-            }
-
-            if (sheet && sheet.complete && sheet.naturalWidth > 0) {
-                const sData = this.player.sprite;
-                const srcX = sData.frameX * sData.width;
-                const srcY = sData.frameY * sData.height;
-                
-                // Draw slice of spritesheet centered on player coords
-                this.ctx.drawImage(
-                    sheet, 
-                    srcX, srcY, sData.width, sData.height, // Source cut
-                    px - sData.width/2, py - sData.height/2, sData.width, sData.height // Dest drawing
-                );
-            } else {
-                // Fallback blue circle
-                this.ctx.beginPath(); this.ctx.arc(px, py, this.player.radius, 0, Math.PI * 2);
-                this.ctx.fillStyle = '#00f'; this.ctx.fill();
-            }
-        };
-
-        this.enemies.forEach(e => drawStaticSprite(e, 'ghost', '#888', true));
-        drawPlayer();
-        this.projectiles.forEach(p => drawStaticSprite(p, p.assetKey, '#ff0'));
+            // Draw relative to translated origin (-width/2 centers it)
+            this.ctx.drawImage(
+                sheet, 
+                srcX, srcY, conf.frameWidth, conf.frameHeight,
+                -conf.frameWidth / 2, -conf.frameHeight / 2, conf.frameWidth, conf.frameHeight
+            );
+            
+            this.ctx.restore(); // Restore canvas so rest of game isn't drawn backwards
+        } else {
+            this.ctx.beginPath(); this.ctx.arc(pScreenX, pScreenY, this.player.radius, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#00f'; this.ctx.fill();
+        }
 
         // Draw Damage Text
-        this.ctx.font = "bold 20px sans-serif";
-        this.ctx.textAlign = "center";
+        this.ctx.font = "bold 20px sans-serif"; this.ctx.textAlign = "center";
         this.damageTexts.forEach(dtxt => {
-            const sx = dtxt.x - this.camera.x;
-            const sy = dtxt.y - this.camera.y;
-            this.ctx.fillStyle = `rgba(0,0,0, ${dtxt.life})`;
-            this.ctx.fillText(dtxt.text, sx+2, sy+2);
-            this.ctx.fillStyle = dtxt.color;
-            this.ctx.globalAlpha = dtxt.life;
-            this.ctx.fillText(dtxt.text, sx, sy);
-            this.ctx.globalAlpha = 1.0;
+            const sx = dtxt.x - this.camera.x; const sy = dtxt.y - this.camera.y;
+            this.ctx.fillStyle = `rgba(0,0,0, ${dtxt.life})`; this.ctx.fillText(dtxt.text, sx+2, sy+2);
+            this.ctx.fillStyle = dtxt.color; this.ctx.globalAlpha = dtxt.life;
+            this.ctx.fillText(dtxt.text, sx, sy); this.ctx.globalAlpha = 1.0;
         });
 
         this.drawMinimap();
@@ -211,10 +173,7 @@ const Game = {
         let dt = (timestamp - this.lastTime) / 1000;
         if (dt > 0.1) dt = 0.1; 
         this.lastTime = timestamp;
-
-        this.update(dt);
-        this.draw();
-
+        this.update(dt); this.draw();
         requestAnimationFrame((t) => this.loop(t));
     }
 };
