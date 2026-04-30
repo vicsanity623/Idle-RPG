@@ -5,7 +5,7 @@ const Game = {
     camera: { x: 0, y: 0, width: 0, height: 0 },
     
     WORLD_SIZE: 3000, TILE_SIZE: 100,
-    player: null, enemies: [], npcs: [], lootItems: [], damageTexts: [], // Added npcs
+    player: null, enemies: [], npcs: [], lootItems: [], projectiles: [], damageTexts: [], 
     kills: 0, images: {},
     
     init() {
@@ -20,10 +20,10 @@ const Game = {
 
         this.player = new Player(this.WORLD_SIZE/2, this.WORLD_SIZE/2);
         
-        // NEW: Spawn Quest NPC in the center
+        // Spawn Quest NPC
         this.npcs = [new NPC(this.WORLD_SIZE/2 + 100, this.WORLD_SIZE/2, "Quest Master")];
             
-        // NEW: Hook up Potion Buttons in Action Bar to use items from inventory
+        // Hook up Potion Buttons
         document.querySelectorAll('.action-slot.potion').forEach((btn, idx) => {
             btn.onclick = () => {
                 const type = idx === 0 ? "Health Potion" : "Mana Potion";
@@ -59,6 +59,14 @@ const Game = {
         const worldX = (e.clientX - rect.left) + this.camera.x;
         const worldY = (e.clientY - rect.top) + this.camera.y;
 
+        // NEW: Check for NPC clicks first
+        for (let npc of this.npcs) {
+            if (Math.hypot(npc.x - worldX, npc.y - worldY) < 60) {
+                UI.showLootNotification(`${npc.name}: "The ghosts are restless today..."`, "rarity-legendary");
+                return;
+            }
+        }
+
         let clickedEnemy = null;
         for (let enemy of this.enemies) {
             if (!enemy.isDead && enemy.distanceTo({x: worldX, y: worldY}) < enemy.radius + 30) {
@@ -68,20 +76,34 @@ const Game = {
         this.player.target = clickedEnemy; 
     },
 
+    // NEW: Fire Arrow Logic
+    castFireArrow() {
+        if (this.player.level < 5 || this.player.mp < 50 || !this.player.target || this.player.isDead) return;
+        this.player.mp -= 50;
+        this.projectiles.push(new Projectile(this.player.x, this.player.y - 30, this.player.target, 500));
+        UI.showLootNotification("FIRE ARROW!", "rarity-epic");
+    },
+
     spawnDamageText(x, y, text, color) { this.damageTexts.push({ x, y, text, color, life: 1.0 }); },
 
     update(dt) {
         this.player.update(dt, this.enemies);
         
-        this.camera.x = Math.max(0, Math.min(this.player.x - this.camera.width / 2, this.WORLD_SIZE - this.camera.width));
-        this.camera.y = Math.max(0, Math.min(this.player.y - this.camera.height / 2, this.WORLD_SIZE - this.camera.height));
+        if (!this.player.isDead) {
+            this.camera.x = Math.max(0, Math.min(this.player.x - this.camera.width / 2, this.WORLD_SIZE - this.camera.width));
+            this.camera.y = Math.max(0, Math.min(this.player.y - this.camera.height / 2, this.WORLD_SIZE - this.camera.height));
+        }
 
         this.enemies.forEach(e => e.update(dt, this.player));
         this.enemies = this.enemies.filter(e => !e.isDead);
 
+        // Update Projectiles (Fire Arrow)
+        this.projectiles.forEach(p => p.update(dt));
+        this.projectiles = this.projectiles.filter(p => p.life > 0);
+
         this.lootItems.forEach(item => {
             item.life -= dt;
-            if (this.player.distanceTo(item) < 50) {
+            if (this.player.distanceTo(item) < 50 && !this.player.isDead) {
                 this.player.pickUpItem(item);
                 item.isPickedUp = true;
             }
@@ -100,7 +122,7 @@ const Game = {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw Background
+        // Background
         const startCol = Math.max(0, Math.floor(this.camera.x / this.TILE_SIZE));
         const endCol = Math.min(this.WORLD_SIZE / this.TILE_SIZE, startCol + (this.camera.width / this.TILE_SIZE) + 1);
         const startRow = Math.max(0, Math.floor(this.camera.y / this.TILE_SIZE));
@@ -122,30 +144,34 @@ const Game = {
         // Draw Loot
         this.lootItems.forEach(item => {
             const sx = item.x - this.camera.x; const sy = item.y - this.camera.y;
-            if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
             let color = item.rarity === 'legendary' ? "#f1c40f" : item.rarity === 'epic' ? "#9b59b6" : item.rarity === 'rare' ? "#3498db" : "#fff";
-            this.ctx.save();
-            this.ctx.shadowBlur = 15; this.ctx.shadowColor = color;
+            this.ctx.save(); this.ctx.shadowBlur = 15; this.ctx.shadowColor = color;
             this.ctx.fillStyle = color; this.ctx.beginPath(); this.ctx.arc(sx, sy, 8, 0, Math.PI * 2); this.ctx.fill();
             this.ctx.restore();
         });
 
-        // NEW: Draw NPCs
+        // Draw NPCs
         this.npcs.forEach(n => {
             const sx = n.x - this.camera.x; const sy = n.y - this.camera.y;
-            if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
-            this.ctx.fillStyle = "#f1c40f"; this.ctx.beginPath();
-            this.ctx.arc(sx, sy, 25, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = "#f1c40f"; this.ctx.beginPath(); this.ctx.arc(sx, sy, 25, 0, Math.PI*2); this.ctx.fill();
             this.ctx.fillStyle = "white"; this.ctx.font = "bold 14px sans-serif"; this.ctx.textAlign = "center";
             this.ctx.fillText(n.name, sx, sy - 40);
-            this.ctx.fillStyle = "#f1c40f"; this.ctx.font = "bold 30px sans-serif";
-            this.ctx.fillText("!", sx, sy - 60); // Quest Marker
+            this.ctx.fillStyle = "#f1c40f"; this.ctx.font = "bold 30px sans-serif"; this.ctx.fillText("!", sx, sy - 60);
+        });
+
+        // Draw Projectiles (Fire Arrow)
+        this.projectiles.forEach(p => {
+            p.trail.forEach(t => {
+                this.ctx.fillStyle = `rgba(255, 69, 0, ${t.alpha})`;
+                this.ctx.beginPath(); this.ctx.arc(t.x - this.camera.x, t.y - this.camera.y, 8, 0, Math.PI*2); this.ctx.fill();
+            });
+            this.ctx.fillStyle = "#ff0000";
+            this.ctx.beginPath(); this.ctx.arc(p.x - this.camera.x, p.y - this.camera.y, 12, 0, Math.PI*2); this.ctx.fill();
         });
 
         // Draw Enemies
         this.enemies.forEach(e => {
             const sx = e.x - this.camera.x; const sy = e.y - this.camera.y;
-            if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
             if (this.images['ghost'] && this.images['ghost'].complete) {
                 this.ctx.drawImage(this.images['ghost'], sx - e.radius, sy - e.radius, e.radius*2, e.radius*2);
             } else {
@@ -157,18 +183,16 @@ const Game = {
         });
 
         // Draw Player
-        const pScreenX = Math.round(this.player.x - this.camera.x);
-        const pScreenY = Math.round(this.player.y - this.camera.y);
-        if (this.player.target) {
-            this.ctx.beginPath(); this.ctx.ellipse(this.player.target.x - this.camera.x, this.player.target.y - this.camera.y + 10, 20, 10, 0, 0, Math.PI*2);
-            this.ctx.strokeStyle = '#f00'; this.ctx.lineWidth = 2; this.ctx.stroke();
-        }
-        let pDraw = this.player.getDrawInfo();
-        if (pDraw && pDraw.image) {
-            this.ctx.save(); this.ctx.translate(pScreenX, pScreenY); 
-            if (!this.player.facingRight) this.ctx.scale(-1, 1); 
-            this.ctx.drawImage(pDraw.image, -pDraw.drawWidth/2, -pDraw.drawHeight, pDraw.drawWidth, pDraw.drawHeight);
-            this.ctx.restore(); 
+        if (!this.player.isDead) {
+            const pScreenX = Math.round(this.player.x - this.camera.x);
+            const pScreenY = Math.round(this.player.y - this.camera.y);
+            let pDraw = this.player.getDrawInfo();
+            if (pDraw && pDraw.image) {
+                this.ctx.save(); this.ctx.translate(pScreenX, pScreenY); 
+                if (!this.player.facingRight) this.ctx.scale(-1, 1); 
+                this.ctx.drawImage(pDraw.image, -pDraw.drawWidth/2, -pDraw.drawHeight, pDraw.drawWidth, pDraw.drawHeight);
+                this.ctx.restore(); 
+            }
         }
 
         // Draw Damage Text
@@ -179,6 +203,16 @@ const Game = {
             this.ctx.fillStyle = dtxt.color; this.ctx.globalAlpha = dtxt.life;
             this.ctx.fillText(dtxt.text, sx, sy); this.ctx.globalAlpha = 1.0;
         });
+
+        // NEW: Draw Death Overlay
+        if (this.player.isDead) {
+            this.ctx.fillStyle = "rgba(0,0,0,0.7)";
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = "white"; this.ctx.font = "bold 40px sans-serif"; this.ctx.textAlign = "center";
+            this.ctx.fillText("YOU HAVE FALLEN", this.canvas.width/2, this.canvas.height/2);
+            this.ctx.font = "20px sans-serif";
+            this.ctx.fillText(`Respawning in ${Math.ceil(10 - this.player.respawnTimer)}s...`, this.canvas.width/2, this.canvas.height/2 + 50);
+        }
 
         this.drawMinimap();
     },
@@ -201,6 +235,29 @@ const Game = {
     }
 };
 
+// --- PROJECTILE CLASS ---
+class Projectile {
+    constructor(x, y, target, damage) {
+        this.x = x; this.y = y; this.target = target; this.damage = damage;
+        this.speed = 600; this.life = 2; this.trail = [];
+    }
+    update(dt) {
+        this.trail.push({x: this.x, y: this.y, alpha: 1.0});
+        if (this.trail.length > 12) this.trail.shift();
+        this.trail.forEach(t => t.alpha -= 0.08);
+
+        const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+        this.x += Math.cos(angle) * this.speed * dt;
+        this.y += Math.sin(angle) * this.speed * dt;
+        this.life -= dt;
+
+        if (Math.hypot(this.target.x - this.x, this.target.y - this.y) < 25) {
+            this.target.takeDamage(this.damage, Game.player);
+            this.life = 0;
+        }
+    }
+}
+
 // --- PATCHING THE UI OBJECT ---
 if (typeof UI !== 'undefined') {
     UI.currentInvTab = 'equip';
@@ -208,8 +265,7 @@ if (typeof UI !== 'undefined') {
     UI.setInventoryTab = function(tab) {
         this.currentInvTab = tab;
         document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
-        // We find the correct button based on text content since tab events vary
-        event.target.classList.add('active');
+        if (event) event.target.classList.add('active');
         this.updateInventory(Game.player);
     };
 
@@ -217,7 +273,6 @@ if (typeof UI !== 'undefined') {
         const grid = document.getElementById('inv-grid');
         const goldTxt = document.getElementById('inv-gold');
         if (!grid) return;
-
         grid.innerHTML = '';
         goldTxt.innerText = player.gold.toLocaleString();
 
@@ -244,7 +299,8 @@ if (typeof UI !== 'undefined') {
         });
         
         const cp = Math.floor((player.level * 150) + (equipAtk * 10));
-        document.getElementById('combat-power').innerText = cp.toLocaleString();
+        const cpEl = document.getElementById('combat-power');
+        if (cpEl) cpEl.innerText = cp.toLocaleString();
         this.updateStatsModal(player, cp, equipAtk);
     };
 
@@ -260,9 +316,9 @@ if (typeof UI !== 'undefined') {
             item.count--;
             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
         } else if (item.name.includes("Mana Potion")) {
-             this.showLootNotification("Mana restored!", "rarity-rare");
-             item.count--;
-             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
+            Game.player.mp = Math.min(Game.player.maxMp, Game.player.mp + 100);
+            item.count--;
+            if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
         }
         this.updateInventory(Game.player);
     };
@@ -304,27 +360,24 @@ if (typeof UI !== 'undefined') {
                 <h2 style="color:#d4af37; margin-bottom:10px;">Level ${player.level} Ninja</h2>
                 <div class="stat-row"><span>Combat Power</span><span style="color:#f1c40f">${cp}</span></div>
                 <div class="stat-row"><span>Health</span><span>${Math.floor(player.hp)} / ${player.maxHp}</span></div>
+                <div class="stat-row"><span>Mana</span><span>${Math.floor(player.mp)} / ${player.maxMp}</span></div>
                 <div class="stat-row"><span>Base Attack</span><span>${player.level * 10}</span></div>
                 <div class="stat-row"><span>Gear Attack</span><span style="color:#2ecc71">+${equipAtk}</span></div>
-                <div class="stat-row"><span>Movement Speed</span><span>${player.speed}</span></div>
             </div>
         `;
     };
 
-    // NEW: Quest Progression & HUD Bridge
     UI.updatePlayerStats = function(player) {
         const countEl = document.getElementById('quest-count');
         const questBox = document.getElementById('quest-tracker');
         if (countEl && Game.kills < 40) countEl.innerText = Game.kills;
 
-        // Handle Quest Completion
         if (Game.kills >= 40) {
             questBox.classList.add('quest-complete-glow');
             questBox.innerHTML = `<h4 class="quest-title">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: 500 Gold & 1000 XP</p>`;
             questBox.onclick = () => UI.claimQuest(player);
         }
 
-        // Update HUD Potion counts
         const hpPot = player.inventory.find(i => i.name === "Health Potion");
         const mpPot = player.inventory.find(i => i.name === "Mana Potion");
         const hpLabel = document.getElementById('hp-potion-count');
@@ -332,10 +385,16 @@ if (typeof UI !== 'undefined') {
         if (hpLabel) hpLabel.innerText = hpPot ? hpPot.count : 0;
         if (mpLabel) mpLabel.innerText = mpPot ? mpPot.count : 0;
         
-        // Update HP bars
+        // Update Skill Locking at level 5
+        const skillBtn = document.getElementById('btn-skill-1');
+        if (skillBtn && player.level >= 5) skillBtn.classList.remove('locked');
+
+        // Update Bars
         const hpFill = document.getElementById('hp-fill');
+        const mpFill = document.getElementById('mp-fill');
         const hpTxt = document.getElementById('hp-text');
         if (hpFill) hpFill.style.width = (player.hp / player.maxHp * 100) + "%";
+        if (mpFill) mpFill.style.width = (player.mp / player.maxMp * 100) + "%";
         if (hpTxt) hpTxt.innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
     };
 
@@ -345,7 +404,7 @@ if (typeof UI !== 'undefined') {
         Game.kills = 0; 
         const questBox = document.getElementById('quest-tracker');
         questBox.style.display = 'none';
-        this.showLootNotification("Quest Complete: +500 Gold!", "rarity-legendary");
+        this.showLootNotification("Quest Complete!", "rarity-legendary");
         this.updateInventory(player);
     };
 }
