@@ -187,7 +187,11 @@ class Player extends Entity {
                 if (this.distanceTo(e) <= this.attackRange + 20) {
                     let dx = e.x - this.x;
                     if ((this.facingRight && dx > -20) || (!this.facingRight && dx < 20)) {
-                        e.takeDamage(150, this);
+                        // Calculate total attack: (Level * 10) + Gear Stats
+                        let gearAtk = Object.values(this.equipment).reduce((acc, item) => acc + (item ? item.stats.attack : 0), 0);
+                        let totalDmg = (this.level * 10) + gearAtk;
+                        
+                        e.takeDamage(totalDmg, this);
                         e.x += this.facingRight ? 30 : -30;
                     }
                 }
@@ -309,5 +313,12 @@ class LootItem {
                 this.count = 1;
                 break;
         }
+    }
+}
+
+class NPC extends Entity {
+    constructor(x, y, name) {
+        super(x, y, 30, 0);
+        this.name = name;
     }
 }
