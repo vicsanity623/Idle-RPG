@@ -7,7 +7,6 @@ class Entity {
         this.target = null;
         this.isDead = false;
     }
-    
     distanceTo(other) {
         const dx = this.x - other.x;
         const dy = this.y - other.y;
@@ -17,19 +16,58 @@ class Entity {
 
 class Player extends Entity {
     constructor(x, y) {
-        super(x, y, 20, 200);
+        super(x, y, 20, 250); // Speed 250
         this.hp = 1000; this.maxHp = 1000;
-        this.destX = x; this.destY = y;
         this.attackRange = 250;
         this.lastAttack = 0;
-        this.attackCooldown = 0.8; // seconds
+        this.attackCooldown = 0.6; 
         this.autoAttack = false;
+
+        // Spritesheet configuration
+        this.sprite = {
+            frameX: 0, 
+            frameY: 0,     // 0: Down, 1: Left, 2: Right, 3: Up
+            maxFrames: 4,  // Number of columns in the spritesheet
+            timer: 0, 
+            interval: 0.15, // Speed of animation
+            width: 64,     // Width of ONE single frame (Change depending on your sheet)
+            height: 64     // Height of ONE single frame
+        };
     }
 
     update(dt, enemies) {
         if (this.isDead) return;
 
-        // Auto Attack Logic
+        // --- Movement & Animation via Joystick ---
+        if (UI.joystick.active) {
+            this.x += UI.joystick.vector.x * this.speed * dt;
+            this.y += UI.joystick.vector.y * this.speed * dt;
+            
+            // Determine Direction (Row)
+            if (Math.abs(UI.joystick.vector.x) > Math.abs(UI.joystick.vector.y)) {
+                this.sprite.frameY = UI.joystick.vector.x > 0 ? 2 : 1; // 2: Right, 1: Left
+            } else {
+                this.sprite.frameY = UI.joystick.vector.y > 0 ? 0 : 3; // 0: Down, 3: Up
+            }
+
+            // Animate Frames (Column)
+            this.sprite.timer += dt;
+            if (this.sprite.timer >= this.sprite.interval) {
+                // cycle frames 1 to maxFrames-1 (assuming 0 is idle standing frame)
+                this.sprite.frameX = (this.sprite.frameX + 1) % this.sprite.maxFrames;
+                this.sprite.timer = 0;
+            }
+            
+            // Interrupt auto-pathing/targeting if we manually move away
+            if (this.target && this.distanceTo(this.target) > this.attackRange + 50) {
+                this.target = null;
+            }
+        } else {
+            // Idle Frame
+            this.sprite.frameX = 0; 
+        }
+
+        // --- Combat Logic ---
         if (this.autoAttack && !this.target) {
             let closest = null;
             let minDist = Infinity;
@@ -40,41 +78,44 @@ class Player extends Entity {
             if (closest) this.target = closest;
         }
 
-        // Movement & Combat
         if (this.target) {
             if (this.target.isDead) {
                 this.target = null;
             } else {
                 let dist = this.distanceTo(this.target);
-                if (dist > this.attackRange) {
-                    // Move towards target
-                    const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-                    this.x += Math.cos(angle) * this.speed * dt;
-                    this.y += Math.sin(angle) * this.speed * dt;
-                } else {
-                    // In range, Attack
-                    this.destX = this.x; this.destY = this.y; // stop moving
+                // If in range and NOT manually moving away, Attack
+                if (dist <= this.attackRange) {
                     const now = performance.now() / 1000;
                     if (now - this.lastAttack >= this.attackCooldown) {
-                        Game.fireProjectile(this, this.target, "assets/magic_missile.png");
+                        Game.fireProjectile(this, this.target, 'missile');
                         this.lastAttack = now;
+                        
+                        // Face target when attacking
+                        const dx = this.target.x - this.x;
+                        const dy = this.target.y - this.y;
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            this.sprite.frameY = dx > 0 ? 2 : 1;
+                        } else {
+                            this.sprite.frameY = dy > 0 ? 0 : 3;
+                        }
                     }
                 }
-            }
-        } else {
-            // Normal click-to-move
-            const distToDest = Math.sqrt((this.destX - this.x)**2 + (this.destY - this.y)**2);
-            if (distToDest > 5) {
-                const angle = Math.atan2(this.destY - this.y, this.destX - this.x);
-                this.x += Math.cos(angle) * this.speed * dt;
-                this.y += Math.sin(angle) * this.speed * dt;
             }
         }
     }
 
-    setDestination(x, y) {
-        this.destX = x; this.destY = y;
-        this.target = null; // override attack target
+    forceAttack() {
+        if (!this.target && Game.enemies.length > 0) {
+            // Find closest to attack if none selected
+            this.target = Game.enemies.reduce((prev, curr) => this.distanceTo(curr) < this.distanceTo(prev) ? curr : prev);
+        }
+        if (this.target && this.distanceTo(this.target) <= this.attackRange) {
+            const now = performance.now() / 1000;
+            if (now - this.lastAttack >= this.attackCooldown) {
+                 Game.fireProjectile(this, this.target, 'missile');
+                 this.lastAttack = now;
+            }
+        }
     }
 }
 
@@ -82,11 +123,10 @@ class Enemy extends Entity {
     constructor(x, y) {
         super(x, y, 20, 100);
         this.hp = 200; this.maxHp = 200;
-        this.aggroRange = 150; // Only attack when very close
+        this.aggroRange = 150; 
         this.attackRange = 40;
         this.lastAttack = 0;
         this.originX = x; this.originY = y;
-        this.state = 'idle';
     }
 
     update(dt, player) {
@@ -94,7 +134,6 @@ class Enemy extends Entity {
 
         let distToPlayer = this.distanceTo(player);
 
-        // Logic: Attack if player is very close, OR if already aggroed (target !== null)
         if (distToPlayer <= this.aggroRange) {
             this.target = player;
         }
@@ -107,13 +146,12 @@ class Enemy extends Entity {
             } else {
                 const now = performance.now() / 1000;
                 if (now - this.lastAttack > 1.5) {
-                    player.hp -= 25; // Simple melee damage
+                    player.hp -= 25; 
                     Game.spawnDamageText(player.x, player.y - 30, "25", "#ff0000");
                     this.lastAttack = now;
                 }
             }
         } else {
-            // Wander around origin
             if (Math.random() < 0.01) {
                 this.x = this.originX + (Math.random() - 0.5) * 100;
                 this.y = this.originY + (Math.random() - 0.5) * 100;
@@ -124,7 +162,7 @@ class Enemy extends Entity {
     takeDamage(amount, source) {
         this.hp -= amount;
         Game.spawnDamageText(this.x, this.y - 30, amount.toString(), "#fff");
-        this.target = source; // Retaliate when attacked!
+        this.target = source; // Retaliate
         if (this.hp <= 0) {
             this.isDead = true;
             Game.kills++;
@@ -133,12 +171,12 @@ class Enemy extends Entity {
 }
 
 class Projectile {
-    constructor(source, target, speed, asset) {
+    constructor(source, target, speed, assetKey) {
         this.x = source.x; this.y = source.y;
         this.target = target;
         this.source = source;
         this.speed = speed;
-        this.asset = asset;
+        this.assetKey = assetKey;
         this.isDead = false;
     }
     update(dt) {
