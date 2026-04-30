@@ -5,7 +5,7 @@ const Game = {
     camera: { x: 0, y: 0, width: 0, height: 0 },
     
     WORLD_SIZE: 3000, TILE_SIZE: 100,
-    player: null, enemies: [], lootItems: [], damageTexts: [],
+    player: null, enemies: [], npcs: [], lootItems: [], damageTexts: [], // Added npcs
     kills: 0, images: {},
     
     init() {
@@ -19,6 +19,20 @@ const Game = {
         this.canvas.addEventListener('pointerdown', (e) => this.handleScreenTap(e));
 
         this.player = new Player(this.WORLD_SIZE/2, this.WORLD_SIZE/2);
+        
+        // NEW: Spawn Quest NPC in the center
+        this.npcs = [new NPC(this.WORLD_SIZE/2 + 100, this.WORLD_SIZE/2, "Quest Master")];
+            
+        // NEW: Hook up Potion Buttons in Action Bar to use items from inventory
+        document.querySelectorAll('.action-slot.potion').forEach((btn, idx) => {
+            btn.onclick = () => {
+                const type = idx === 0 ? "Health Potion" : "Mana Potion";
+                const item = this.player.inventory.find(i => i.name === type);
+                if (item) UI.handleItemClick(item);
+                else UI.showLootNotification(`No ${type}s left!`, "rarity-common");
+            };
+        });
+
         for(let i=0; i<30; i++) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
 
         this.loadAsset('bg', 'assets/grass.png');
@@ -116,6 +130,18 @@ const Game = {
             this.ctx.restore();
         });
 
+        // NEW: Draw NPCs
+        this.npcs.forEach(n => {
+            const sx = n.x - this.camera.x; const sy = n.y - this.camera.y;
+            if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
+            this.ctx.fillStyle = "#f1c40f"; this.ctx.beginPath();
+            this.ctx.arc(sx, sy, 25, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.fillStyle = "white"; this.ctx.font = "bold 14px sans-serif"; this.ctx.textAlign = "center";
+            this.ctx.fillText(n.name, sx, sy - 40);
+            this.ctx.fillStyle = "#f1c40f"; this.ctx.font = "bold 30px sans-serif";
+            this.ctx.fillText("!", sx, sy - 60); // Quest Marker
+        });
+
         // Draw Enemies
         this.enemies.forEach(e => {
             const sx = e.x - this.camera.x; const sy = e.y - this.camera.y;
@@ -182,6 +208,7 @@ if (typeof UI !== 'undefined') {
     UI.setInventoryTab = function(tab) {
         this.currentInvTab = tab;
         document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+        // We find the correct button based on text content since tab events vary
         event.target.classList.add('active');
         this.updateInventory(Game.player);
     };
@@ -198,15 +225,13 @@ if (typeof UI !== 'undefined') {
 
         items.forEach(item => {
             const slot = document.createElement('div');
-            // FIX: Added 'slot-icon' and inner text so items are visible without images
             slot.className = `inv-slot rarity-${item.rarity} slot-icon`;
-            slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; // Shows first letter as icon
+            slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; 
             slot.onclick = () => this.handleItemClick(item);
             if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
             grid.appendChild(slot);
         });
 
-        // Update Equipment Slots & Calculate Combat Power
         let equipAtk = 0;
         Object.keys(player.equipment).forEach(slotName => {
             const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
@@ -218,7 +243,6 @@ if (typeof UI !== 'undefined') {
             }
         });
         
-        // Update Stats UI
         const cp = Math.floor((player.level * 150) + (equipAtk * 10));
         document.getElementById('combat-power').innerText = cp.toLocaleString();
         this.updateStatsModal(player, cp, equipAtk);
@@ -235,6 +259,10 @@ if (typeof UI !== 'undefined') {
             Game.player.hp = Math.min(Game.player.maxHp, Game.player.hp + 200);
             item.count--;
             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
+        } else if (item.name.includes("Mana Potion")) {
+             this.showLootNotification("Mana restored!", "rarity-rare");
+             item.count--;
+             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
         }
         this.updateInventory(Game.player);
     };
@@ -275,13 +303,50 @@ if (typeof UI !== 'undefined') {
             <div style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">
                 <h2 style="color:#d4af37; margin-bottom:10px;">Level ${player.level} Ninja</h2>
                 <div class="stat-row"><span>Combat Power</span><span style="color:#f1c40f">${cp}</span></div>
-                <div class="stat-row"><span>Health</span><span>${player.hp} / ${player.maxHp}</span></div>
+                <div class="stat-row"><span>Health</span><span>${Math.floor(player.hp)} / ${player.maxHp}</span></div>
                 <div class="stat-row"><span>Base Attack</span><span>${player.level * 10}</span></div>
                 <div class="stat-row"><span>Gear Attack</span><span style="color:#2ecc71">+${equipAtk}</span></div>
                 <div class="stat-row"><span>Movement Speed</span><span>${player.speed}</span></div>
             </div>
-            <div style="margin-top:20px; font-size:11px; color:#666;">* Stats increase automatically on Level Up and through Equipment.</div>
         `;
+    };
+
+    // NEW: Quest Progression & HUD Bridge
+    UI.updatePlayerStats = function(player) {
+        const countEl = document.getElementById('quest-count');
+        const questBox = document.getElementById('quest-tracker');
+        if (countEl && Game.kills < 40) countEl.innerText = Game.kills;
+
+        // Handle Quest Completion
+        if (Game.kills >= 40) {
+            questBox.classList.add('quest-complete-glow');
+            questBox.innerHTML = `<h4 class="quest-title">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: 500 Gold & 1000 XP</p>`;
+            questBox.onclick = () => UI.claimQuest(player);
+        }
+
+        // Update HUD Potion counts
+        const hpPot = player.inventory.find(i => i.name === "Health Potion");
+        const mpPot = player.inventory.find(i => i.name === "Mana Potion");
+        const hpLabel = document.getElementById('hp-potion-count');
+        const mpLabel = document.getElementById('mp-potion-count');
+        if (hpLabel) hpLabel.innerText = hpPot ? hpPot.count : 0;
+        if (mpLabel) mpLabel.innerText = mpPot ? mpPot.count : 0;
+        
+        // Update HP bars
+        const hpFill = document.getElementById('hp-fill');
+        const hpTxt = document.getElementById('hp-text');
+        if (hpFill) hpFill.style.width = (player.hp / player.maxHp * 100) + "%";
+        if (hpTxt) hpTxt.innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
+    };
+
+    UI.claimQuest = function(player) {
+        player.gainXp(1000);
+        player.gold += 500;
+        Game.kills = 0; 
+        const questBox = document.getElementById('quest-tracker');
+        questBox.style.display = 'none';
+        this.showLootNotification("Quest Complete: +500 Gold!", "rarity-legendary");
+        this.updateInventory(player);
     };
 }
 
