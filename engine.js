@@ -38,7 +38,39 @@ const Game = {
         this.loadAsset('bg', 'assets/grass.png');
         this.loadAsset('ghost', 'assets/sleepless_ghost.png');
 
+        // NEW: Load saved data before starting loop
+        this.loadGame();
+
         requestAnimationFrame((t) => this.loop(t));
+    },
+
+    // --- NEW: PERSISTENT SAVE SYSTEM ---
+    saveGame() {
+        const saveData = {
+            level: this.player.level,
+            xp: this.player.xp,
+            maxXp: this.player.maxXp,
+            gold: this.player.gold,
+            inventory: this.player.inventory,
+            equipment: this.player.equipment,
+            kills: this.kills
+        };
+        localStorage.setItem('mmo_save_data', JSON.stringify(saveData));
+    },
+
+    loadGame() {
+        const saved = localStorage.getItem('mmo_save_data');
+        if (saved) {
+            const data = JSON.parse(saved);
+            // Deep merge saved data into player object
+            Object.assign(this.player, data);
+            this.kills = data.kills;
+            
+            // Re-sync UI immediately
+            UI.updateInventory(this.player);
+            UI.updatePlayerStats(this.player);
+            UI.showLootNotification("Progress Loaded", "rarity-legendary");
+        }
     },
 
     resize() {
@@ -59,7 +91,6 @@ const Game = {
         const worldX = (e.clientX - rect.left) + this.camera.x;
         const worldY = (e.clientY - rect.top) + this.camera.y;
 
-        // NEW: Check for NPC clicks first
         for (let npc of this.npcs) {
             if (Math.hypot(npc.x - worldX, npc.y - worldY) < 60) {
                 UI.showLootNotification(`${npc.name}: "The ghosts are restless today..."`, "rarity-legendary");
@@ -76,7 +107,6 @@ const Game = {
         this.player.target = clickedEnemy; 
     },
 
-    // NEW: Fire Arrow Logic
     castFireArrow() {
         if (this.player.level < 5 || this.player.mp < 50 || !this.player.target || this.player.isDead) return;
         this.player.mp -= 50;
@@ -97,7 +127,6 @@ const Game = {
         this.enemies.forEach(e => e.update(dt, this.player));
         this.enemies = this.enemies.filter(e => !e.isDead);
 
-        // Update Projectiles (Fire Arrow)
         this.projectiles.forEach(p => p.update(dt));
         this.projectiles = this.projectiles.filter(p => p.life > 0);
 
@@ -117,12 +146,15 @@ const Game = {
         
         UI.updatePlayerStats(this.player);
         UI.updateXpBar(this.player);
+
+        // Auto-Save logic (roughly every 10 seconds)
+        if (Math.random() < 0.002) this.saveGame();
     },
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Background
+        // Background logic
         const startCol = Math.max(0, Math.floor(this.camera.x / this.TILE_SIZE));
         const endCol = Math.min(this.WORLD_SIZE / this.TILE_SIZE, startCol + (this.camera.width / this.TILE_SIZE) + 1);
         const startRow = Math.max(0, Math.floor(this.camera.y / this.TILE_SIZE));
@@ -159,7 +191,7 @@ const Game = {
             this.ctx.fillStyle = "#f1c40f"; this.ctx.font = "bold 30px sans-serif"; this.ctx.fillText("!", sx, sy - 60);
         });
 
-        // Draw Projectiles (Fire Arrow)
+        // Draw Projectiles
         this.projectiles.forEach(p => {
             p.trail.forEach(t => {
                 this.ctx.fillStyle = `rgba(255, 69, 0, ${t.alpha})`;
@@ -204,7 +236,7 @@ const Game = {
             this.ctx.fillText(dtxt.text, sx, sy); this.ctx.globalAlpha = 1.0;
         });
 
-        // NEW: Draw Death Overlay
+        // Death Overlay
         if (this.player.isDead) {
             this.ctx.fillStyle = "rgba(0,0,0,0.7)";
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -258,7 +290,7 @@ class Projectile {
     }
 }
 
-// --- PATCHING THE UI OBJECT ---
+// --- UI PATCHES ---
 if (typeof UI !== 'undefined') {
     UI.currentInvTab = 'equip';
 
@@ -321,6 +353,7 @@ if (typeof UI !== 'undefined') {
             if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
         }
         this.updateInventory(Game.player);
+        Game.saveGame(); // Save state on item change
     };
 
     UI.startAutoQuest = function() {
@@ -361,8 +394,6 @@ if (typeof UI !== 'undefined') {
                 <div class="stat-row"><span>Combat Power</span><span style="color:#f1c40f">${cp}</span></div>
                 <div class="stat-row"><span>Health</span><span>${Math.floor(player.hp)} / ${player.maxHp}</span></div>
                 <div class="stat-row"><span>Mana</span><span>${Math.floor(player.mp)} / ${player.maxMp}</span></div>
-                <div class="stat-row"><span>Base Attack</span><span>${player.level * 10}</span></div>
-                <div class="stat-row"><span>Gear Attack</span><span style="color:#2ecc71">+${equipAtk}</span></div>
             </div>
         `;
     };
@@ -385,11 +416,9 @@ if (typeof UI !== 'undefined') {
         if (hpLabel) hpLabel.innerText = hpPot ? hpPot.count : 0;
         if (mpLabel) mpLabel.innerText = mpPot ? mpPot.count : 0;
         
-        // Update Skill Locking at level 5
         const skillBtn = document.getElementById('btn-skill-1');
         if (skillBtn && player.level >= 5) skillBtn.classList.remove('locked');
 
-        // Update Bars
         const hpFill = document.getElementById('hp-fill');
         const mpFill = document.getElementById('mp-fill');
         const hpTxt = document.getElementById('hp-text');
@@ -406,6 +435,7 @@ if (typeof UI !== 'undefined') {
         questBox.style.display = 'none';
         this.showLootNotification("Quest Complete!", "rarity-legendary");
         this.updateInventory(player);
+        Game.saveGame(); // Force Save
     };
 }
 
