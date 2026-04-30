@@ -226,10 +226,9 @@ class Player extends Entity {
     }
 
     forceAttack() {
-        // --- NEW: MANA COST CHECK ---
-        if (this.state === 'attack' || this.mp < 10) return; 
+        if (this.state === 'attack' || this.mp < 2) return; 
         
-        this.mp -= 10; 
+        this.mp -= 2; 
         this.state = 'attack';
         this.currentFrame = 0;
         this.animTimer = 0;
