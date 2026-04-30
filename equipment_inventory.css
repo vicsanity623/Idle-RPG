@@ -1,0 +1,34 @@
+/* --- EQUIPMENT SCREEN (AROUND CHARACTER) --- */
+.char-preview-container { flex: 1.2; position: relative; border: 1px solid #333; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.equipment-grid { position: absolute; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+.eq-slot { 
+    position: absolute; width: 45px; height: 45px; background: rgba(20,20,20,0.8); 
+    border: 1px solid #444; pointer-events: auto; cursor: pointer;
+    background-size: cover; background-position: center;
+}
+.eq-slot:hover { border-color: #b89947; }
+/* Positions for slots around character */
+.eq-slot[data-slot="head"]   { top: 5%; left: 50%; transform: translateX(-50%); }
+.eq-slot[data-slot="cape"]   { top: 20%; right: 10%; }
+.eq-slot[data-slot="amulet"] { top: 20%; left: 10%; }
+.eq-slot[data-slot="armor"]  { top: 40%; left: 10%; }
+.eq-slot[data-slot="hands"]  { top: 40%; right: 10%; }
+.eq-slot[data-slot="ring1"]  { top: 60%; left: 10%; }
+.eq-slot[data-slot="ring2"]  { top: 60%; right: 10%; }
+.eq-slot[data-slot="legs"]   { bottom: 5%; left: 50%; transform: translateX(-50%); }
+
+.char-preview { display: flex; flex-direction: column; align-items: center; z-index: 1; }
+.char-preview img { width: auto; height: 250px; image-rendering: pixelated; }
+.cp-stats { margin-top: 10px; color: #d4af37; font-weight: bold; font-size: 14px; text-shadow: 1px 1px #000; }
+
+/* --- INVENTORY TABS & FOOTER --- */
+.inv-tabs-container { flex: 1; display: flex; flex-direction: column; background: #1a1a1a; padding: 10px; border: 1px solid #333; }
+.tab-header { display: flex; gap: 5px; margin-bottom: 10px; }
+.tab { flex: 1; background: #333; color: #888; border: 1px solid #444; padding: 6px; cursor: pointer; font-size: 11px; }
+.tab.active { background: #b89947; color: #000; border-color: #fff; font-weight: bold; }
+.inventory-grid { flex-grow: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 50px; gap: 8px; overflow-y: auto; padding-right: 5px; }
+.inv-slot { background: #222; border: 1px solid #444; position: relative; cursor: pointer; }
+.inv-slot:hover { border-color: #b89947; }
+.inv-slot .count { position: absolute; bottom: 2px; right: 2px; font-size: 9px; color: white; background: rgba(0,0,0,0.5); padding: 0 2px; }
+.inventory-footer { border-top: 1px solid #333; padding-top: 10px; display: flex; justify-content: space-between; }
+.gold-display { color: #f1c40f; font-weight: bold; font-size: 14px; }
