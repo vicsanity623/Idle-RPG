@@ -17,41 +17,87 @@ class Player extends Entity {
         this.state = 'idle'; // 'idle', 'run', 'attack'
         this.facingRight = true; 
         
-        // SPRITESHEET CONFIGURATION
-        // YOU MUST UPDATE THESE NUMBERS based on your mango-full-sheet-sheet.png!
-        this.animConfig = {
-            frameWidth: 128,   // Image Width divided by number of columns
-            frameHeight: 128,  // Image Height divided by number of rows
+        // --- NEW IMAGE SEQUENCE LOADING ---
+        // Scale down the massive images (559x447) to fit the game screen
+        this.spriteScale = 0.25; 
+        
+        this.animations = {
+            idle: this.loadFrames('assets/idle', 'idle', 10), // Loads idle00 to idle09
+            run: this.loadFrames('assets/run', 'run', 8),     // Loads run00 to run07
             
-            idle:   { row: 0, frames: 4, speed: 0.15 }, // Row 0, 4 frames
-            run:    { row: 1, frames: 8, speed: 0.08 }, // Row 1, 8 frames
-            attack: { row: 3, frames: 8, speed: 0.06 }  // Row 3 (the combo slash), 8 frames
+            // NOTE: Change '8' to however many attack frames you downloaded!
+            attack: this.loadFrames('assets/attack', 'attack', 8) 
+        };
+
+        // Timing settings for each state
+        this.animTimings = {
+            idle: { speed: 0.12 },
+            run:  { speed: 0.08 },
+            attack: { speed: 0.06 } 
         };
 
         this.currentFrame = 0;
         this.animTimer = 0;
-        this.attackFired = false; // Prevents firing 100 times during one attack animation
+        this.attackFired = false;
+    }
+
+    // Helper to automatically load image arrays based on your folder structure
+    loadFrames(folder, prefix, frameCount) {
+        let frames = [];
+        for (let i = 0; i < frameCount; i++) {
+            let img = new Image();
+            // Pad numbers < 10 with a zero (e.g., '00', '01')
+            let num = i < 10 ? '0' + i : i;
+            img.src = `${folder}/${prefix}${num}.png`;
+            frames.push(img);
+        }
+        return frames;
+    }
+
+    // Helper method for engine.js to easily grab and draw the current image
+    getDrawInfo() {
+        let animArray = this.animations[this.state];
+        // Failsafe in case images haven't loaded yet
+        if (!animArray || animArray.length === 0) return null; 
+        
+        let img = animArray[this.currentFrame];
+        if (!img || !img.complete || img.width === 0) return null;
+
+        // Anchor math to fix the dimension changes!
+        // We anchor the image bottom-center to this.x and this.y
+        return {
+            image: img,
+            drawWidth: img.width * this.spriteScale,
+            drawHeight: img.height * this.spriteScale,
+            // X center offset 
+            drawX: this.x - ((img.width * this.spriteScale) / 2),
+            // Y bottom offset (anchors her feet to her collision box location)
+            drawY: this.y - (img.height * this.spriteScale)
+        };
     }
 
     update(dt, enemies) {
         if (this.isDead) return;
 
-        let activeAnim = this.animConfig[this.state];
+        let currentAnimArray = this.animations[this.state];
+        let currentTiming = this.animTimings[this.state];
+
+        // Failsafe for loading
+        if (!currentAnimArray) return;
 
         // 1. Advance Animation Frames
         this.animTimer += dt;
-        if (this.animTimer >= activeAnim.speed) {
+        if (this.animTimer >= currentTiming.speed) {
             this.currentFrame++;
             this.animTimer = 0;
 
             // Handle end of animation
-            if (this.currentFrame >= activeAnim.frames) {
+            if (this.currentFrame >= currentAnimArray.length) {
                 if (this.state === 'attack') {
                     // Attack finished, revert to idle or run
                     this.state = UI.joystick.active ? 'run' : 'idle';
                     this.attackFired = false; 
                     this.currentFrame = 0;
-                    activeAnim = this.animConfig[this.state];
                 } else {
                     // Loop idle/run
                     this.currentFrame = 0; 
@@ -92,7 +138,8 @@ class Player extends Entity {
         }
 
         // 4. Deal Damage during a specific frame of the attack animation
-        if (this.state === 'attack' && this.currentFrame === Math.floor(activeAnim.frames / 2) && !this.attackFired) {
+        // Triggers halfway through the attack array
+        if (this.state === 'attack' && this.currentFrame === Math.floor(currentAnimArray.length / 2) && !this.attackFired) {
             this.attackFired = true; // Ensure damage happens once per swing
             
             // Melee splash damage (hit everything in front)
