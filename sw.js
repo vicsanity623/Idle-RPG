@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raged-v0.0.2-b.7';
+const CACHE_NAME = 'raged-v0.0.2-b.8';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
