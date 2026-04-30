@@ -40,9 +40,11 @@
                 <canvas id="minimapCanvas"></canvas>
             </div>
             <!-- Clickable Quest Tracker for Auto-Pathing -->
-            <div id="quest-tracker" onclick="UI.startAutoQuest()">
-                <h4 class="quest-title">[Battle] Level Achievement</h4>
-                <p class="quest-obj">Kill Sleepless Ghost (<span id="quest-count">0</span>/40)</p>
+            <div id="quest-tracker" style="display: none;">
+                <div id="quest-content">
+                    <h4 class="quest-title"></h4>
+                    <p class="quest-obj"></p>
+                </div>
                 <div id="auto-quest-indicator" class="hidden">Auto-Pathing...</div>
             </div>
         </div>
@@ -136,10 +138,17 @@
 
         <div id="stats-modal" class="ui-modal hidden">
             <div class="modal-header">
-                <h3>Character Stats</h3>
+                <h3>Ongoing Effects & Stats</h3>
                 <button class="close-btn" onclick="UI.toggleModal('stats-modal')">X</button>
             </div>
             <div class="modal-body" id="stats-list"></div>
+        </div>
+
+        <!-- NEW: Item Tooltip for Long Press -->
+        <div id="item-tooltip" class="hidden">
+            <h4 id="tt-name">Item Name</h4>
+            <div id="tt-rarity">Rarity</div>
+            <div id="tt-stats">Stats</div>
         </div>
     </div>
 
