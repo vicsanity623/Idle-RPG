@@ -4,20 +4,28 @@ class InventoryManager {
         this.equippedItems = {};
     }
 
-    // Method to add an item to the inventory
-    addItem(item) {
+// Method to add an item to the inventory
+addItem(item) {
+    if (this.equippedItems[item.name]) {
+        console.log(`Item ${item.name} is already equipped.`);
+    } else {
         this.inventory.push(item);
         this.updateInventoryDisplay();
     }
+}
 
-    // Method to remove an item from the inventory
-    removeItem(item) {
-        const index = this.inventory.indexOf(item);
-        if (index > -1) {
+// Method to remove an item from the inventory
+removeItem(item) {
+    const index = this.inventory.indexOf(item);
+    if (index > -1) {
+        if (this.equippedItems[item.name]) {
+            console.log(`Item ${item.name} is equipped. Unequip it first.`);
+        } else {
             this.inventory.splice(index, 1);
             this.updateInventoryDisplay();
         }
     }
+}
 
     // Method to equip an item
     equipItem(item, slot) {
