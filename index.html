@@ -13,7 +13,7 @@
 
         <!-- Top Left: Player Status -->
         <div id="player-hud">
-            <div class="portrait"><img src="assets/player_portrait.png" alt="P"></div>
+            <div class="portrait"><img src="assets/player_portrait.png" alt="P" onerror="this.style.display='none'"></div>
             <div class="status-bars">
                 <div class="level-badge">40</div>
                 <div class="bars-container">
@@ -22,8 +22,8 @@
                 </div>
             </div>
             <div class="buffs">
-                <img src="assets/buff_attack.png" class="buff-icon">
-                <img src="assets/buff_speed.png" class="buff-icon">
+                <img src="assets/buff_attack.png" class="buff-icon" onerror="this.style.display='none'">
+                <img src="assets/buff_speed.png" class="buff-icon" onerror="this.style.display='none'">
             </div>
         </div>
 
@@ -45,13 +45,17 @@
             <button class="menu-btn">Skills</button>
         </div>
 
-        <!-- Bottom: Action Bar -->
+        <!-- Bottom Left: Virtual Joystick -->
+        <div id="joystick-base">
+            <div id="joystick-knob"></div>
+        </div>
+
+        <!-- Bottom Right: Action Bar -->
         <div id="action-bar">
-            <div class="action-slot potion"><img src="assets/potion_hp.png"><span>95</span></div>
-            <div class="action-slot potion"><img src="assets/potion_mp.png"><span>40</span></div>
+            <div class="action-slot potion"><img src="assets/potion_hp.png" onerror="this.style.display='none'"><span>95</span></div>
+            <div class="action-slot potion"><img src="assets/potion_mp.png" onerror="this.style.display='none'"><span>40</span></div>
             <div class="spacer"></div>
-            <div class="action-slot skill" id="btn-attack"><img src="assets/skill_attack.png"></div>
-            <div class="action-slot skill"><img src="assets/skill_magic.png"></div>
+            <div class="action-slot skill" id="btn-attack"><img src="assets/skill_attack.png" onerror="this.style.display='none'"></div>
             <div class="action-slot toggle-btn" id="btn-auto">AUTO<br><span id="auto-status">OFF</span></div>
         </div>
 
@@ -63,13 +67,12 @@
             </div>
             <div class="modal-body flex-row">
                 <div class="char-preview">
-                    <img src="assets/player_preview.png" alt="Preview">
+                    <img src="assets/player_preview.png" alt="Preview" onerror="this.style.display='none'">
                     <div class="cp-stats">CP: <span id="combat-power">14,320</span></div>
                 </div>
                 <div class="inv-tabs">
                     <button class="tab active">Equip</button>
                     <button class="tab">Consumables</button>
-                    <button class="tab">Misc</button>
                     <div class="inventory-grid" id="inv-grid"></div>
                 </div>
             </div>
@@ -80,9 +83,7 @@
                 <h3>Ongoing Effects & Stats</h3>
                 <button class="close-btn" onclick="UI.toggleModal('stats-modal')">X</button>
             </div>
-            <div class="modal-body" id="stats-list">
-                <!-- Populated by JS -->
-            </div>
+            <div class="modal-body" id="stats-list"></div>
         </div>
     </div>
 
