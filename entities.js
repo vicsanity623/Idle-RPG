@@ -26,7 +26,7 @@ class Player extends Entity {
             run: this.loadFrames('assets/run', 'run', 8),     // Loads run00 to run07
             
             // NOTE: Change '8' to however many attack frames you downloaded!
-            attack: this.loadFrames('assets/attack', 'atk', 8) 
+            attack: this.loadFrames('assets/attack', 'atk', 9) 
         };
 
         // Timing settings for each state
