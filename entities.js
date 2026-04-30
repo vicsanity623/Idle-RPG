@@ -144,16 +144,25 @@ class Player extends Entity {
         // 2. Movement Logic (Manual or Auto-Quest)
         if (this.state !== 'attack') {
             if (UI.joystick.active) {
-                this.autoQuest = false; // Manual input cancels auto-quest
+                this.autoQuest = false; 
                 this.state = 'run';
                 this.x += UI.joystick.vector.x * this.speed * dt;
                 this.y += UI.joystick.vector.y * this.speed * dt;
                 this.facingRight = UI.joystick.vector.x >= 0;
             } else if (this.autoQuest) {
+                // Persistent targeting: If no target, find the next one automatically
+                if (!this.target || this.target.isDead) {
+                    let closest = null; let minDist = Infinity;
+                    enemies.forEach(e => { let d = this.distanceTo(e); if (d < minDist) { minDist = d; closest = e; } });
+                    this.target = closest;
+                }
                 this.handleAutoQuestLogic(dt, enemies);
             } else {
                 this.state = 'idle';
             }
+            // World Boundary Lock
+            this.x = Math.max(this.radius, Math.min(this.x, Game.WORLD_SIZE - this.radius));
+            this.y = Math.max(this.radius, Math.min(this.y, Game.WORLD_SIZE - this.radius));
         }
 
         // 3. Combat logic
