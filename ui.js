@@ -12,7 +12,7 @@ const UI = {
             document.getElementById('btn-auto').style.borderColor = Game.player.autoAttack ? "#0f0" : "#b89947";
         });
 
-        // Click manual attack button
+        // Trigger action-based attack animation
         document.getElementById('btn-attack').addEventListener('pointerdown', () => {
             Game.player.forceAttack();
         });
@@ -29,44 +29,32 @@ const UI = {
             rect = base.getBoundingClientRect();
             const centerX = rect.left + maxRadius;
             const centerY = rect.top + maxRadius;
-            
             let dx = clientX - centerX;
             let dy = clientY - centerY;
             const distance = Math.sqrt(dx*dx + dy*dy);
 
-            // Clamp knob to edge of base
             if (distance > maxRadius) {
                 dx = (dx / distance) * maxRadius;
                 dy = (dy / distance) * maxRadius;
             }
-
             knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-            
-            // Normalize vector (-1.0 to 1.0)
             this.joystick.vector.x = dx / maxRadius;
             this.joystick.vector.y = dy / maxRadius;
         };
 
         base.addEventListener('pointerdown', (e) => {
-            pointerId = e.pointerId;
-            this.joystick.active = true;
-            updateKnob(e.clientX, e.clientY);
-            base.setPointerCapture(pointerId);
+            pointerId = e.pointerId; this.joystick.active = true;
+            updateKnob(e.clientX, e.clientY); base.setPointerCapture(pointerId);
         });
-
         base.addEventListener('pointermove', (e) => {
-            if (this.joystick.active && e.pointerId === pointerId) {
-                updateKnob(e.clientX, e.clientY);
-            }
+            if (this.joystick.active && e.pointerId === pointerId) updateKnob(e.clientX, e.clientY);
         });
 
         const resetJoy = (e) => {
             if (e.pointerId === pointerId) {
-                this.joystick.active = false;
-                this.joystick.vector = { x: 0, y: 0 };
+                this.joystick.active = false; this.joystick.vector = { x: 0, y: 0 };
                 knob.style.transform = `translate(-50%, -50%)`;
-                base.releasePointerCapture(pointerId);
-                pointerId = null;
+                base.releasePointerCapture(pointerId); pointerId = null;
             }
         };
 
@@ -74,32 +62,19 @@ const UI = {
         base.addEventListener('pointercancel', resetJoy);
     },
 
-    toggleModal(id) {
-        document.getElementById(id).classList.toggle('hidden');
-    },
-
+    toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); },
     updatePlayerStats(player) {
-        const hpPercent = Math.max(0, (player.hp / player.maxHp) * 100);
-        document.getElementById('hp-fill').style.width = hpPercent + '%';
+        document.getElementById('hp-fill').style.width = Math.max(0, (player.hp / player.maxHp) * 100) + '%';
         document.getElementById('hp-text').innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
         document.getElementById('quest-count').innerText = Game.kills;
     },
-
     populateInventory() {
         const grid = document.getElementById('inv-grid');
-        for (let i = 0; i < 40; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'inv-slot';
-            grid.appendChild(slot);
-        }
+        for (let i = 0; i < 40; i++) { grid.appendChild(Object.assign(document.createElement('div'), {className: 'inv-slot'})); }
     },
-
     populateStats() {
-        const statsList = document.getElementById('stats-list');
-        const stats = { "ATK": 1420, "DEF": 850, "Max HP": 1000, "Crit Rate": "15%", "ATK Speed": "22%", "Movement Speed": "12%" };
-        for (const [key, value] of Object.entries(stats)) {
-            statsList.innerHTML += `<div class="stat-row"><span>${key}</span><span style="color:#fff">${value}</span></div>`;
-        }
+        const stats = { "ATK": 1420, "DEF": 850, "Max HP": 1000, "Crit Rate": "15%" };
+        for (const [k, v] of Object.entries(stats)) document.getElementById('stats-list').innerHTML += `<div class="stat-row"><span>${k}</span><span style="color:#fff">${v}</span></div>`;
     }
 };
 
