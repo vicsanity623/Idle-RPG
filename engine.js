@@ -313,10 +313,10 @@ class Projectile {
 if (typeof UI !== 'undefined') {
     UI.currentInvTab = 'equip';
 
-    UI.setInventoryTab = function(tab) {
+    UI.setInventoryTab = function(tab, event) {
         this.currentInvTab = tab;
         document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
-        if (event) event.target.classList.add('active');
+        if (event && event.target) event.target.classList.add('active');
         this.updateInventory(Game.player);
     };
 
