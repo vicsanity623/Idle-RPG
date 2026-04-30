@@ -1,0 +1,21 @@
+{
+  "name": "Rage: Eternal",
+  "short_name": "RageMMORPG",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#FF8C00",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "idle192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "idle512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
