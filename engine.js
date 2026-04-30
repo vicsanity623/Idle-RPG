@@ -5,7 +5,7 @@ const Game = {
     camera: { x: 0, y: 0, width: 0, height: 0 },
     
     WORLD_SIZE: 3000, TILE_SIZE: 100,
-    player: null, enemies: [], lootItems: [], damageTexts: [], // Added lootItems
+    player: null, enemies: [], lootItems: [], damageTexts: [],
     kills: 0, images: {},
     
     init() {
@@ -21,11 +21,8 @@ const Game = {
         this.player = new Player(this.WORLD_SIZE/2, this.WORLD_SIZE/2);
         for(let i=0; i<30; i++) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
 
-        // LOAD ASSETS
         this.loadAsset('bg', 'assets/grass.png');
         this.loadAsset('ghost', 'assets/sleepless_ghost.png');
-        // Pre-load common icons for loot if needed
-        this.loadAsset('gold_icon', 'assets/potion_mp.png'); // Fallback icon
 
         requestAnimationFrame((t) => this.loop(t));
     },
@@ -39,7 +36,6 @@ const Game = {
         const img = new Image(); img.src = src; this.images[key] = img;
     },
 
-    // --- NEW: LOOT SPAWNING ---
     spawnLoot(x, y, type) {
         this.lootItems.push(new LootItem(x, y, type));
     },
@@ -69,16 +65,13 @@ const Game = {
         this.enemies.forEach(e => e.update(dt, this.player));
         this.enemies = this.enemies.filter(e => !e.isDead);
 
-        // --- NEW: LOOT PICKUP LOGIC ---
         this.lootItems.forEach(item => {
             item.life -= dt;
-            // Check if player is close enough to "vacuum" the loot
-            if (this.player.distanceTo(item) < 40) {
+            if (this.player.distanceTo(item) < 50) {
                 this.player.pickUpItem(item);
                 item.isPickedUp = true;
             }
         });
-        // Remove picked up or expired items
         this.lootItems = this.lootItems.filter(item => !item.isPickedUp && item.life > 0);
 
         this.damageTexts.forEach(dtxt => { dtxt.y -= 30 * dt; dtxt.life -= dt; });
@@ -87,7 +80,7 @@ const Game = {
         if (this.enemies.length < 30) this.enemies.push(new Enemy(Math.random()*this.WORLD_SIZE, Math.random()*this.WORLD_SIZE));
         
         UI.updatePlayerStats(this.player);
-        UI.updateXpBar(this.player); // Keep XP bar in sync
+        UI.updateXpBar(this.player);
     },
 
     draw() {
@@ -103,7 +96,7 @@ const Game = {
             for (let c = startCol; c < endCol; c++) {
                 let px = c * this.TILE_SIZE - this.camera.x;
                 let py = r * this.TILE_SIZE - this.camera.y;
-                if (this.images['bg'] && this.images['bg'].complete && this.images['bg'].naturalWidth > 0) {
+                if (this.images['bg'] && this.images['bg'].complete) {
                     this.ctx.drawImage(this.images['bg'], px, py, this.TILE_SIZE, this.TILE_SIZE);
                 } else {
                     this.ctx.fillStyle = (r+c)%2===0 ? '#2a4a2a' : '#1e381e';
@@ -112,24 +105,14 @@ const Game = {
             }
         }
 
-        // --- NEW: DRAW LOOT ON THE GROUND ---
+        // Draw Loot
         this.lootItems.forEach(item => {
             const sx = item.x - this.camera.x; const sy = item.y - this.camera.y;
             if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
-
-            // Draw Rarity Glow
-            let color = "#ffffff";
-            if (item.rarity === 'rare') color = "#3498db";
-            if (item.rarity === 'epic') color = "#9b59b6";
-            if (item.rarity === 'legendary') color = "#f1c40f";
-
+            let color = item.rarity === 'legendary' ? "#f1c40f" : item.rarity === 'epic' ? "#9b59b6" : item.rarity === 'rare' ? "#3498db" : "#fff";
             this.ctx.save();
-            this.ctx.shadowBlur = 15;
-            this.ctx.shadowColor = color;
-            this.ctx.fillStyle = color;
-            this.ctx.beginPath();
-            this.ctx.arc(sx, sy, 8, 0, Math.PI * 2);
-            this.ctx.fill();
+            this.ctx.shadowBlur = 15; this.ctx.shadowColor = color;
+            this.ctx.fillStyle = color; this.ctx.beginPath(); this.ctx.arc(sx, sy, 8, 0, Math.PI * 2); this.ctx.fill();
             this.ctx.restore();
         });
 
@@ -137,8 +120,7 @@ const Game = {
         this.enemies.forEach(e => {
             const sx = e.x - this.camera.x; const sy = e.y - this.camera.y;
             if (sx < -50 || sx > this.camera.width + 50 || sy < -50 || sy > this.camera.height + 50) return;
-            
-            if (this.images['ghost'] && this.images['ghost'].complete && this.images['ghost'].naturalWidth > 0) {
+            if (this.images['ghost'] && this.images['ghost'].complete) {
                 this.ctx.drawImage(this.images['ghost'], sx - e.radius, sy - e.radius, e.radius*2, e.radius*2);
             } else {
                 this.ctx.beginPath(); this.ctx.arc(sx, sy, e.radius, 0, Math.PI * 2);
@@ -151,23 +133,16 @@ const Game = {
         // Draw Player
         const pScreenX = Math.round(this.player.x - this.camera.x);
         const pScreenY = Math.round(this.player.y - this.camera.y);
-
         if (this.player.target) {
-            this.ctx.beginPath();
-            this.ctx.ellipse(this.player.target.x - this.camera.x, this.player.target.y - this.camera.y + 10, 20, 10, 0, 0, Math.PI*2);
+            this.ctx.beginPath(); this.ctx.ellipse(this.player.target.x - this.camera.x, this.player.target.y - this.camera.y + 10, 20, 10, 0, 0, Math.PI*2);
             this.ctx.strokeStyle = '#f00'; this.ctx.lineWidth = 2; this.ctx.stroke();
         }
-
         let pDraw = this.player.getDrawInfo();
         if (pDraw && pDraw.image) {
-            this.ctx.save();
-            this.ctx.translate(pScreenX, pScreenY); 
+            this.ctx.save(); this.ctx.translate(pScreenX, pScreenY); 
             if (!this.player.facingRight) this.ctx.scale(-1, 1); 
             this.ctx.drawImage(pDraw.image, -pDraw.drawWidth/2, -pDraw.drawHeight, pDraw.drawWidth, pDraw.drawHeight);
             this.ctx.restore(); 
-        } else {
-            this.ctx.beginPath(); this.ctx.arc(pScreenX, pScreenY, this.player.radius, 0, Math.PI * 2);
-            this.ctx.fillStyle = '#00f'; this.ctx.fill();
         }
 
         // Draw Damage Text
@@ -189,8 +164,6 @@ const Game = {
         this.enemies.forEach(e => this.miniCtx.fillRect(e.x * scale, e.y * scale, 3, 3));
         this.miniCtx.fillStyle = 'lime';
         this.miniCtx.fillRect(this.player.x * scale, this.player.y * scale, 4, 4);
-        this.miniCtx.strokeStyle = 'white';
-        this.miniCtx.strokeRect(this.camera.x * scale, this.camera.y * scale, this.camera.width * scale, this.camera.height * scale);
     },
 
     loop(timestamp) {
@@ -202,32 +175,94 @@ const Game = {
     }
 };
 
-// --- PATCHING THE UI OBJECT TO HANDLE NEW ELEMENTS ---
-// This ensures that the calls from entities.js actually find their targets in index.html
+// --- PATCHING THE UI OBJECT ---
 if (typeof UI !== 'undefined') {
+    UI.currentInvTab = 'equip';
+
+    UI.setInventoryTab = function(tab) {
+        this.currentInvTab = tab;
+        document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        this.updateInventory(Game.player);
+    };
+
+    UI.updateInventory = function(player) {
+        const grid = document.getElementById('inv-grid');
+        const goldTxt = document.getElementById('inv-gold');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        goldTxt.innerText = player.gold.toLocaleString();
+
+        // Filter inventory by current tab
+        const items = player.inventory.filter(item => {
+            if (this.currentInvTab === 'equip') return item.type === 'equipment';
+            return item.type === 'potion' || item.type === 'rune';
+        });
+
+        items.forEach((item, index) => {
+            const slot = document.createElement('div');
+            slot.className = `inv-slot rarity-${item.rarity}`;
+            slot.title = item.name;
+            slot.onclick = () => this.handleItemClick(item);
+            
+            if (item.count > 1) {
+                const count = document.createElement('span');
+                count.className = 'count';
+                count.innerText = item.count;
+                slot.appendChild(count);
+            }
+            grid.appendChild(slot);
+        });
+
+        // Update Equipment Slots
+        Object.keys(player.equipment).forEach(slotName => {
+            const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
+            if (el) el.className = `eq-slot ${player.equipment[slotName] ? 'rarity-' + player.equipment[slotName].rarity : ''}`;
+        });
+    };
+
+    UI.handleItemClick = function(item) {
+        if (item.type === 'equipment') {
+            const oldItem = Game.player.equipment[item.slot];
+            Game.player.equipment[item.slot] = item;
+            Game.player.inventory = Game.player.inventory.filter(i => i !== item);
+            if (oldItem) Game.player.inventory.push(oldItem);
+            this.showLootNotification(`Equipped ${item.name}`, 'rarity-epic');
+        } else if (item.name.includes("Health Potion")) {
+            Game.player.hp = Math.min(Game.player.maxHp, Game.player.hp + 200);
+            item.count--;
+            if (item.count <= 0) Game.player.inventory = Game.player.inventory.filter(i => i !== item);
+        }
+        this.updateInventory(Game.player);
+    };
+
+    UI.startAutoQuest = function() {
+        Game.player.autoQuest = !Game.player.autoQuest;
+        const indicator = document.getElementById('auto-quest-indicator');
+        if (indicator) indicator.classList.toggle('hidden', !Game.player.autoQuest);
+        this.showLootNotification(Game.player.autoQuest ? "Auto-Quest Started" : "Auto-Quest Stopped", "rarity-rare");
+    };
+
     UI.updateXpBar = function(player) {
         const fill = document.getElementById('exp-fill');
         const text = document.getElementById('exp-text');
-        const levelBadge = document.getElementById('player-level');
-        
         if (fill) {
             const pct = (player.xp / player.maxXp) * 100;
             fill.style.width = pct + "%";
             if (text) text.innerText = `EXP ${pct.toFixed(3)}%`;
         }
-        if (levelBadge) levelBadge.innerText = player.level;
+        const badge = document.getElementById('player-level');
+        if (badge) badge.innerText = player.level;
     };
 
-    UI.showLootNotification = function(message, rarityClass) {
+    UI.showLootNotification = function(msg, rarity) {
         const container = document.getElementById('loot-notification-container');
         if (!container) return;
-
         const el = document.createElement('div');
-        el.className = `loot-msg ${rarityClass}`;
-        el.innerText = message;
+        el.className = `loot-msg ${rarity}`;
+        el.innerText = msg;
         container.appendChild(el);
-
-        // Auto-remove the element after the CSS animation ends (3.5s)
         setTimeout(() => el.remove(), 3500);
     };
 }
