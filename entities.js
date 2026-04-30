@@ -10,25 +10,28 @@ class Player extends Entity {
     constructor(x, y) {
         super(x, y, 20, 300);
         this.hp = 1000; this.maxHp = 1000;
+        
+        // --- NEW: MANA & RESPAWN STATS ---
+        this.mp = 200; this.maxMp = 200;
+        this.mpRegen = 5; // Mana per second
+        this.respawnTimer = 0;
+        
         this.attackRange = 120; 
         this.autoAttack = false;
-        this.autoQuest = false; // --- NEW: Auto-Pathing Toggle ---
+        this.autoQuest = false; 
 
-        // --- NEW: LEVELING, GOLD & INVENTORY ---
         this.level = 1;
         this.xp = 0;
         this.maxXp = 500;
         this.gold = 0;
-        this.inventory = []; // Stores stackable items and unequipped gear
+        this.inventory = []; 
         
-        // --- NEW: EQUIPMENT SLOTS ---
         this.equipment = {
             head: null, cape: null, amulet: null,
             armor: null, hands: null, legs: null,
             ring1: null, ring2: null
         };
 
-        // --- ANIMATION STATE ---
         this.state = 'idle'; 
         this.facingRight = true; 
         this.spriteScale = 0.25; 
@@ -50,13 +53,11 @@ class Player extends Entity {
         this.attackFired = false;
     }
 
-    // --- NEW: ITEM PICKUP WITH STACKING ---
     pickUpItem(item) {
         if (item.type === 'gold') {
             this.gold += item.value;
             UI.showLootNotification(`+${item.value} Gold`, 'rarity-legendary');
         } else if (item.stackable) {
-            // Check if we already have this consumable
             let existing = this.inventory.find(i => i.name === item.name);
             if (existing) {
                 existing.count += (item.count || 1);
@@ -66,16 +67,12 @@ class Player extends Entity {
             }
             UI.showLootNotification(`Picked up ${item.name}`, `rarity-${item.rarity}`);
         } else {
-            // Equipment or Unique items
             this.inventory.push(item);
             UI.showLootNotification(`Found ${item.name}`, `rarity-${item.rarity}`);
         }
-        
-        // Trigger UI Refresh
         UI.updateInventory(this);
     }
 
-    // --- PROGRESSION ---
     gainXp(amount) {
         this.xp += amount;
         if (this.xp >= this.maxXp) this.levelUp();
@@ -88,6 +85,7 @@ class Player extends Entity {
         this.maxXp = Math.floor(this.maxXp * 1.5);
         this.maxHp += 100;
         this.hp = this.maxHp;
+        this.mp = this.maxMp; // Refill mana on level up
         Game.spawnDamageText(this.x, this.y - 50, "LEVEL UP!", "#f1c40f");
         UI.updatePlayerStats(this);
     }
@@ -119,7 +117,22 @@ class Player extends Entity {
     }
 
     update(dt, enemies) {
-        if (this.isDead) return;
+        // --- NEW: DEATH & RESPAWN LOGIC ---
+        if (this.isDead) {
+            this.respawnTimer += dt;
+            if (this.respawnTimer >= 10) {
+                this.isDead = false;
+                this.hp = this.maxHp;
+                this.mp = this.maxMp;
+                this.respawnTimer = 0;
+                this.x = Game.WORLD_SIZE / 2;
+                this.y = Game.WORLD_SIZE / 2;
+            }
+            return;
+        }
+
+        // --- NEW: MANA REGEN ---
+        this.mp = Math.min(this.maxMp, this.mp + this.mpRegen * dt);
 
         let currentAnimArray = this.animations[this.state];
         let currentTiming = this.animTimings[this.state];
@@ -150,7 +163,7 @@ class Player extends Entity {
                 this.y += UI.joystick.vector.y * this.speed * dt;
                 this.facingRight = UI.joystick.vector.x >= 0;
             } else if (this.autoQuest) {
-                // Persistent targeting: If no target, find the next one automatically
+                // Persistent targeting across entire map
                 if (!this.target || this.target.isDead) {
                     let closest = null; let minDist = Infinity;
                     enemies.forEach(e => { let d = this.distanceTo(e); if (d < minDist) { minDist = d; closest = e; } });
@@ -168,7 +181,7 @@ class Player extends Entity {
         // 3. Combat logic
         if ((this.autoAttack || this.autoQuest) && !this.target && this.state !== 'attack') {
             let closest = null; let minDist = Infinity;
-            enemies.forEach(e => { let d = this.distanceTo(e); if (d < 400 && d < minDist) { minDist = d; closest = e; } });
+            enemies.forEach(e => { let d = this.distanceTo(e); if (d < 600 && d < minDist) { minDist = d; closest = e; } });
             if (closest) this.target = closest;
         }
 
@@ -187,10 +200,8 @@ class Player extends Entity {
                 if (this.distanceTo(e) <= this.attackRange + 20) {
                     let dx = e.x - this.x;
                     if ((this.facingRight && dx > -20) || (!this.facingRight && dx < 20)) {
-                        // Calculate total attack: (Level * 10) + Gear Stats
                         let gearAtk = Object.values(this.equipment).reduce((acc, item) => acc + (item ? item.stats.attack : 0), 0);
                         let totalDmg = (this.level * 10) + gearAtk;
-                        
                         e.takeDamage(totalDmg, this);
                         e.x += this.facingRight ? 30 : -30;
                     }
@@ -199,14 +210,11 @@ class Player extends Entity {
         }
     }
 
-    // --- NEW: AUTO QUEST PATHING ---
     handleAutoQuestLogic(dt, enemies) {
         if (!this.target) {
-            // If no target, move toward a random spot in the world or stay idle
             this.state = 'idle';
             return;
         }
-
         this.state = 'run';
         const dist = this.distanceTo(this.target);
         if (dist > this.attackRange - 20) {
@@ -218,7 +226,10 @@ class Player extends Entity {
     }
 
     forceAttack() {
-        if (this.state === 'attack') return; 
+        // --- NEW: MANA COST CHECK ---
+        if (this.state === 'attack' || this.mp < 10) return; 
+        
+        this.mp -= 10; 
         this.state = 'attack';
         this.currentFrame = 0;
         this.animTimer = 0;
@@ -236,7 +247,7 @@ class Enemy extends Entity {
     }
 
     update(dt, player) {
-        if (this.isDead) return;
+        if (this.isDead || player.isDead) return;
         let dist = this.distanceTo(player);
         if (dist <= this.aggroRange) this.target = player;
         if (this.target) {
@@ -247,8 +258,10 @@ class Enemy extends Entity {
             } else {
                 const now = performance.now() / 1000;
                 if (now - this.lastAttack > 1.5) {
-                    player.hp -= 25; 
+                    // --- NEW: PREVENT NEGATIVE HP & TRIGGER PLAYER DEATH ---
+                    player.hp = Math.max(0, player.hp - 25); 
                     Game.spawnDamageText(player.x, player.y - 30, "25", "#ff0000");
+                    if (player.hp <= 0) player.isDead = true;
                     this.lastAttack = now;
                 }
             }
@@ -279,7 +292,6 @@ class Enemy extends Entity {
     }
 }
 
-// --- NEW LOOT ITEM CONFIGURATION ---
 class LootItem {
     constructor(x, y, type) {
         this.x = x; this.y = y; this.type = type;
