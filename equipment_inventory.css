@@ -58,8 +58,9 @@
     font-weight: bold; 
     font-size: 14px; 
     text-shadow: 1px 1px #000; 
-}/* [Equipment screen styles moved to equipment_screen.css] */
-@import 'equipment_screen.css';
+}
+/* This file depends on equipment_inventory.css as per architectural rules. */
+@import 'equipment_inventory.css';
 
 /* --- INVENTORY TABS & FOOTER --- */
 .inv-tabs-container { flex: 1; display: flex; flex-direction: column; background: #1a1a1a; padding: 10px; border: 1px solid #333; }
