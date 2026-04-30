@@ -194,32 +194,34 @@ if (typeof UI !== 'undefined') {
         grid.innerHTML = '';
         goldTxt.innerText = player.gold.toLocaleString();
 
-        // Filter inventory by current tab
-        const items = player.inventory.filter(item => {
-            if (this.currentInvTab === 'equip') return item.type === 'equipment';
-            return item.type === 'potion' || item.type === 'rune';
-        });
+        const items = player.inventory.filter(item => (this.currentInvTab === 'equip' ? item.type === 'equipment' : item.type !== 'equipment'));
 
-        items.forEach((item, index) => {
+        items.forEach(item => {
             const slot = document.createElement('div');
-            slot.className = `inv-slot rarity-${item.rarity}`;
-            slot.title = item.name;
+            // FIX: Added 'slot-icon' and inner text so items are visible without images
+            slot.className = `inv-slot rarity-${item.rarity} slot-icon`;
+            slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; // Shows first letter as icon
             slot.onclick = () => this.handleItemClick(item);
-            
-            if (item.count > 1) {
-                const count = document.createElement('span');
-                count.className = 'count';
-                count.innerText = item.count;
-                slot.appendChild(count);
-            }
+            if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
             grid.appendChild(slot);
         });
 
-        // Update Equipment Slots
+        // Update Equipment Slots & Calculate Combat Power
+        let equipAtk = 0;
         Object.keys(player.equipment).forEach(slotName => {
             const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
-            if (el) el.className = `eq-slot ${player.equipment[slotName] ? 'rarity-' + player.equipment[slotName].rarity : ''}`;
+            const item = player.equipment[slotName];
+            if (el) {
+                el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''}`;
+                el.innerHTML = item ? `<div class="item-label">${item.name[0]}</div>` : '';
+                if (item) equipAtk += (item.stats.attack || 0);
+            }
         });
+        
+        // Update Stats UI
+        const cp = Math.floor((player.level * 150) + (equipAtk * 10));
+        document.getElementById('combat-power').innerText = cp.toLocaleString();
+        this.updateStatsModal(player, cp, equipAtk);
     };
 
     UI.handleItemClick = function(item) {
@@ -264,6 +266,22 @@ if (typeof UI !== 'undefined') {
         el.innerText = msg;
         container.appendChild(el);
         setTimeout(() => el.remove(), 3500);
+    };
+    
+    UI.updateStatsModal = function(player, cp, equipAtk) {
+        const list = document.getElementById('stats-list');
+        if (!list) return;
+        list.innerHTML = `
+            <div style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">
+                <h2 style="color:#d4af37; margin-bottom:10px;">Level ${player.level} Ninja</h2>
+                <div class="stat-row"><span>Combat Power</span><span style="color:#f1c40f">${cp}</span></div>
+                <div class="stat-row"><span>Health</span><span>${player.hp} / ${player.maxHp}</span></div>
+                <div class="stat-row"><span>Base Attack</span><span>${player.level * 10}</span></div>
+                <div class="stat-row"><span>Gear Attack</span><span style="color:#2ecc71">+${equipAtk}</span></div>
+                <div class="stat-row"><span>Movement Speed</span><span>${player.speed}</span></div>
+            </div>
+            <div style="margin-top:20px; font-size:11px; color:#666;">* Stats increase automatically on Level Up and through Equipment.</div>
+        `;
     };
 }
 
