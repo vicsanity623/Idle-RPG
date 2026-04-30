@@ -2,18 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Viewport settings for mobile game scaling -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mobile MMO Prototype</title>
+    
+    <!-- PWA Manifest & Theme -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50"> <!-- Sets the browser address bar color -->
+    <link rel="apple-touch-icon" href="assets/idle/idle00.png"> <!-- Fallback icon for iOS -->
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-ui-container">
-        <!-- Core Game Canvas -->
+        <!-- Core Game Canvas (Assets drawn here are handled in engine.js/entities.js) -->
         <canvas id="gameCanvas"></canvas>
 
         <!-- Top Left: Player Status -->
         <div id="player-hud">
-            <div class="portrait"><img src="assets/player_portrait.png" alt="P" onerror="this.style.display='none'"></div>
+            <!-- Updated to use the new ninja girl idle frame as her UI portrait -->
+            <div class="portrait"><img src="assets/idle/idle00.png" alt="P" onerror="this.style.display='none'"></div>
             <div class="status-bars">
                 <div class="level-badge">40</div>
                 <div class="bars-container">
@@ -67,7 +75,8 @@
             </div>
             <div class="modal-body flex-row">
                 <div class="char-preview">
-                    <img src="assets/player_preview.png" alt="Preview" onerror="this.style.display='none'">
+                    <!-- Updated to use the new ninja girl idle frame for the inventory screen preview -->
+                    <img src="assets/idle/idle00.png" alt="Preview" onerror="this.style.display='none'">
                     <div class="cp-stats">CP: <span id="combat-power">14,320</span></div>
                 </div>
                 <div class="inv-tabs">
@@ -91,5 +100,20 @@
     <script src="ui.js"></script>
     <script src="entities.js"></script>
     <script src="engine.js"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
