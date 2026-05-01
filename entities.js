@@ -247,7 +247,10 @@ class Player extends Entity {
         }
 
         // Regen & Timers
-        this.mp = Math.min(this.maxMp, this.mp + this.mpRegen * dt);
+        this.mp = Math.min(this.maxMp, this.mp + (this.stats.mpRecovery || 10) * dt);
+        if (this.hp < this.maxHp) {
+            this.hp = Math.min(this.maxHp, this.hp + (this.stats.hpRecovery || 0) * dt);
+        }
         if (this.attackTimer > 0) this.attackTimer -= dt;
         this.skills.forEach(s => { if (s.timer > 0) s.timer -= dt; });
 
@@ -291,8 +294,9 @@ class Player extends Entity {
 
         if (moving) {
             this.state = 'run';
-            this.x += vx * this.speed * dt;
-            this.y += vy * this.speed * dt;
+            const currentSpeed = this.speed * ((this.stats.moveSpeed || 100) / 100);
+            this.x += vx * currentSpeed * dt;
+            this.y += vy * currentSpeed * dt;
             this.facingRight = vx >= 0;
             // Boundary Clamping
             this.x = Math.max(this.radius, Math.min(this.x, Game.WORLD_SIZE - this.radius));
@@ -381,7 +385,14 @@ class Player extends Entity {
                 if (!e.isDead && this.distSq(e) <= rangeSq) {
                     const isFacing = this.facingRight ? (e.x > this.x - 10) : (e.x < this.x + 10);
                     if (isFacing) {
-                        e.takeDamage(this.stats.attack, this);
+                        let isCrit = Math.random() * 100 < (this.stats.critRate || 0);
+                        let finalDmg = this.stats.attack;
+                        if (isCrit) {
+                            finalDmg *= 1.5; // Base 150% crit damage
+                            finalDmg *= (1 + (this.stats.fatalityRate || 0) / 100);
+                        }
+                        
+                        e.takeDamage(finalDmg, this, isCrit);
                         // Small knockback
                         e.x += this.facingRight ? 15 : -15;
                     }
@@ -495,16 +506,49 @@ class Enemy extends Entity {
     }
 
     attackPlayer(player) {
-        const dmg = this.attackPower || 25;
+        // Evade check
+        if (Math.random() * 100 < (player.stats.evade || 0)) {
+            Game.spawnDamageText(player.x, player.y - 30, "Evade!", "#a8e6cf");
+            this.attackTimer = this.attackCooldown;
+            return;
+        }
+
+        let dmg = this.attackPower || 25;
+        
+        // Block check (50% damage reduction)
+        let isBlocked = false;
+        if (Math.random() * 100 < (player.stats.block || 0)) {
+            dmg *= 0.5;
+            isBlocked = true;
+        }
+
+        // Flat Defense reduction
+        if (player.stats.defense) {
+            dmg -= player.stats.defense;
+        }
+        
+        // Percentage Damage reduction
+        if (player.stats.dmgReduction) {
+            dmg = dmg * (1 - (player.stats.dmgReduction / 100));
+        }
+
+        dmg = Math.max(1, Math.floor(dmg));
+
         player.hp = Math.max(0, player.hp - dmg);
+        if (isBlocked) {
+            Game.spawnDamageText(player.x, player.y - 45, "Block!", "#f1c40f");
+        }
         Game.spawnDamageText(player.x, player.y - 30, dmg.toString(), "#ff4444");
+        
         if (player.hp <= 0) player.isDead = true;
         this.attackTimer = this.attackCooldown;
     }
 
-    takeDamage(amount, source) {
+    takeDamage(amount, source, isCrit = false) {
         this.hp -= amount;
-        Game.spawnDamageText(this.x, this.y - 30, Math.floor(amount).toString(), "#ffffff");
+        const color = isCrit ? "#ffaa00" : "#ffffff";
+        const text = isCrit ? `CRIT ${Math.floor(amount)}!` : Math.floor(amount).toString();
+        Game.spawnDamageText(this.x, this.y - 30, text, color);
         this.target = source;
 
         // Track boss damage
