@@ -13,7 +13,7 @@ class Player extends Entity {
         
         // --- NEW: MANA & RESPAWN STATS ---
         this.mp = 200; this.maxMp = 200;
-        this.mpRegen = 5; // Mana per second
+        this.mpRegen = 1; // Mana per second
         this.respawnTimer = 0;
         
         this.attackRange = 120; 
@@ -226,9 +226,9 @@ class Player extends Entity {
     }
 
     forceAttack() {
-        if (this.state === 'attack' || this.mp < 2) return; 
+        if (this.state === 'attack' || this.mp < 5) return; 
         
-        this.mp -= 2; 
+        this.mp -= 5; 
         this.state = 'attack';
         this.currentFrame = 0;
         this.animTimer = 0;
@@ -294,7 +294,7 @@ class Enemy extends Entity {
 class LootItem {
     constructor(x, y, type) {
         this.x = x; this.y = y; this.type = type;
-        this.radius = 15;
+        this.radius = 25;
         this.isPickedUp = false;
         this.life = 60;
         this.stackable = (type === 'gold' || type === 'potion' || type === 'rune');
