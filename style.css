@@ -33,6 +33,9 @@
     --z-hud: 10;
     --z-loot: 15;
     --z-exp: 20;
+
+    /* Borders */
+    --border-light: #444;
     --z-joystick: 50;
     --z-modal: 100;
     --z-tooltip: 9999;
