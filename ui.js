@@ -576,7 +576,7 @@ const UI = {
             `;
             group.stats.forEach(stat => {
                 const val = player.stats[stat.key] || 0;
-                const displayVal = stat.pct ? `${val}%` : val;
+                const displayVal = stat.pct ? `${val}%` : this.formatNumber(val);
                 statListHTML += `
                     <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px;">
                         <span style="color: #888;">${stat.label}</span>
@@ -598,17 +598,17 @@ const UI = {
                         <div style="display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-bottom: 3px;">
                             <span style="width: 20px; text-align: left; color: #e74c3c; font-weight: bold;">HP</span>
                             <div style="width: 100px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;"><div style="width: ${hpPct}%; background: #e74c3c; height: 100%;"></div></div>
-                            <span style="width: 70px; text-align: right;">${Math.floor(player.hp)} / ${player.maxHp}</span>
+                            <span style="width: 70px; text-align: right;">${this.formatNumber(Math.floor(player.hp))} / ${this.formatNumber(player.maxHp)}</span>
                         </div>
                         <div style="display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-bottom: 3px;">
                             <span style="width: 20px; text-align: left; color: #3498db; font-weight: bold;">MP</span>
                             <div style="width: 100px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;"><div style="width: ${mpPct}%; background: #3498db; height: 100%;"></div></div>
-                            <span style="width: 70px; text-align: right;">${Math.floor(player.mp)} / ${player.maxMp}</span>
+                            <span style="width: 70px; text-align: right;">${this.formatNumber(Math.floor(player.mp))} / ${this.formatNumber(player.maxMp)}</span>
                         </div>
                         <div style="display: flex; justify-content: flex-end; align-items: center; gap: 5px;">
                             <span style="width: 20px; text-align: left; color: #9b59b6; font-weight: bold;">XP</span>
                             <div style="width: 100px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;"><div style="width: ${xpPct}%; background: #9b59b6; height: 100%;"></div></div>
-                            <span style="width: 70px; text-align: right;">${Math.floor(player.xp)} / ${player.maxXp}</span>
+                            <span style="width: 70px; text-align: right;">${this.formatNumber(Math.floor(player.xp))} / ${this.formatNumber(player.maxXp)}</span>
                         </div>
                     </div>
                 </div>
@@ -770,13 +770,13 @@ const UI = {
             const qObj = questBox.querySelector('.quest-obj');
             
             if (qTitle) qTitle.innerText = Game.activeQuest.title;
-            if (qObj) qObj.innerHTML = `${Game.activeQuest.obj} (<span id="quest-count">${Game.kills}</span>/${Game.activeQuest.target})`;
+            if (qObj) qObj.innerHTML = `${Game.activeQuest.obj} (<span id="quest-count">${this.formatNumber(Game.kills)}</span>/${this.formatNumber(Game.activeQuest.target)})`;
             
             if (Game.kills >= Game.activeQuest.target) {
                 questBox.classList.add('quest-complete-glow');
                 const qContent = questBox.querySelector('#quest-content');
                 if (qContent) {
-                    qContent.innerHTML = `<h4 class="quest-title" style="color:#fff;">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: ${Game.activeQuest.g} Gold & ${Game.activeQuest.xp} XP</p>`;
+                    qContent.innerHTML = `<h4 class="quest-title" style="color:#fff;">[DONE] Click to Claim!</h4><p class="quest-obj">Reward: ${this.formatNumber(Game.activeQuest.g)} Gold & ${this.formatNumber(Game.activeQuest.xp)} XP</p>`;
                 }
                 const ind = document.getElementById('auto-quest-indicator');
                 if (ind) ind.classList.add('hidden');
@@ -852,7 +852,7 @@ const UI = {
         const hpTxt = document.getElementById('hp-text');
         if (hpFill) hpFill.style.width = Math.max(0, (player.hp / player.maxHp) * 100) + "%";
         if (mpFill) mpFill.style.width = Math.max(0, (player.mp / player.maxMp) * 100) + "%";
-        if (hpTxt) hpTxt.innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
+        if (hpTxt) hpTxt.innerText = `${this.formatNumber(Math.floor(player.hp))}/${this.formatNumber(player.maxHp)}`;
     },
 
     updateXpBar(player) {

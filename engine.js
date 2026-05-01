@@ -150,7 +150,13 @@ var Game = {
 
     interactWithNPC(npc) {
         if (!this.activeQuest) {
-            this.activeQuest = {...this.questList[Math.floor(Math.random() * this.questList.length)]};
+            let baseQuest = this.questList[Math.floor(Math.random() * this.questList.length)];
+            let multiplier = this.player.level || 1;
+            this.activeQuest = {
+                ...baseQuest,
+                g: baseQuest.g * multiplier,
+                xp: baseQuest.xp * multiplier
+            };
             this.kills = 0; 
             
             const questBox = document.getElementById('quest-tracker');
