@@ -25,6 +25,7 @@
     
     /* Item Rarities */
     --rarity-common: #ffffff;
+    --rarity-uncommon: #2ecc71; /* Green for uncommon */
     --rarity-rare: #3498db;
     --rarity-epic: #9b59b6;
     --rarity-legendary: #f1c40f;
