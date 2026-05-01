@@ -22,8 +22,8 @@ const Game = {
     enemies: [],
     npcs: [],
     lootItems: [],
-    projectiles: [],
-    damageTexts: [], 
+    projectiles:[],
+    damageTexts:[], 
     kills: 0,
     images: {},
     assetsLoaded: 0,
@@ -44,20 +44,19 @@ const Game = {
         this.canvas = document.getElementById('gameCanvas');
         if (!this.canvas) return console.error("Game Canvas not found");
         
-        this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimization: no alpha for main ctx
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.miniCanvas = document.getElementById('minimapCanvas');
         this.miniCtx = this.miniCanvas ? this.miniCanvas.getContext('2d') : null;
         
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        // Standardized Pointer Support (Mouse/Touch/Pen)
+        // Standardized Pointer Support
         this.canvas.addEventListener('pointerdown', (e) => this.handleInput(e));
 
         // Initialize Entities
-        // Assuming Player and NPC classes are defined in other files
         this.player = new Player(this.WORLD_SIZE / 2, this.WORLD_SIZE / 2);
-        this.npcs = [new NPC(this.WORLD_SIZE / 2 + 100, this.WORLD_SIZE / 2, "Quest Master")];
+        this.npcs =[new NPC(this.WORLD_SIZE / 2 + 100, this.WORLD_SIZE / 2, "Quest Master")];
 
         // Setup Potion Shortcuts
         this.setupActionSlots();
@@ -69,7 +68,7 @@ const Game = {
         // Load Saved Data
         this.loadGame();
 
-        // Initial UI Sync
+        // Initial UI Sync (Calls to the newly standalone ui.js)
         if (typeof UI !== 'undefined') {
             UI.updateInventory(this.player);
             UI.updatePlayerStats(this.player);
@@ -139,7 +138,6 @@ const Game = {
 
     interactWithNPC(npc) {
         if (!this.activeQuest) {
-            // Assign new quest
             this.activeQuest = {...this.questList[Math.floor(Math.random() * this.questList.length)]};
             this.kills = 0; 
             
@@ -149,12 +147,21 @@ const Game = {
                 questBox.classList.remove('quest-complete-glow');
             }
             
-            UI.showLootNotification(`Quest Accepted: ${this.activeQuest.title}`, "rarity-epic");
-            UI.updatePlayerStats(this.player);
+            if (typeof UI !== 'undefined') {
+                UI.showLootNotification(`Quest Accepted: ${this.activeQuest.title}`, "rarity-epic");
+                UI.updatePlayerStats(this.player);
+            }
             this.saveGame();
-        } else {
+        } else if (typeof UI !== 'undefined') {
             UI.showLootNotification(`${npc.name}: "Finish your task first!"`, "rarity-common");
         }
+    },
+
+    castFireArrow() {
+        if (this.player.level < 5 || this.player.mp < 50 || !this.player.target || this.player.isDead) return;
+        this.player.mp -= 50;
+        this.projectiles.push(new Projectile(this.player.x, this.player.y - 30, this.player.target, 500));
+        if (typeof UI !== 'undefined') UI.showLootNotification("FIRE ARROW!", "rarity-epic");
     },
 
     saveGame() {
@@ -180,7 +187,7 @@ const Game = {
                 Object.assign(this.player, data);
                 this.kills = data.kills || 0;
                 this.activeQuest = data.activeQuest || null;
-                UI.showLootNotification("Progress Loaded", "rarity-legendary");
+                if (typeof UI !== 'undefined') UI.showLootNotification("Progress Loaded", "rarity-legendary");
             } catch (e) {
                 console.error("Save data corrupted.");
             }
@@ -189,6 +196,10 @@ const Game = {
 
     spawnDamageText(x, y, text, color) {
         this.damageTexts.push({ x, y, text, color, life: 1.0 });
+    },
+
+    spawnLoot(x, y, type) {
+        this.lootItems.push(new LootItem(x, y, type));
     },
 
     update(dt) {
@@ -232,7 +243,7 @@ const Game = {
             this.enemies.push(new Enemy(Math.random() * this.WORLD_SIZE, Math.random() * this.WORLD_SIZE));
         }
 
-        // Logic-based UI updates (only when UI exists and not every frame)
+        // Logic-based UI updates (throttled to save CPU)
         if (typeof UI !== 'undefined' && Math.random() < 0.1) {
             UI.updatePlayerStats(this.player);
             UI.updateXpBar(this.player);
@@ -241,7 +252,7 @@ const Game = {
 
     draw() {
         const { ctx, camera, images, TILE_SIZE } = this;
-        ctx.fillStyle = "#1e381e"; // Fallback background
+        ctx.fillStyle = "#1e381e"; 
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
         // 1. Draw Tiled Background
@@ -256,6 +267,9 @@ const Game = {
                 let py = r * TILE_SIZE - camera.y;
                 if (images.bg && images.bg.complete) {
                     ctx.drawImage(images.bg, px, py, TILE_SIZE, TILE_SIZE);
+                } else {
+                    ctx.fillStyle = (r+c)%2===0 ? '#2a4a2a' : '#1e381e';
+                    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
                 }
             }
         }
@@ -264,9 +278,11 @@ const Game = {
         this.lootItems.forEach(item => {
             const sx = item.x - camera.x;
             const sy = item.y - camera.y;
-            const color = item.rarity === 'legendary' ? "#f1c40f" : item.rarity === 'epic' ? "#9b59b6" : "#fff";
+            const color = item.rarity === 'legendary' ? "#f1c40f" : item.rarity === 'epic' ? "#9b59b6" : item.rarity === 'rare' ? "#3498db" : "#fff";
             ctx.fillStyle = color;
-            ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 15; ctx.shadowColor = color;
+            ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
         });
 
         // 3. Draw NPCs
@@ -280,8 +296,12 @@ const Game = {
 
         // 4. Draw Projectiles
         this.projectiles.forEach(p => {
-            ctx.fillStyle = "#ff4500";
-            ctx.beginPath(); ctx.arc(p.x - camera.x, p.y - camera.y, 8, 0, Math.PI*2); ctx.fill();
+            p.trail.forEach(t => {
+                ctx.fillStyle = `rgba(255, 69, 0, ${t.alpha})`;
+                ctx.beginPath(); ctx.arc(t.x - camera.x, t.y - camera.y, 8, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.fillStyle = "#ff0000";
+            ctx.beginPath(); ctx.arc(p.x - camera.x, p.y - camera.y, 12, 0, Math.PI*2); ctx.fill();
         });
 
         // 5. Draw Enemies
@@ -317,10 +337,12 @@ const Game = {
         // 7. Damage Text Overlay
         ctx.textAlign = "center";
         this.damageTexts.forEach(dtxt => {
+            const sx = dtxt.x - camera.x; const sy = dtxt.y - camera.y;
+            ctx.fillStyle = `rgba(0,0,0, ${dtxt.life})`; ctx.fillText(dtxt.text, sx+2, sy+2);
             ctx.globalAlpha = dtxt.life;
             ctx.fillStyle = dtxt.color;
             ctx.font = "bold 20px Arial";
-            ctx.fillText(dtxt.text, dtxt.x - camera.x, dtxt.y - camera.y);
+            ctx.fillText(dtxt.text, sx, sy);
         });
         ctx.globalAlpha = 1.0;
 
@@ -328,9 +350,10 @@ const Game = {
         if (this.player.isDead) {
             ctx.fillStyle = "rgba(0,0,0,0.7)";
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            ctx.fillStyle = "white";
-            ctx.font = "bold 40px Arial";
+            ctx.fillStyle = "white"; ctx.font = "bold 40px Arial"; ctx.textAlign = "center";
             ctx.fillText("YOU HAVE FALLEN", this.canvas.width/2, this.canvas.height/2);
+            ctx.font = "20px Arial";
+            ctx.fillText(`Respawning in ${Math.ceil(10 - this.player.respawnTimer)}s...`, this.canvas.width/2, this.canvas.height/2 + 50);
         }
 
         this.drawMinimap();
@@ -342,7 +365,7 @@ const Game = {
         const scale = this.miniCanvas.width / this.WORLD_SIZE;
         
         this.miniCtx.fillStyle = 'red';
-        this.enemies.forEach(e => this.miniCtx.fillRect(e.x * scale, e.y * scale, 2, 2));
+        this.enemies.forEach(e => this.miniCtx.fillRect(e.x * scale, e.y * scale, 3, 3));
         
         this.miniCtx.fillStyle = 'lime';
         this.miniCtx.fillRect(this.player.x * scale, this.player.y * scale, 4, 4);
@@ -350,7 +373,7 @@ const Game = {
 
     loop(timestamp) {
         let dt = (timestamp - this.lastTime) / 1000;
-        dt = Math.min(dt, 0.1); // Cap dt to prevent huge jumps
+        dt = Math.min(dt, 0.1); 
         this.lastTime = timestamp;
 
         this.update(dt);
@@ -359,17 +382,19 @@ const Game = {
     }
 };
 
-/**
- * Projectile Class - Refactored for better logic
- */
 class Projectile {
     constructor(x, y, target, damage) {
         this.x = x; this.y = y; this.target = target; this.damage = damage;
-        this.speed = 700;
+        this.speed = 600;
         this.life = 2.0;
+        this.trail =[];
     }
     update(dt) {
-        if (!this.target || this.target.isDead) { this.life = 0; return; }
+        this.trail.push({x: this.x, y: this.y, alpha: 1.0});
+        if (this.trail.length > 12) this.trail.shift();
+        this.trail.forEach(t => t.alpha -= 0.08);
+
+        if (!this.target || this.target.isDead) { this.life -= dt; return; }
         
         const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
         this.x += Math.cos(angle) * this.speed * dt;
@@ -383,141 +408,4 @@ class Projectile {
     }
 }
 
-/**
- * UI Patching - Enhanced UI logic
- */
-if (typeof UI !== 'undefined') {
-    UI.currentInvTab = 'equip';
-
-    UI.setInventoryTab = function(tab) {
-        this.currentInvTab = tab;
-        document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
-        this.updateInventory(Game.player);
-    };
-
-    UI.updateInventory = function(player) {
-        const grid = document.getElementById('inv-grid');
-        if (!grid) return;
-        
-        grid.innerHTML = '';
-        const items = player.inventory.filter(item => 
-            this.currentInvTab === 'equip' ? item.type === 'equipment' : item.type !== 'equipment'
-        );
-
-        // Render 40 slots
-        for (let i = 0; i < 40; i++) {
-            const item = items[i];
-            const slot = document.createElement('div');
-            slot.className = `inv-slot ${item ? 'rarity-' + item.rarity : ''}`;
-            
-            if (item) {
-                slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`;
-                if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
-                slot.onclick = () => this.handleItemClick(item);
-            }
-            grid.appendChild(slot);
-        }
-
-        // Update Equipment
-        let equipAtk = 0;
-        Object.keys(player.equipment).forEach(slotName => {
-            const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
-            const item = player.equipment[slotName];
-            if (el) {
-                el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''}`;
-                el.innerHTML = item ? `<div class="item-label">${item.name[0]}</div>` : '';
-                if (item) {
-                    equipAtk += (item.stats.attack || 0);
-                    el.onclick = () => this.handleItemClick(item);
-                }
-            }
-        });
-
-        // CP Calculation
-        const cp = Math.floor((player.level * 150) + (equipAtk * 10));
-        const cpEl = document.getElementById('combat-power');
-        if (cpEl) cpEl.innerText = `CP: ${cp.toLocaleString()}`;
-    };
-
-    UI.handleItemClick = function(item) {
-        const p = Game.player;
-        if (item.type === 'equipment') {
-            const isEquipped = Object.values(p.equipment).includes(item);
-            if (isEquipped) {
-                p.equipment[item.slot] = null;
-                p.inventory.push(item);
-            } else {
-                const old = p.equipment[item.slot];
-                p.equipment[item.slot] = item;
-                p.inventory = p.inventory.filter(i => i !== item);
-                if (old) p.inventory.push(old);
-            }
-        } else if (item.name.includes("Potion")) {
-            const isHealth = item.name.includes("Health");
-            if (isHealth) p.hp = Math.min(p.maxHp, p.hp + 200);
-            else p.mp = Math.min(p.maxMp, p.mp + 100);
-            
-            item.count--;
-            if (item.count <= 0) p.inventory = p.inventory.filter(i => i !== item);
-            Game.spawnDamageText(p.x, p.y - 50, isHealth ? "HP +200" : "MP +100", isHealth ? "#2ecc71" : "#3498db");
-        }
-        this.updateInventory(p);
-        Game.saveGame();
-    };
-
-    UI.updatePlayerStats = function(player) {
-        const questBox = document.getElementById('quest-tracker');
-        if (!Game.activeQuest) {
-            if (questBox) questBox.style.display = 'none';
-        } else {
-            if (questBox) {
-                questBox.style.display = 'block';
-                const isComplete = Game.kills >= Game.activeQuest.target;
-                questBox.classList.toggle('quest-complete-glow', isComplete);
-                
-                const qContent = document.getElementById('quest-content');
-                if (qContent) {
-                    qContent.innerHTML = isComplete ? 
-                        `<h4 style="color:#d4af37">[READY] Claim Reward!</h4>` : 
-                        `<h4>${Game.activeQuest.title}</h4><p>${Game.activeQuest.obj}: ${Game.kills}/${Game.activeQuest.target}</p>`;
-                }
-                questBox.onclick = () => isComplete ? UI.claimQuest(player) : UI.startAutoQuest();
-            }
-        }
-
-        // Update Bars
-        const hpFill = document.getElementById('hp-fill');
-        const mpFill = document.getElementById('mp-fill');
-        if (hpFill) hpFill.style.width = `${(player.hp / player.maxHp) * 100}%`;
-        if (mpFill) mpFill.style.width = `${(player.mp / player.maxMp) * 100}%`;
-    };
-
-    UI.claimQuest = function(player) {
-        if (!Game.activeQuest) return;
-        player.gainXp(Game.activeQuest.xp);
-        player.gold += Game.activeQuest.g;
-        Game.activeQuest = null;
-        Game.kills = 0;
-        this.showLootNotification("Quest Complete!", "rarity-legendary");
-        this.updateInventory(player);
-        Game.saveGame();
-    };
-
-    UI.showLootNotification = function(msg, rarity) {
-        const container = document.getElementById('loot-notification-container');
-        if (!container) return;
-        const el = document.createElement('div');
-        el.className = `loot-msg ${rarity}`;
-        el.innerText = msg;
-        container.appendChild(el);
-        setTimeout(() => el.remove(), 3000);
-    };
-
-    UI.updateXpBar = function(player) {
-        const fill = document.getElementById('exp-fill');
-        if (fill) fill.style.width = `${(player.xp / player.maxXp) * 100}%`;
-    };
-}
-
-// Global Launcher
 window.addEventListener('load', () => Game.init());
