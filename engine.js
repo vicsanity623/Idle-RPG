@@ -557,9 +557,11 @@ if (typeof UI !== 'undefined') {
         const hpFill = document.getElementById('hp-fill');
         const mpFill = document.getElementById('mp-fill');
         const hpTxt = document.getElementById('hp-text');
+        const mpTxt = document.getElementById('mp-text'); // Added mpTxt
         if (hpFill) hpFill.style.width = (player.hp / player.maxHp * 100) + "%";
         if (mpFill) mpFill.style.width = (player.mp / player.maxMp * 100) + "%";
         if (hpTxt) hpTxt.innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
+        if (mpTxt) mpTxt.innerText = `${Math.floor(player.mp)}/${player.maxMp}`; // Added update for mpTxt
     };
 
     UI.claimQuest = function(player) {
