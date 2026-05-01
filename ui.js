@@ -73,7 +73,11 @@ const UI = {
     },
     populateStats() {
         const stats = { "ATK": 1420, "DEF": 850, "Max HP": 1000, "Crit Rate": "15%" };
-        for (const [k, v] of Object.entries(stats)) document.getElementById('stats-list').innerHTML += `<div class="stat-row"><span>${k}</span><span style="color:#fff">${v}</span></div>`;
+        let statsHtml = '';
+        for (const [k, v] of Object.entries(stats)) {
+            statsHtml += `<div class="stat-row"><span>${k}</span><span style="color:#fff">${v}</span></div>`;
+        }
+        document.getElementById('stats-list').innerHTML = statsHtml;
     }
 };
 
