@@ -1,79 +1,512 @@
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: sans-serif; }
-body, html { width: 100%; height: 100%; background: #000; overflow: hidden; touch-action: none; }
+/**
+ * Core Game Stylesheet
+ * Standards: CSS3, CSS Variables, Mobile-First/Safe-Area Support, Hardware Acceleration
+ */
 
-#game-ui-container { position: relative; width: 100vw; height: 100vh; }
-#gameCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+/* --- 1. THEME VARIABLES --- */
+:root {
+    /* UI Palette */
+    --color-bg-dark: #000000;
+    --color-bg-panel: rgba(15, 15, 20, 0.98);
+    --color-bg-hud: rgba(20, 20, 20, 0.7);
+    --color-bg-slot: rgba(30, 30, 30, 0.8);
+    
+    /* Accents */
+    --color-gold: #b89947;
+    --color-gold-light: #d4af37;
+    --color-gold-glow: #f1c40f;
+    --color-danger: #ff4500;
+    --color-success: #2ecc71;
+    
+    /* Text */
+    --color-text-main: #ffffff;
+    --color-text-dim: #cccccc;
+    --color-text-dark: #888888;
+    
+    /* Item Rarities */
+    --rarity-common: #ffffff;
+    --rarity-rare: #3498db;
+    --rarity-epic: #9b59b6;
+    --rarity-legendary: #f1c40f;
 
-/* HUD Elements */
-#player-hud { position: absolute; top: 10px; left: 10px; display: flex; align-items: flex-start; gap: 10px; z-index: 10; pointer-events: none; }
-.portrait { width: 50px; height: 50px; border: 2px solid #b89947; border-radius: 50%; background: #222; overflow: hidden; }
-.portrait img { width: 100%; height: 100%; }
-.status-bars { display: flex; flex-direction: column; gap: 2px; }
-.level-badge { background: #5a1111; color: #fff; font-size: 10px; padding: 2px 4px; border-radius: 2px; width: fit-content; border: 1px solid #b89947; }
+    /* Z-Index Hierarchy */
+    --z-hud: 10;
+    --z-loot: 15;
+    --z-exp: 20;
+    --z-joystick: 50;
+    --z-modal: 100;
+    --z-tooltip: 9999;
+}
+
+/* --- 2. GLOBAL RESET & BASE --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none; /* Prevents accidental text selection while playing */
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+/* Allow selection in text inputs for future chat features */
+input, textarea {
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+html, body {
+    width: 100%;
+    /* Use dynamic viewport height to fix mobile Safari address bar jump */
+    height: 100vh;
+    height: 100dvh; 
+    background: var(--color-bg-dark);
+    overflow: hidden;
+    touch-action: none; /* Prevents browser pull-to-refresh and panning */
+}
+
+/* --- 3. LAYOUT & CANVAS --- */
+#game-ui-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    /* Respect physical device notches in landscape */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated; /* Keeps retro pixel art sharp */
+}
+
+/* --- 4. TOP-LEFT HUD (Player Stats) --- */
+#player-hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    z-index: var(--z-hud);
+    pointer-events: none; /* Let clicks pass through to the game world */
+}
+
+.portrait {
+    width: 50px;
+    height: 50px;
+    border: 2px solid var(--color-gold);
+    border-radius: 50%;
+    background: #222;
+    overflow: hidden;
+    pointer-events: auto; /* Allow clicking the portrait */
+    cursor: pointer;
+}
+
+.portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.status-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.level-badge {
+    background: #5a1111;
+    color: var(--color-text-main);
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 2px;
+    width: fit-content;
+    border: 1px solid var(--color-gold);
+    font-weight: bold;
+}
+
 .bars-container { width: 200px; }
-.bar { height: 14px; background: #333; border: 1px solid #000; position: relative; border-radius: 2px; overflow: hidden; margin-bottom: 2px;}
-.hp-bar .fill { background: linear-gradient(90deg, #8b0000, #ff4500); width: 100%; height: 100%; transition: width 0.2s; }
-.mp-bar .fill { background: linear-gradient(90deg, #00008b, #1e90ff); width: 100%; height: 100%; transition: width 0.2s; }
-#hp-text { position: absolute; width: 100%; text-align: center; top: 0; font-size: 10px; color: white; line-height: 14px; text-shadow: 1px 1px 0 #000; }
-.buffs { display: flex; gap: 2px; margin-top: 5px; }
-.buff-icon { width: 20px; height: 20px; border: 1px solid #666; background: #333; }
 
-#right-hud { position: absolute; top: 10px; right: 10px; z-index: 10; pointer-events: none; text-align: right; }
-#minimap-container { width: 150px; height: 150px; border: 2px solid #b89947; background: rgba(0,0,0,0.5); border-radius: 5px; overflow: hidden; margin-bottom: 10px; pointer-events: auto; }
-#minimapCanvas { width: 100%; height: 100%; }
-#quest-tracker { background: rgba(20, 20, 20, 0.7); border-left: 3px solid #b89947; padding: 10px; color: #ddd; width: 200px; pointer-events: auto; text-align: left; cursor: pointer; transition: background 0.3s; }
-#quest-tracker:hover { background: rgba(40, 40, 40, 0.8); }
-.quest-title { color: #f0c040; font-size: 12px; margin-bottom: 5px; }
+.bar {
+    height: 14px;
+    background: #333;
+    border: 1px solid #000;
+    position: relative;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.hp-bar .fill {
+    background: linear-gradient(90deg, #8b0000, var(--color-danger));
+    width: 100%;
+    height: 100%;
+    transition: width 0.2s ease-out;
+    will-change: width; /* Hardware acceleration hint */
+}
+
+.mp-bar .fill {
+    background: linear-gradient(90deg, #00008b, #1e90ff);
+    width: 100%;
+    height: 100%;
+    transition: width 0.2s ease-out;
+    will-change: width;
+}
+
+#hp-text {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 0;
+    font-size: 10px;
+    color: var(--color-text-main);
+    line-height: 14px;
+    text-shadow: 1px 1px 0 #000;
+}
+
+.buffs {
+    display: flex;
+    gap: 2px;
+    margin-top: 5px;
+}
+
+.buff-icon {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #666;
+    background: #333;
+}
+
+/* --- 5. TOP-RIGHT HUD (Minimap & Quests) --- */
+#right-hud {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: var(--z-hud);
+    pointer-events: none;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#minimap-container {
+    width: 150px;
+    height: 150px;
+    border: 2px solid var(--color-gold);
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    pointer-events: auto;
+}
+
+#minimapCanvas {
+    width: 100%;
+    height: 100%;
+}
+
+#quest-tracker {
+    background: var(--color-bg-hud);
+    border-left: 3px solid var(--color-gold);
+    padding: 10px;
+    color: #ddd;
+    width: 200px;
+    pointer-events: auto;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#quest-tracker:hover {
+    background: rgba(40, 40, 40, 0.8);
+}
+
+.quest-title {
+    color: #f0c040;
+    font-size: 12px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
 .quest-obj { font-size: 11px; }
-#auto-quest-indicator { color: #2ecc71; font-size: 9px; margin-top: 5px; font-weight: bold; animation: pulse 1s infinite; }
 
-#menu-toggles { position: absolute; top: 180px; right: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 10; }
-.menu-btn { background: rgba(30, 30, 30, 0.8); border: 1px solid #666; color: #aaa; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-size: 12px; pointer-events: auto; }
-.menu-btn:hover { border-color: #b89947; color: #fff; }
+#auto-quest-indicator {
+    color: var(--color-success);
+    font-size: 9px;
+    margin-top: 5px;
+    font-weight: bold;
+    animation: pulse 1s infinite;
+}
 
-/* Virtual Joystick */
+#menu-toggles {
+    position: absolute;
+    top: 180px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: var(--z-hud);
+}
+
+.menu-btn {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid #666;
+    color: #aaa;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: auto;
+    transition: all 0.2s;
+}
+
+.menu-btn:hover {
+    border-color: var(--color-gold);
+    color: var(--color-text-main);
+}
+
+/* --- 6. CONTROLS (Joystick & Action Bar) --- */
 #joystick-base {
-    position: absolute; bottom: 30px; left: 30px;
-    width: 130px; height: 130px;
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    width: 130px;
+    height: 130px;
     background: radial-gradient(circle, rgba(50,50,50,0.6) 0%, rgba(10,10,10,0.8) 100%);
     border: 2px solid rgba(184, 153, 71, 0.5);
-    border-radius: 50%; z-index: 50; touch-action: none;
+    border-radius: 50%;
+    z-index: var(--z-joystick);
+    touch-action: none;
 }
+
 #joystick-knob {
-    position: absolute; top: 50%; left: 50%;
-    width: 50px; height: 50px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
     background: radial-gradient(circle, #ddd 0%, #777 100%);
-    border: 2px solid #333; border-radius: 50%;
+    border: 2px solid #333;
+    border-radius: 50%;
     transform: translate(-50%, -50%);
-    pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    will-change: transform;
 }
 
-/* Action Bar */
-#action-bar { position: absolute; bottom: 20px; right: 20px; display: flex; gap: 10px; z-index: 10; }
-.action-slot { width: 60px; height: 60px; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 50%; position: relative; cursor: pointer; pointer-events: auto; }
-.action-slot img { width: 100%; height: 100%; border-radius: 50%; }
-.action-slot span { position: absolute; bottom: 2px; right: 10px; color: white; font-size: 12px; text-shadow: 1px 1px #000; font-weight: bold;}
+#action-bar {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: var(--z-hud);
+}
+
+.action-slot {
+    width: 60px;
+    height: 60px;
+    background: rgba(0,0,0,0.6);
+    border: 2px solid #555;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s;
+}
+
+.action-slot:active { transform: scale(0.95); }
+
+.action-slot img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+}
+
+.action-slot span.count {
+    position: absolute;
+    bottom: 2px;
+    right: 10px;
+    color: var(--color-text-main);
+    font-size: 12px;
+    text-shadow: 1px 1px 2px #000;
+    font-weight: bold;
+}
+
 .spacer { width: 20px; }
-.toggle-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: bold; border-color: #b89947; background: rgba(100, 80, 20, 0.5); border-radius: 8px;}
 
-/* Modals General */
-.ui-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; max-width: 900px; height: 75%; background: rgba(15, 15, 20, 0.98); border: 2px solid #b89947; box-shadow: 0 0 20px rgba(0,0,0,0.8); z-index: 100; display: flex; flex-direction: column; }
-.ui-modal.hidden { display: none; }
-.modal-header { display: flex; justify-content: space-between; padding: 10px; background: #222; border-bottom: 1px solid #444; color: #d4af37; }
-.close-btn { background: transparent; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 0 5px; }
-.modal-body { padding: 15px; flex-grow: 1; overflow-y: auto; color: #ccc; }
-.flex-row { display: flex; gap: 20px; height: 100%; }
-
-/* --- EQUIPMENT SCREEN (AROUND CHARACTER) --- */
-.char-preview-container { flex: 1.2; position: relative; border: 1px solid #333; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.equipment-grid { position: absolute; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
-.eq-slot { 
-    position: absolute; width: 45px; height: 45px; background: rgba(20,20,20,0.8); 
-    border: 1px solid #444; pointer-events: auto; cursor: pointer;
-    background-size: cover; background-position: center;
+.toggle-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-main);
+    font-size: 10px;
+    font-weight: bold;
+    border-color: var(--color-gold);
+    background: rgba(100, 80, 20, 0.5);
+    border-radius: 8px;
 }
-.eq-slot:hover { border-color: #b89947; }
-/* Positions for slots around character */
+
+#btn-skill-1 {
+    border: 2px solid var(--color-danger);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    background: radial-gradient(circle, #8b0000, #222);
+}
+
+#btn-skill-1.locked {
+    filter: grayscale(1);
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* --- 7. BOTTOM EXP BAR --- */
+#exp-bar-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 6px; /* Slightly thicker for better visibility */
+    background: rgba(0, 0, 0, 0.8);
+    z-index: var(--z-exp);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#exp-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--color-gold-light), var(--color-gold-glow));
+    transition: width 0.4s ease-out;
+    box-shadow: 0 0 5px rgba(241, 196, 15, 0.6);
+    will-change: width;
+}
+
+#exp-text {
+    position: absolute;
+    bottom: 8px;
+    left: 10px;
+    font-size: 9px;
+    color: var(--color-text-dim);
+    text-shadow: 1px 1px 2px #000;
+    letter-spacing: 0.5px;
+}
+
+/* --- 8. UI MODALS (Inventory, Stats, etc.) --- */
+.ui-modal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 900px;
+    height: 80%;
+    max-height: 800px;
+    background: var(--color-bg-panel);
+    border: 2px solid var(--color-gold);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+    z-index: var(--z-modal);
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px; /* Softer edges */
+    overflow: hidden;
+}
+
+.ui-modal.hidden { display: none; }
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #444;
+    color: var(--color-gold-light);
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-text-main);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.close-btn:hover { color: var(--color-danger); }
+
+.modal-body {
+    padding: 15px;
+    flex-grow: 1;
+    overflow-y: auto;
+    color: var(--color-text-dim);
+}
+
+.flex-row {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    height: 100%;
+}
+
+/* Modal Inner Layout adjustments for mobile */
+@media (max-width: 768px) {
+    .flex-row { flex-direction: column; }
+    .char-preview-container { flex: 0.8 !important; min-height: 200px; }
+}
+
+/* Equipment Visualizer */
+.char-preview-container {
+    flex: 1.2;
+    position: relative;
+    border: 1px solid #333;
+    background: radial-gradient(circle, #2a2a2a, #111);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.equipment-grid {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.eq-slot {
+    position: absolute;
+    width: 45px;
+    height: 45px;
+    background: var(--color-bg-slot);
+    border: 1px solid var(--border-light);
+    pointer-events: auto;
+    cursor: pointer;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: border-color 0.2s, transform 0.1s;
+}
+
+.eq-slot:hover {
+    border-color: var(--color-gold);
+    transform: scale(1.05);
+}
+
+/* Equipment Positioning */
 .eq-slot[data-slot="head"]   { top: 5%; left: 50%; transform: translateX(-50%); }
 .eq-slot[data-slot="cape"]   { top: 20%; right: 10%; }
 .eq-slot[data-slot="amulet"] { top: 20%; left: 10%; }
@@ -82,94 +515,218 @@ body, html { width: 100%; height: 100%; background: #000; overflow: hidden; touc
 .eq-slot[data-slot="ring1"]  { top: 60%; left: 10%; }
 .eq-slot[data-slot="ring2"]  { top: 60%; right: 10%; }
 .eq-slot[data-slot="legs"]   { bottom: 5%; left: 50%; transform: translateX(-50%); }
+/* Restore normal transform for hovered center items */
+.eq-slot[data-slot="head"]:hover, .eq-slot[data-slot="legs"]:hover { transform: translateX(-50%) scale(1.05); }
 
-.char-preview { display: flex; flex-direction: column; align-items: center; z-index: 1; }
-.char-preview img { width: auto; height: 250px; image-rendering: pixelated; }
-.cp-stats { margin-top: 10px; color: #d4af37; font-weight: bold; font-size: 14px; text-shadow: 1px 1px #000; }
-
-/* --- INVENTORY TABS & FOOTER --- */
-.inv-tabs-container { flex: 1; display: flex; flex-direction: column; background: #1a1a1a; padding: 10px; border: 1px solid #333; }
-.tab-header { display: flex; gap: 5px; margin-bottom: 10px; }
-.tab { flex: 1; background: #333; color: #888; border: 1px solid #444; padding: 6px; cursor: pointer; font-size: 11px; }
-.tab.active { background: #b89947; color: #000; border-color: #fff; font-weight: bold; }
-.inventory-grid { flex-grow: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 50px; gap: 8px; overflow-y: auto; padding-right: 5px; }
-.inv-slot { background: #222; border: 1px solid #444; position: relative; cursor: pointer; }
-.inv-slot:hover { border-color: #b89947; }
-.inv-slot .count { position: absolute; bottom: 2px; right: 2px; font-size: 9px; color: white; background: rgba(0,0,0,0.5); padding: 0 2px; }
-.inventory-footer { border-top: 1px solid #333; padding-top: 10px; display: flex; justify-content: space-between; }
-.gold-display { color: #f1c40f; font-weight: bold; font-size: 14px; }
-
-/* EXP BAR STYLES */
-#exp-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: rgba(0, 0, 0, 0.8); z-index: 20; border-top: 1px solid rgba(255, 255, 255, 0.1); }
-#exp-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #d4af37, #f1c40f); transition: width 0.4s ease-out; box-shadow: 0 0 5px rgba(241, 196, 15, 0.6); }
-#exp-text { position: absolute; bottom: 6px; left: 10px; font-size: 9px; color: #bbb; text-shadow: 1px 1px #000; letter-spacing: 0.5px; }
-
-/* LOOT NOTIFICATION SYSTEM */
-#loot-notification-container { position: absolute; bottom: 100px; left: 20px; display: flex; flex-direction: column-reverse; gap: 4px; z-index: 15; pointer-events: none; }
-.loot-msg { background: rgba(0, 0, 0, 0.65); border-left: 3px solid #ccc; padding: 4px 10px; font-size: 11px; color: #fff; border-radius: 0 4px 4px 0; animation: lootFadeIn 3.5s forwards; white-space: nowrap; }
-.rarity-common { border-left-color: #ffffff; color: #fff; }
-.rarity-rare { border-left-color: #3498db; color: #85c1e9; }
-.rarity-epic { border-left-color: #9b59b6; color: #c39bd3; }
-.rarity-legendary { border-left-color: #f1c40f; color: #f7dc6f; font-weight: bold; }
-
-/* Skills List Styling */
-.skills-list { display: flex; flex-direction: column; gap: 10px; }
-
-/* Fix for invisible items */
-.slot-icon { display: flex; align-items: center; justify-content: center; position: relative; }
-.item-label { color: #fff; font-weight: bold; font-size: 18px; text-shadow: 1px 1px 2px #000; }
-.eq-slot { display: flex; align-items: center; justify-content: center; }
-
-#btn-skill-1 { 
-    border: 2px solid #ff4500; 
-    box-shadow: 0 0 10px #ff0000; 
-    background: radial-gradient(circle, #8b0000, #222); 
+.char-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1;
 }
-#btn-skill-1.locked { filter: grayscale(1); opacity: 0.5; pointer-events: none; }
 
-/* Quest Completion Glow Effect */
-.quest-complete-glow {
-    background: rgba(212, 175, 55, 0.3) !important;
-    border: 2px solid #f1c40f !important;
-    box-shadow: 0 0 15px #f1c40f;
-    animation: goldPulse 1.5s infinite;
+.char-preview img {
+    width: auto;
+    height: 250px;
+    image-rendering: pixelated;
+}
+
+.cp-stats {
+    margin-top: 10px;
+    color: var(--color-gold-light);
+    font-weight: bold;
+    font-size: 14px;
+    text-shadow: 1px 1px 2px #000;
+}
+
+/* Inventory System */
+.inv-tabs-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+    padding: 10px;
+    border: 1px solid #333;
+    border-radius: 4px;
+}
+
+.tab-header {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.tab {
+    flex: 1;
+    background: #333;
+    color: var(--color-text-dark);
+    border: 1px solid #444;
+    padding: 8px 6px;
     cursor: pointer;
+    font-size: 11px;
+    text-align: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.tab.active {
+    background: var(--color-gold);
+    color: #000;
+    border-color: #fff;
+    font-weight: bold;
+}
+
+.inventory-grid {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); /* Responsive grid */
+    grid-auto-rows: 45px;
+    gap: 6px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Custom Scrollbar for Inventory */
+.inventory-grid::-webkit-scrollbar { width: 6px; }
+.inventory-grid::-webkit-scrollbar-track { background: #111; }
+.inventory-grid::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+.inv-slot {
+    background: #222;
+    border: 1px solid #444;
+    position: relative;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s;
+}
+
+.inv-slot:hover { border-color: var(--color-gold); }
+
+.inv-slot .count {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 9px;
+    color: var(--color-text-main);
+    background: rgba(0,0,0,0.7);
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+.inventory-footer {
+    border-top: 1px solid #333;
+    margin-top: 10px;
+    padding-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.gold-display {
+    color: var(--color-gold-glow);
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Universal Slot Content */
+.item-label {
+    color: var(--color-text-main);
+    font-weight: bold;
+    font-size: 18px;
+    text-shadow: 1px 1px 2px #000;
+}
+
+/* --- 9. NOTIFICATIONS & TOOLTIPS --- */
+#loot-notification-container {
+    position: absolute;
+    bottom: 120px;
+    left: 20px;
+    display: flex;
+    flex-direction: column-reverse; /* Newest at bottom */
+    gap: 6px;
+    z-index: var(--z-loot);
+    pointer-events: none;
+}
+
+.loot-msg {
+    background: rgba(0, 0, 0, 0.75);
+    border-left: 3px solid var(--color-text-dim);
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--color-text-main);
+    border-radius: 0 4px 4px 0;
+    animation: lootFadeIn 3.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* Rarity System Integrations */
+.rarity-common { border-color: var(--rarity-common) !important; color: var(--rarity-common); }
+.rarity-rare { border-color: var(--rarity-rare) !important; color: var(--rarity-rare); }
+.rarity-epic { border-color: var(--rarity-epic) !important; color: var(--rarity-epic); }
+.rarity-legendary { 
+    border-color: var(--rarity-legendary) !important; 
+    color: var(--rarity-legendary); 
+    font-weight: bold; 
+    text-shadow: 0 0 5px rgba(241, 196, 15, 0.3);
+}
+
+#item-tooltip {
+    position: fixed; 
+    background: rgba(15, 15, 20, 0.95);
+    border: 2px solid var(--color-gold);
+    border-radius: 4px;
+    padding: 12px;
+    color: var(--color-text-main);
+    z-index: var(--z-tooltip);
+    pointer-events: none; /* Crucial: ensures mouse events fall through to the slot underneath */
+    width: 180px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.9);
+    text-shadow: 1px 1px 0 #000;
+    transform: translate(-50%, -110%);
+}
+
+#item-tooltip.hidden { display: none; }
+
+#tt-name { font-size: 14px; margin-bottom: 4px; font-weight: bold; }
+#tt-rarity { 
+    font-size: 10px; 
+    font-style: italic; 
+    margin-bottom: 8px; 
+    text-transform: capitalize; 
+    border-bottom: 1px solid #444; 
+    padding-bottom: 4px; 
+    color: var(--color-text-dim);
+}
+#tt-stats { font-size: 12px; color: var(--color-success); font-weight: bold; line-height: 1.4; }
+
+/* --- 10. ANIMATIONS --- */
+.quest-complete-glow {
+    background: rgba(212, 175, 55, 0.2) !important;
+    border: 2px solid var(--color-gold-glow) !important;
+    animation: goldPulse 1.5s infinite;
 }
 
 @keyframes goldPulse {
-    0% { box-shadow: 0 0 5px #f1c40f; }
-    50% { box-shadow: 0 0 20px #f1c40f; }
-    100% { box-shadow: 0 0 5px #f1c40f; }
+    0%   { box-shadow: 0 0 5px var(--color-gold-glow); }
+    50%  { box-shadow: 0 0 20px var(--color-gold-glow); }
+    100% { box-shadow: 0 0 5px var(--color-gold-glow); }
 }
 
 @keyframes lootFadeIn {
-    0% { transform: translateX(-20px); opacity: 0; }
-    10% { transform: translateX(0); opacity: 1; }
-    80% { opacity: 1; }
+    0%   { transform: translateX(-20px); opacity: 0; }
+    10%  { transform: translateX(0); opacity: 1; }
+    80%  { transform: translateX(0); opacity: 1; }
     100% { transform: translateY(-30px); opacity: 0; }
 }
+
 @keyframes pulse {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; }
+    0%   { opacity: 0.5; }
+    50%  { opacity: 1; }
     100% { opacity: 0.5; }
 }
-
-/* --- NEW: ITEM TOOLTIP --- */
-#item-tooltip {
-    position: fixed; /* Fixed to screen coordinates */
-    background: rgba(15, 15, 20, 0.95);
-    border: 2px solid #b89947;
-    border-radius: 4px;
-    padding: 10px;
-    color: #fff;
-    z-index: 9999;
-    pointer-events: none;
-    width: 160px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.9);
-    text-shadow: 1px 1px 0 #000;
-    transform: translate(-50%, -110%); /* Centers above finger */
-}
-#item-tooltip.hidden { display: none; }
-#tt-name { font-size: 14px; margin-bottom: 2px; }
-#tt-rarity { font-size: 10px; font-style: italic; margin-bottom: 5px; text-transform: capitalize; border-bottom: 1px solid #444; padding-bottom: 3px; }
-#tt-stats { font-size: 11px; color: #2ecc71; font-weight: bold; }
