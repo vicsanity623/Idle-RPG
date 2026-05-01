@@ -258,7 +258,8 @@ class Enemy extends Entity {
                 const now = performance.now() / 1000;
                 if (now - this.lastAttack > 1.5) {
                     // --- NEW: PREVENT NEGATIVE HP & TRIGGER PLAYER DEATH ---
-                    player.hp = Math.max(0, player.hp - 25); 
+                    player.hp = Math.max(0, player.hp - 25);
+                    UI.updateHpBar(player); // Update HP bar after taking damage
                     Game.spawnDamageText(player.x, player.y - 30, "25", "#ff0000");
                     if (player.hp <= 0) player.isDead = true;
                     this.lastAttack = now;
