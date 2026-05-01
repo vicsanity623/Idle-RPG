@@ -111,11 +111,7 @@ const Game = {
                     this.activeQuest = this.questList[Math.floor(Math.random() * this.questList.length)];
                     this.kills = 0; 
                     
-                    const questBox = document.getElementById('quest-tracker');
-                    if (questBox) {
-                        questBox.style.display = 'block';
-                        questBox.classList.remove('quest-complete-glow');
-                    }
+                    
                     
                     UI.showLootNotification(`Quest Accepted: ${this.activeQuest.title}`, "rarity-epic");
                     UI.updatePlayerStats(this.player);
