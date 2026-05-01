@@ -24,8 +24,7 @@ class Player extends Entity {
         this.xp = 0;
         this.maxXp = 500;
         this.gold = 0;
-        this.inventory = [];
-        this.maxInventorySize = 20; // Max items player can hold 
+        this.inventory = []; 
         
         this.equipment = {
             head: null, cape: null, amulet: null,
