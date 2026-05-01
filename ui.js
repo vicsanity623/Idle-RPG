@@ -89,6 +89,14 @@ base.addEventListener('pointermove', (e) => {
                 }
             }
         }
+    },
+
+    // Placeholder for inventory update logic, to be implemented
+    updateInventory(player) {
+        // TODO: Implement logic to fetch player's inventory,
+        // render items in the 'inventory-modal', and update UI elements.
+        // This function will be responsible for populating the inventory slots.
+        console.log("Updating inventory for player:", player);
     }
 };
 
