@@ -48,6 +48,25 @@
                 <div id="auto-quest-indicator" class="hidden">Auto-Pathing...</div>
             </div>
         </div>
+        <!-- NEW: Interactive Target HUD -->
+        <div id="target-hud" class="hidden">
+            <div class="target-header">
+                <h4 id="target-name">Target Name</h4>
+                <div class="level-badge" id="target-level">?</div>
+                <button class="close-btn" onclick="UI.clearTarget()">X</button>
+            </div>
+            <div class="target-body">
+                <div class="portrait"><img id="target-portrait" src="assets/idle/idle00.png" alt="T" onerror="this.style.display='none'"></div>
+                <div class="status-bars">
+                    <div class="bars-container">
+                        <div class="bar hp-bar"><div id="target-hp-fill" class="fill"></div><span id="target-hp-text">?/??</span></div>
+                    </div>
+                </div>
+                <div class="buffs" id="target-buffs">
+                    <!-- Target specific buffs/debuffs will be injected here by UI script -->
+                </div>
+            </div>
+        </div>
 
         <!-- Right Side: Menu Toggles -->
         <div id="menu-toggles">
