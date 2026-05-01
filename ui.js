@@ -2,7 +2,6 @@ const UI = {
     joystick: { active: false, vector: { x: 0, y: 0 } },
 
     init() {
-        this.populateInventory();
         this.populateStats();
         this.setupJoystick();
         
