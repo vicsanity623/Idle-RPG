@@ -13,8 +13,10 @@ const Realms = {
         { name: "Eldritch Peaks", difficulty: 1.4, color: "#e74c3c" }
     ],
 
+    globalDifficultyMultiplier: 1.0,
+
     getMultiplier() {
-        return this.list[this.currentRealm].difficulty;
+        return this.list[this.currentRealm].difficulty * this.globalDifficultyMultiplier;
     },
 
     setRealm(index) {

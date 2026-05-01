@@ -10,15 +10,110 @@ const UI = {
     isLongPress: false,
     pressTimer: null,
 
+    formatNumber(num) {
+        if (num < 1000) return Math.floor(num).toString();
+        const suffixes = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
+        let i = 0;
+        let val = num;
+        while (val >= 1000 && i < suffixes.length - 1) {
+            val /= 1000;
+            i++;
+        }
+        // Handle AA-ZZ style after Decillion
+        if (i === suffixes.length - 1 && val >= 1000) {
+            let letterIdx = Math.floor(Math.log(val / 1000) / Math.log(1000));
+            const char1 = String.fromCharCode(65 + Math.floor(letterIdx / 26));
+            const char2 = String.fromCharCode(65 + (letterIdx % 26));
+            return (val / Math.pow(1000, letterIdx + 1)).toFixed(2) + char1 + char2;
+        }
+        return (val < 10 ? val.toFixed(2) : val.toFixed(1)) + suffixes[i];
+    },
+
+    autoEquip() {
+        if (!window.Game || !Game.player) return;
+        const p = Game.player;
+        const slots = ['head', 'armor', 'hands', 'legs', 'cape', 'amulet', 'ring1', 'ring2'];
+        const rarityMap = { legendary: 4, epic: 3, rare: 2, uncommon: 1.5, common: 1 };
+        
+        let changed = false;
+        slots.forEach(slot => {
+            const current = p.equipment[slot];
+            // Find best item in inventory for this slot
+            const candidates = p.inventory.filter(i => i.type === 'equipment' && i.slot === slot);
+            if (candidates.length === 0) return;
+
+            candidates.sort((a, b) => {
+                const scoreA = (a.stats.attack * 10) + (a.stats.defense * 15) + (rarityMap[a.rarity] * 100);
+                const scoreB = (b.stats.attack * 10) + (b.stats.defense * 15) + (rarityMap[b.rarity] * 100);
+                return scoreB - scoreA;
+            });
+
+            const best = candidates[0];
+            const currentScore = current ? (current.stats.attack * 10) + (current.stats.defense * 15) + (rarityMap[current.rarity] * 100) : -1;
+            const bestScore = (best.stats.attack * 10) + (best.stats.defense * 15) + (rarityMap[best.rarity] * 100);
+
+            if (bestScore > currentScore) {
+                // Swap
+                p.equipment[slot] = best;
+                p.inventory = p.inventory.filter(i => i !== best);
+                if (current) p.inventory.push(current);
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            p.recalculateStats();
+            this.updateInventory(p);
+            this.showLootNotification("Auto-Equipped Best Gear", "rarity-legendary");
+        } else {
+            this.showLootNotification("Already wearing best gear", "rarity-common");
+        }
+    },
+
     init() {
         this.setupJoystick();
         this.bindEvents();
         this.populateInventoryPlaceholder();
+        this.startPreviewAnimation();
         
         // Skill Overhaul States
         this.currentSkillCategory = 'unique';
         this.currentSkillPreset = 'A';
         this.selectedSkillId = 'spirit_spear';
+    },
+
+    startPreviewAnimation() {
+        const canvas = document.getElementById('char-preview-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let frame = 0;
+        let timer = 0;
+
+        const loop = (t) => {
+            if (!window.Game || !Game.player) { requestAnimationFrame(loop); return; }
+            const p = Game.player;
+            const anim = p.animations.idle;
+            const dt = 0.016; 
+            timer += dt;
+            
+            if (timer >= anim.speed) {
+                frame = (frame + 1) % anim.frames.length;
+                timer = 0;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const img = anim.frames[frame];
+            if (img && img.complete) {
+                // Better Scaling for Preview: Fit inside the 200x240 canvas
+                const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.8;
+                const w = img.width * scale;
+                const h = img.height * scale;
+                // Center it properly
+                ctx.drawImage(img, canvas.width/2 - w/2, canvas.height/2 - h/2, w, h);
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
     },
 
     bindEvents() {
@@ -159,8 +254,8 @@ const UI = {
         const mainGoldTxt = document.getElementById('main-gold-count');
         if (!grid || !player) return;
 
-        if (goldTxt) goldTxt.innerText = player.gold.toLocaleString();
-        if (mainGoldTxt) mainGoldTxt.innerText = player.gold.toLocaleString();
+        if (goldTxt) goldTxt.innerText = this.formatNumber(player.gold);
+        if (mainGoldTxt) mainGoldTxt.innerText = this.formatNumber(player.gold);
 
         let items = player.inventory.filter(item => 
             (this.currentInvTab === 'equip' ? item.type === 'equipment' : item.type !== 'equipment')
@@ -177,25 +272,26 @@ const UI = {
             return 0;
         });
 
-        // Render Exactly 40 Slots
+        // Render Only Actual Items (No empty slots)
         const fragment = document.createDocumentFragment();
-        for (let i = 0; i < 40; i++) {
-            const item = items[i];
+        items.forEach((item) => {
             const slot = document.createElement('div');
+            slot.className = `inv-slot rarity-${item.rarity || 'common'}`;
+            slot.setAttribute('role', 'button');
+            slot.setAttribute('tabindex', '0');
             
-            if (item) {
-                slot.className = `inv-slot rarity-${item.rarity} slot-icon`;
-                slot.innerHTML = `<div class="item-icon-text">${item.icon || item.name[0]}</div>`; 
-                if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
-                
-                // Click Logic
-                slot.onclick = () => this.showItemDetails(item);
-                slot.oncontextmenu = (e) => e.preventDefault();
-            } else {
-                slot.className = 'inv-slot';
-            }
+            const img = document.createElement('img');
+            img.src = item.icon || 'assets/skill_attack.png';
+            img.alt = item.name;
+            img.onerror = () => img.style.display = 'none';
+            
+            slot.appendChild(img);
+            slot.onclick = () => this.handleItemClick(item);
+            
             fragment.appendChild(slot);
-        }
+        });
+
+        grid.innerHTML = '';
         grid.appendChild(fragment);
 
         // Update Equipment Slots
@@ -221,7 +317,7 @@ const UI = {
         
         const cp = Math.floor((player.level * 150) + (equipAtk * 10) + (equipDef * 15));
         const cpEl = document.getElementById('combat-power');
-        if (cpEl) cpEl.innerText = cp.toLocaleString();
+        if (cpEl) cpEl.innerText = this.formatNumber(cp);
 
         const gearSummary = document.getElementById('gear-summary-stats');
         if (gearSummary) gearSummary.innerHTML = `<span style="color:#e74c3c">⚔️ +${equipAtk}</span> &nbsp;|&nbsp; <span style="color:#3498db">🛡️ +${equipDef}</span>`;
@@ -350,17 +446,22 @@ const UI = {
     updateStatsModal(player, cp, equipAtk, equipDef = 0) {
         const list = document.getElementById('stats-list');
         if (!list) return;
+
+        // Save scroll position of the scrollable area
+        const scrollContainer = list.querySelector('.stats-scroll-area');
+        const lastScrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
         
         const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
         const mpPct = Math.max(0, Math.min(100, (player.mp / player.maxMp) * 100));
         const xpPct = Math.max(0, Math.min(100, (player.xp / player.maxXp) * 100));
 
+        // Stat Groups Config
         const statConfig = [
             {
                 title: "ATK",
                 color: "#d4af37",
                 stats: [
-                    { key: "atkSpeed", label: "ATK Speed", pct: true },
+                    { key: "attackSpeed", label: "ATK Speed", pct: true },
                     { key: "skillSpeed", label: "Skill Speed", pct: true },
                     { key: "attack", label: "ATK", pct: false },
                     { key: "magicAtk", label: "Magic ATK", pct: false },
@@ -457,11 +558,11 @@ const UI = {
         });
 
         list.innerHTML = `
-            <div style="background: rgba(20,20,25,0.95); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.15); box-shadow: inset 0 0 20px rgba(0,0,0,0.5); max-height: 70vh; overflow-y: auto;">
+            <div class="stats-scroll-area" style="background: rgba(20,20,25,0.95); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.15); box-shadow: inset 0 0 20px rgba(0,0,0,0.5); max-height: 70vh; overflow-y: auto;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; position: sticky; top: -20px; background: rgba(20,20,25,0.95); z-index: 10;">
                     <div>
                         <h2 style="color:#d4af37; margin:0; text-shadow: 0 0 10px rgba(212,175,55,0.5); letter-spacing: 1px; font-size: 20px;">Level ${player.level} Ninja</h2>
-                        <div style="font-size: 14px; color: #aaa; margin-top: 4px;">CP: <span style="color: #f1c40f; font-weight: bold;">${cp.toLocaleString()}</span></div>
+                        <div style="font-size: 14px; color: #aaa; margin-top: 4px;">CP: <span style="color: #f1c40f; font-weight: bold;">${this.formatNumber(cp)}</span></div>
                     </div>
                     <div style="text-align: right; font-size: 12px; color: #bbb; line-height: 1.6;">
                         <div style="display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-bottom: 3px;">
@@ -481,13 +582,13 @@ const UI = {
                         </div>
                     </div>
                 </div>
-
-                <!-- Comprehensive Stat List -->
-                <div style="padding-right: 10px;">
-                    ${statListHTML}
-                </div>
+                ${statListHTML}
             </div>
         `;
+
+        // Restore scroll position
+        const newScrollArea = list.querySelector('.stats-scroll-area');
+        if (newScrollArea) newScrollArea.scrollTop = lastScrollTop;
     },
 
     setSkillCategory(cat) {
@@ -647,7 +748,7 @@ const UI = {
         if (mpLabel) mpLabel.innerText = mpPot ? mpPot.count : 0;
         
         const mainGoldTxt = document.getElementById('main-gold-count');
-        if (mainGoldTxt) mainGoldTxt.innerText = player.gold.toLocaleString();
+        if (mainGoldTxt) mainGoldTxt.innerText = this.formatNumber(player.gold);
         
         // Skills Action Bar (Dynamic Sync)
         if (player.skills) {

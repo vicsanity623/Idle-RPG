@@ -88,9 +88,9 @@
             </button>
         </section>
 
-        <!-- HUD: Top Center (Gold) -->
-        <div id="top-gold-display" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 20px; border: 1px solid var(--color-gold); color: var(--color-gold-glow); font-weight: 800; font-size: 18px; z-index: var(--z-hud); display: flex; align-items: center; gap: 10px; box-shadow: 0 0 15px rgba(184, 153, 71, 0.3); backdrop-filter: blur(5px);">
-            <span style="font-size: 20px;">💰</span> <span id="main-gold-count">0</span>
+        <!-- HUD: Gold Display (True Centered) -->
+        <div id="top-gold-display" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 20px; border: 1px solid var(--color-gold); color: var(--color-gold-glow); font-weight: 800; font-size: 16px; z-index: 100; display: flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(184, 153, 71, 0.4); backdrop-filter: blur(8px); pointer-events: none;">
+            <span style="font-size: 18px;">💰</span> <span id="main-gold-count">0</span>
         </div>
 
         <!-- ==========================================
@@ -198,7 +198,7 @@
                         <div class="eq-slot" data-slot="legs" title="Legs" role="button" tabindex="0"></div>
                     </div>
                     <div class="char-preview">
-                        <img src="assets/idle/idle00.png" alt="Character Preview">
+                        <canvas id="char-preview-canvas" width="200" height="240" style="width:100%; height:auto; display:block;"></canvas>
                         <div class="cp-stats">CP: <span id="combat-power">0</span></div>
                         <div id="gear-summary-stats" style="margin-top: 8px; font-size: 14px; background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 6px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); display: inline-block;">⚔️ +0 &nbsp;|&nbsp; 🛡️ +0</div>
                     </div>
@@ -219,6 +219,7 @@
                                 <option value="value">Sort: Value</option>
                                 <option value="attack">Sort: Attack</option>
                             </select>
+                            <button onclick="UI.autoEquip()" style="background:var(--color-gold); color:black; border:none; border-radius:4px; padding:2px 10px; font-size:12px; font-weight:bold; cursor:pointer;" title="Equip best available gear">Auto Equip</button>
                             <button onclick="UI.purgeInventory()" style="background:#c0392b; color:white; border:none; border-radius:4px; padding:2px 8px; font-size:12px; cursor:pointer;" title="Delete lower quality items than equipped">Purge Low Quality</button>
                         </div>
                     </div>

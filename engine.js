@@ -340,7 +340,8 @@ var Game = {
 
         // Update Entities
         this.enemies.forEach(e => e.update(dt, this.player));
-        this.enemies = this.enemies.filter(e => !e.isDead);
+        // Remove enemies that are dead OR have 0 HP to prevent 'immortal' state
+        this.enemies = this.enemies.filter(e => !e.isDead && e.hp > 0);
 
         this.projectiles.forEach(p => p.update(dt));
         this.projectiles = this.projectiles.filter(p => p.life > 0);
@@ -378,8 +379,8 @@ var Game = {
             // Apply Realm Scaling
             if (window.Realms) {
                 const mult = Realms.getMultiplier();
-                enemy.hp = Math.floor(enemy.hp * mult);
-                enemy.maxHp = enemy.hp;
+                enemy.maxHp = Math.floor(300 * mult);
+                enemy.hp = enemy.maxHp;
                 enemy.attackPower = Math.floor(25 * mult); 
             }
             
@@ -400,7 +401,14 @@ var Game = {
             if (!boss || boss.isDead) {
                 this.exitBossArena();
                 this.player.bossRank = (this.player.bossRank || 0) + 1;
-                if (typeof UI !== 'undefined') UI.showLootNotification(`Boss Defeated! Rank Up: ${this.player.bossRank}`, "rarity-legendary");
+                
+                // --- WORLD SCALING ---
+                // Every boss defeat increases global enemy power by 20%
+                if (typeof Realms !== 'undefined') {
+                    Realms.globalDifficultyMultiplier *= 1.2;
+                }
+                
+                if (typeof UI !== 'undefined') UI.showLootNotification(`Boss Defeated! World Difficulty +20% | Rank: ${this.player.bossRank}`, "rarity-legendary");
             }
         }
 

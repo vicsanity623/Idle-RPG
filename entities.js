@@ -168,9 +168,6 @@ class Player extends Entity {
             }
         });
 
-        this.hp = Math.min(this.hp, this.stats.maxHp);
-        this.maxHp = this.stats.maxHp;
-
         // Apply Skill Passives
         if (this.skills) {
             this.skills.forEach(skill => {
@@ -183,6 +180,19 @@ class Player extends Entity {
                 }
             });
         }
+
+        // --- ANTI-BREAKING STAT CAPS ---
+        // Max Movement Speed: 400 (Base 100)
+        this.stats.moveSpeed = Math.min(this.stats.moveSpeed, 400);
+        // Max CDR: 60%
+        this.stats.cdReduction = Math.min(this.stats.cdReduction, 60);
+        // Max Attack Speed: 0.1s cooldown (Lower is faster)
+        this.attackCooldown = Math.max(0.1, 0.4 - (this.stats.cdReduction / 200)); 
+        // Max Critical Rate: 80%
+        this.stats.critRate = Math.min(this.stats.critRate || 0, 80);
+
+        this.hp = Math.min(this.hp, this.stats.maxHp);
+        this.maxHp = this.stats.maxHp;
     }
 
     gainXp(amount) {
@@ -229,6 +239,10 @@ class Player extends Entity {
         this.skills.forEach(s => { if (s.timer > 0) s.timer -= dt; });
 
         this.handleMovement(dt, enemies);
+        
+        // Ensure dead targets are dropped before combat logic
+        if (this.target && this.target.isDead) this.target = null;
+        
         this.handleCombat(enemies);
         this.handleAnimation(dt);
     }
@@ -320,14 +334,20 @@ class Player extends Entity {
 
         let attacked = false;
         if (this.target && this.distanceTo(this.target) <= this.attackRange) {
+            // Only perform basic attack if within range and auto-attack is on or forced
             if (this.autoAttack || this.autoQuest || this.forceAttackTriggered) {
                 this.performAttack(enemies);
                 attacked = true;
             }
         }
 
+        // Force manual attack logic (if player clicks button)
         if (!attacked && this.forceAttackTriggered) {
-            this.performAttack(enemies);
+            // Check if ANY enemy is in range for manual click
+            const closest = this.findClosestEnemy(enemies, this.attackRange);
+            if (closest) {
+                this.performAttack(enemies);
+            }
         }
 
         this.forceAttackTriggered = false;
@@ -345,7 +365,7 @@ class Player extends Entity {
         setTimeout(() => {
             const rangeSq = (this.attackRange + 20) ** 2;
             enemies.forEach(e => {
-                if (this.distSq(e) <= rangeSq) {
+                if (!e.isDead && this.distSq(e) <= rangeSq) {
                     const isFacing = this.facingRight ? (e.x > this.x - 10) : (e.x < this.x + 10);
                     if (isFacing) {
                         e.takeDamage(this.stats.attack, this);
@@ -451,10 +471,12 @@ class Enemy extends Entity {
                 this.attackPlayer(player);
             }
         } else {
-            // Idle Wander
-            if (Math.random() < 0.005) {
-                this.x = this.origin.x + (Math.random() - 0.5) * 100;
-                this.y = this.origin.y + (Math.random() - 0.5) * 100;
+            // Idle Wander (Time-based movement for stability)
+            if (Math.random() < 0.01) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 50;
+                this.x = Math.max(0, Math.min(Game.WORLD_SIZE, this.x + Math.cos(angle) * dist));
+                this.y = Math.max(0, Math.min(Game.WORLD_SIZE, this.y + Math.sin(angle) * dist));
             }
         }
     }
@@ -491,7 +513,7 @@ class Enemy extends Entity {
     dropLoot() {
         const roll = Math.random();
         if (roll < 0.70) Game.spawnLoot(this.x, this.y, 'gold');
-        if (roll < 0.15) Game.spawnLoot(this.x, this.y, 'equipment');
+        if (roll < 0.05) Game.spawnLoot(this.x, this.y, 'equipment'); // Reduced from 0.15
         if (roll < 0.10) Game.spawnLoot(this.x, this.y, 'potion');
         if (roll < 0.05) Game.spawnLoot(this.x, this.y, 'rune');
     }
