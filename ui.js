@@ -225,7 +225,7 @@ const UI = {
     purgeInventory() {
         if (!window.Game || !Game.player) return;
         const player = Game.player;
-        const rarityMap = { legendary: 4, epic: 3, rare: 2, common: 1 };
+        const rarityMap = { legendary: 4, epic: 3, rare: 2, uncommon: 1.5, common: 1 }; // Added uncommon rarity
 
         if (!confirm("Are you sure you want to delete all lower quality items? This cannot be undone.")) return;
 
