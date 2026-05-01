@@ -209,6 +209,8 @@ class Player extends Entity {
     }
 
     gainXp(amount) {
+        if (typeof Game !== 'undefined' && Game.isNight) amount *= 2;
+        if (typeof Game !== 'undefined' && Game.inChallengeMode) Game.challengeRewards.xp += amount;
         this.xp += amount;
         if (this.xp >= this.maxXp) {
             this.level++;
@@ -224,9 +226,16 @@ class Player extends Entity {
 
     pickUpItem(item) {
         if (item.type === 'gold') {
-            this.gold += item.value;
-            UI.showLootNotification(`+${item.value} Gold`, 'rarity-legendary');
+            let goldVal = item.value;
+            if (typeof Game !== 'undefined' && Game.isNight) goldVal *= 2;
+            this.gold += goldVal;
+            if (typeof Game !== 'undefined' && Game.inChallengeMode) Game.challengeRewards.gold += goldVal;
+            if (typeof UI !== 'undefined') UI.showLootNotification(`+${goldVal} Gold`, 'rarity-legendary');
         } else {
+            if (typeof Game !== 'undefined' && Game.inChallengeMode) {
+                if (item.type === 'rune') Game.challengeRewards.runes += (item.count || 1);
+                else if (item.type === 'equipment') Game.challengeRewards.equipment.push(item);
+            }
             if (item.stackable) {
                 let existing = this.inventory.find(i => i.name === item.name);
                 if (existing) existing.count += (item.count || 1);
@@ -485,7 +494,7 @@ class Enemy extends Entity {
         if (this.attackTimer > 0) this.attackTimer -= dt;
 
         const dSq = this.distSq(player);
-        if (dSq <= this.aggroRangeSq) {
+        if (dSq <= this.aggroRangeSq || (typeof Game !== 'undefined' && Game.inChallengeMode)) {
             this.target = player;
             if (dSq > this.attackRange ** 2) {
                 const angle = Math.atan2(player.y - this.y, player.x - this.x);
@@ -561,18 +570,44 @@ class Enemy extends Entity {
 
         if (this.hp <= 0 && !this.isDead) {
             this.isDead = true;
-            Game.kills++;
-            source.gainXp(this.isBoss ? 5000 : 120);
-            this.dropLoot();
+            if (typeof Game !== 'undefined') Game.kills++;
+            let xpReward = this.isBoss ? 5000 * (1 + (source.bossRank || 0) * 0.5) : 120;
+            source.gainXp(xpReward);
+            this.dropLoot(source);
         }
     }
 
-    dropLoot() {
+    dropLoot(source) {
         const roll = Math.random();
-        if (roll < 0.70) Game.spawnLoot(this.x, this.y, 'gold');
-        if (roll < 0.05) Game.spawnLoot(this.x, this.y, 'equipment'); // Reduced from 0.15
-        if (roll < 0.10) Game.spawnLoot(this.x, this.y, 'potion');
-        if (roll < 0.05) Game.spawnLoot(this.x, this.y, 'rune');
+        
+        if (this.isBoss) {
+            // Boss scaling gold
+            let rank = (source && source.bossRank) || 0;
+            let goldAmount = Math.floor(5000 * (1 + rank * 0.5));
+            let goldItem = new LootItem(this.x, this.y, 'gold');
+            goldItem.value = goldAmount; // override rng value
+            if (typeof Game !== 'undefined') Game.lootItems.push(goldItem);
+            
+            // 0.001% chance for Legendary equipment drop
+            if (Math.random() < 0.00001) {
+                let legItem = new LootItem(this.x, this.y, 'equipment');
+                legItem.rarity = 'legendary';
+                legItem.generateProperties(); // re-roll with guaranteed legendary rarity
+                if (typeof Game !== 'undefined') Game.lootItems.push(legItem);
+                if (typeof UI !== 'undefined') UI.showLootNotification("LEGENDARY BOSS DROP!", "rarity-legendary");
+            }
+            
+            // Standard boss drops
+            if (typeof Game !== 'undefined') {
+                Game.spawnLoot(this.x, this.y, 'equipment');
+                Game.spawnLoot(this.x, this.y, 'rune');
+            }
+        } else {
+            if (roll < 0.70) Game.spawnLoot(this.x, this.y, 'gold');
+            if (roll < 0.05) Game.spawnLoot(this.x, this.y, 'equipment'); // Reduced from 0.15
+            if (roll < 0.10) Game.spawnLoot(this.x, this.y, 'potion');
+            if (roll < 0.05) Game.spawnLoot(this.x, this.y, 'rune');
+        }
     }
 }
 

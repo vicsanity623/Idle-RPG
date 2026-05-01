@@ -740,6 +740,25 @@ const UI = {
     updatePlayerStats(player) {
         if (!player) return;
 
+        // Day/Night Clock Sync
+        if (typeof Game !== 'undefined') {
+            const dayCountElem = document.getElementById('clock-day-count');
+            const timeElem = document.getElementById('clock-time');
+            const nightStatus = document.getElementById('night-status');
+            if (dayCountElem) dayCountElem.innerText = Game.dayCount;
+            if (timeElem) {
+                const isNight = Game.isNight;
+                const phaseProgress = isNight ? (Game.timeOfDay - 120) / 60 : Game.timeOfDay / 120;
+                let hours = isNight ? 18 + Math.floor(phaseProgress * 12) : 6 + Math.floor(phaseProgress * 12);
+                if (hours >= 24) hours -= 24;
+                const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+                const amPm = hours >= 12 ? 'PM' : 'AM';
+                timeElem.innerText = `${displayHour}:00 ${amPm}`;
+                if (nightStatus) nightStatus.style.display = isNight ? 'block' : 'none';
+                if (timeElem.parentElement) timeElem.parentElement.style.borderColor = isNight ? '#9b59b6' : '#444';
+            }
+        }
+
         // Quests Box Sync
         const questBox = document.getElementById('quest-tracker');
         if (!window.Game || !Game.activeQuest) {
@@ -952,6 +971,11 @@ const UI = {
                     <img src="assets/sleepless_ghost.png" style="width:300px; filter: drop-shadow(0 0 20px #9b59b6); margin-bottom:20px;">
                     <h2>The Sleepless Ghost Lord</h2>
                     <p style="color:#aaa; max-width:400px; margin:10px auto;">Challenge the spirit lord in a gladiator battle. Earn unique ranks and test your damage!</p>
+                    <div style="margin:10px auto; background:rgba(241,196,15,0.1); padding:10px; border-radius:5px; border:1px solid rgba(241,196,15,0.3); max-width:400px;">
+                        <div style="color:#f1c40f; font-size:12px; font-weight:bold; margin-bottom:5px;">BOSS REWARDS</div>
+                        <div style="color:#ddd; font-size:11px;">Heavy scaling XP and Gold based on rank.</div>
+                        <div style="color:#e74c3c; font-size:11px; margin-top:3px; font-weight:bold;">0.001% Chance for Legendary Gear Drop!</div>
+                    </div>
                     <button class="menu-btn" style="background:#8e44ad; color:white; font-size:18px; padding:12px 30px; margin-top:20px; border:none; box-shadow: 0 4px 15px rgba(142, 68, 173, 0.4);" onclick="Game.enterBossArena()">
                         CHALLENGE BOSS <br>
                         <span style="font-size:12px; opacity:0.8;">💰 ${Game.getBossEntryCost().toLocaleString()} Gold</span>
@@ -968,6 +992,37 @@ const UI = {
                     </div>
                 </div>
             `;
+        } else if (this.currentMapTab === 'challenge') {
+            view.innerHTML = `
+                <div style="text-align:center; color:white; width:100%; height:100%; background: radial-gradient(circle, #2c3e50 0%, #000000 100%); display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                    <h2 style="color:#3498db; text-shadow:0 0 15px rgba(52,152,219,0.8); font-size:32px; margin-bottom:10px;">The Endless Horde</h2>
+                    <p style="color:#ccc; max-width:450px; margin-bottom:20px;">Survive the procedurally generated arena for 120 seconds. Hordes of enemies and sudden bosses will attempt to overwhelm you. Gather as many rewards as possible!</p>
+                    
+                    <div style="display:flex; gap:15px; margin-bottom:30px;">
+                        <div style="background:rgba(0,0,0,0.6); border:1px solid #444; border-radius:8px; padding:15px; text-align:center; min-width:80px;">
+                            <div style="font-size:24px; margin-bottom:5px;">✨</div>
+                            <div style="font-size:12px; color:#aaa;">Huge XP</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.6); border:1px solid #444; border-radius:8px; padding:15px; text-align:center; min-width:80px;">
+                            <div style="font-size:24px; margin-bottom:5px;">💰</div>
+                            <div style="font-size:12px; color:#aaa;">Bonus Gold</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.6); border:1px solid #444; border-radius:8px; padding:15px; text-align:center; min-width:80px;">
+                            <div style="font-size:24px; margin-bottom:5px;">💠</div>
+                            <div style="font-size:12px; color:#aaa;">Runes</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.6); border:1px solid #444; border-radius:8px; padding:15px; text-align:center; min-width:80px;">
+                            <div style="font-size:24px; margin-bottom:5px;">🛡️</div>
+                            <div style="font-size:12px; color:#aaa;">Epic Gear</div>
+                        </div>
+                    </div>
+                    
+                    <button class="menu-btn" style="background:linear-gradient(135deg, #2980b9, #8e44ad); color:white; font-size:20px; font-weight:bold; padding:15px 40px; border:none; border-radius:8px; box-shadow: 0 5px 20px rgba(41,128,185,0.5); cursor:pointer;" onclick="Game.enterChallengeArena()">
+                        START CHALLENGE
+                    </button>
+                    <div style="margin-top:15px; font-size:12px; color:#888;">Bonus Time Accumulated: <span style="color:#2ecc71; font-weight:bold;">+${Game.player ? (Game.player.challengeBonusTime || 0) : 0}s</span></div>
+                </div>
+            `;
         } else {
             view.innerHTML = `
                 <div style="position:relative; width:100%; height:100%; background:url('assets/grass.png'); background-size:100px;">
@@ -976,6 +1031,27 @@ const UI = {
                 </div>
             `;
         }
+    },
+
+    showChallengeCompletedModal(rewards) {
+        const modal = document.getElementById('challenge-modal');
+        const list = document.getElementById('challenge-rewards-list');
+        if (!modal || !list) return;
+
+        let gearHtml = rewards.equipment.map(e => `<div style="display:inline-block; margin-right:5px; background:#222; padding:2px 5px; border-radius:3px; font-size:11px; border:1px solid #555;">${e.icon} ${e.name}</div>`).join('');
+        if (rewards.equipment.length === 0) gearHtml = '<span style="color:#666;">None</span>';
+
+        list.innerHTML = `
+            <div style="margin-bottom:8px;"><span style="color:#f1c40f; display:inline-block; width:20px;">✨</span> <strong>XP Gained:</strong> +${Math.floor(rewards.xp).toLocaleString()}</div>
+            <div style="margin-bottom:8px;"><span style="color:#f1c40f; display:inline-block; width:20px;">💰</span> <strong>Gold Found:</strong> +${rewards.gold.toLocaleString()}</div>
+            <div style="margin-bottom:8px;"><span style="color:#3498db; display:inline-block; width:20px;">💠</span> <strong>Runes Collected:</strong> ${rewards.runes}</div>
+            <div style="margin-top:12px; border-top:1px solid #444; padding-top:10px;">
+                <strong style="color:#aaa; display:block; margin-bottom:5px;">Gear Recovered:</strong>
+                ${gearHtml}
+            </div>
+        `;
+
+        this.toggleModal('challenge-modal');
     }
 };
 

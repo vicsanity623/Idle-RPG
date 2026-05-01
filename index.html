@@ -68,6 +68,13 @@
                 <img src="assets/buff_attack.png" class="buff-icon" alt="Attack Buff" onerror="this.style.display='none'">
                 <img src="assets/buff_speed.png" class="buff-icon" alt="Speed Buff" onerror="this.style.display='none'">
             </div>
+            
+            <!-- Day/Time Clock & Night Status -->
+            <div id="day-night-clock" style="margin-top: 5px; padding: 5px 10px; background: rgba(0,0,0,0.6); border-radius: 6px; border: 1px solid #444; text-align: center; font-size: 12px; color: #eee; text-shadow: 0 1px 2px #000;">
+                <div style="font-weight: bold; color: #f1c40f;">Day <span id="clock-day-count">1</span></div>
+                <div id="clock-time" style="font-size: 14px; margin: 2px 0;">12:00 PM</div>
+                <div id="night-status" style="display: none; color: #9b59b6; font-weight: bold; font-size: 10px; text-transform: uppercase;">2x XP & Gold Active</div>
+            </div>
         </section>
 
         <!-- ==========================================
@@ -298,11 +305,27 @@
                     <div class="tab-header" style="padding:10px;">
                         <button class="tab active" onclick="UI.setMapTab('world')">World Map</button>
                         <button class="tab" onclick="UI.setMapTab('boss')">Boss Arena</button>
+                        <button class="tab" onclick="UI.setMapTab('challenge')">Challenge</button>
                     </div>
                     <div id="map-view" style="flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                         <!-- World Map or Boss View -->
                     </div>
                 </div>
+            </div>
+        </dialog>
+
+        <!-- Challenge Completed Modal -->
+        <dialog id="challenge-modal" class="ui-modal hidden" style="width: 90%; max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none;">
+                <h2 style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5); margin: 0; font-size: 24px;">CHALLENGE COMPLETE</h2>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="color: #ccc; margin-bottom: 20px;">You survived the endless horde!</p>
+                <div id="challenge-rewards-list" style="background: rgba(0,0,0,0.5); border: 1px solid #444; border-radius: 8px; padding: 15px; text-align: left; margin-bottom: 20px;">
+                    <!-- Rewards injected here -->
+                </div>
+                <div style="color: #2ecc71; font-weight: bold; margin-bottom: 20px;">+5 Seconds to next Challenge!</div>
+                <button class="menu-btn" style="width: 100%; background: #3498db; color: white;" onclick="UI.toggleModal('challenge-modal')">Claim Rewards</button>
             </div>
         </dialog>
     </main>

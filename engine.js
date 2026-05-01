@@ -30,6 +30,17 @@ var Game = {
     assetsLoaded: 0,
     totalAssets: 0,
 
+    // --- Day/Night Cycle ---
+    timeOfDay: 0,
+    dayCount: 1,
+    isNight: false,
+
+    // --- Challenge Mode ---
+    inChallengeMode: false,
+    challengeTimeRemaining: 0,
+    challengeRewards: { xp: 0, gold: 0, equipment: [], runes: 0 },
+    challengeSpawns: 0,
+
     // --- Quest System ---
     activeQuest: null,
     questList: [
@@ -208,6 +219,41 @@ var Game = {
         if (typeof UI !== 'undefined') UI.showLootNotification("Arena Cleared", "rarity-common");
     },
 
+    enterChallengeArena() {
+        if (!this.player || this.player.isDead) return;
+        this.inChallengeMode = true;
+        this.isBossState = false;
+        this.challengeTimeRemaining = 120 + (this.player.challengeBonusTime || 0);
+        this.challengeRewards = { xp: 0, gold: 0, equipment: [], runes: 0 };
+        this.clearEnemies();
+        this.projectiles = [];
+        this.visualEffects = [];
+        this.lootItems = [];
+        this.player.x = this.WORLD_SIZE / 2;
+        this.player.y = this.WORLD_SIZE / 2;
+        if (typeof UI !== 'undefined') {
+            UI.toggleModal('map-modal');
+            UI.showLootNotification("CHALLENGE STARTED!", "rarity-legendary");
+        }
+    },
+
+    exitChallengeArena(died = false) {
+        this.inChallengeMode = false;
+        this.clearEnemies();
+        this.projectiles = [];
+        this.visualEffects = [];
+        this.lootItems = [];
+        
+        if (!died) {
+            this.player.challengeBonusTime = (this.player.challengeBonusTime || 0) + 5;
+            if (typeof UI !== 'undefined') UI.showChallengeCompletedModal(this.challengeRewards);
+        } else {
+            if (typeof UI !== 'undefined') UI.showLootNotification("Challenge Failed.", "rarity-common");
+        }
+        this.player.x = this.WORLD_SIZE / 2;
+        this.player.y = this.WORLD_SIZE / 2;
+    },
+
     showNotification(text, color) {
         if (typeof UI !== 'undefined') {
             UI.showLootNotification(text, "rarity-epic"); 
@@ -326,8 +372,35 @@ var Game = {
     update(dt) {
         if (this.player.isDead) {
             if (this.isBossState) this.exitBossArena(); // Fix: Cleanup boss if player dies
+            if (this.inChallengeMode) this.exitChallengeArena(true);
             this.player.update(dt, this.enemies); // Handle respawn timer
             return;
+        }
+
+        // --- Day / Night Cycle Logic ---
+        this.timeOfDay += dt;
+        const DAY_DURATION = 120;
+        const NIGHT_DURATION = 60;
+        const CYCLE_TOTAL = DAY_DURATION + NIGHT_DURATION;
+        if (this.timeOfDay >= CYCLE_TOTAL) {
+            this.timeOfDay -= CYCLE_TOTAL;
+            this.dayCount++;
+        }
+        this.isNight = this.timeOfDay >= DAY_DURATION;
+
+        // --- Challenge Mode Bounds ---
+        if (this.inChallengeMode) {
+            this.challengeTimeRemaining -= dt;
+            const chCenterX = this.WORLD_SIZE / 2;
+            const chCenterY = this.WORLD_SIZE / 2;
+            const boundary = 800; // Restricted tile size
+            this.player.x = Math.max(chCenterX - boundary, Math.min(this.player.x, chCenterX + boundary));
+            this.player.y = Math.max(chCenterY - boundary, Math.min(this.player.y, chCenterY + boundary));
+            
+            if (this.challengeTimeRemaining <= 0) {
+                this.exitChallengeArena(false);
+                return;
+            }
         }
 
         this.player.update(dt, this.enemies);
@@ -357,6 +430,15 @@ var Game = {
 
         this.lootItems.forEach(item => {
             item.life -= dt;
+            
+            if (this.inChallengeMode) {
+                // Magnet effect to pull loot
+                const angle = Math.atan2(this.player.y - item.y, this.player.x - item.x);
+                const magnetSpeed = 800; // Fast pull speed
+                item.x += Math.cos(angle) * magnetSpeed * dt;
+                item.y += Math.sin(angle) * magnetSpeed * dt;
+            }
+
             if (this.player.distanceTo(item) < 50) {
                 this.player.pickUpItem(item);
                 item.isPickedUp = true;
@@ -371,20 +453,56 @@ var Game = {
         this.damageTexts = this.damageTexts.filter(dtxt => dtxt.life > 0);
 
         // Respawn Enemies
-        if (!this.isBossState && this.enemies.length < this.MAX_ENEMIES) {
-            const rx = Math.random() * this.WORLD_SIZE;
-            const ry = Math.random() * this.WORLD_SIZE;
-            const enemy = new Enemy(rx, ry);
+        let currentMaxEnemies = this.MAX_ENEMIES;
+        if (this.isNight) currentMaxEnemies = 150; // Night cycle 10x pseudo horde limit
+        if (this.inChallengeMode) currentMaxEnemies = 200; // Massive horde in challenge
+        
+        if (!this.isBossState && this.enemies.length < currentMaxEnemies) {
+            // Spawn multiple enemies per tick in challenge or night to fill quickly
+            let spawnCount = this.inChallengeMode ? 5 : (this.isNight ? 2 : 1);
             
-            // Apply Realm Scaling
-            if (window.Realms) {
-                const mult = Realms.getMultiplier();
-                enemy.maxHp = Math.floor(300 * mult);
-                enemy.hp = enemy.maxHp;
-                enemy.attackPower = Math.floor(25 * mult); 
+            for (let i = 0; i < spawnCount; i++) {
+                if (this.enemies.length >= currentMaxEnemies) break;
+                
+                let rx, ry;
+                if (this.inChallengeMode) {
+                    rx = (this.WORLD_SIZE / 2) + (Math.random() - 0.5) * 1600;
+                    ry = (this.WORLD_SIZE / 2) + (Math.random() - 0.5) * 1600;
+                } else {
+                    rx = Math.random() * this.WORLD_SIZE;
+                    ry = Math.random() * this.WORLD_SIZE;
+                }
+                
+                const enemy = new Enemy(rx, ry);
+                
+                // Apply Realm Scaling
+                if (window.Realms) {
+                    const mult = Realms.getMultiplier();
+                    enemy.maxHp = Math.floor(300 * mult);
+                    enemy.hp = enemy.maxHp;
+                    enemy.attackPower = Math.floor(25 * mult); 
+                }
+
+                // 1% chance for Mini-boss during Night
+                if (this.isNight && !this.inChallengeMode && Math.random() < 0.01) {
+                    enemy.maxHp *= 5;
+                    enemy.hp = enemy.maxHp;
+                    enemy.attackPower *= 2;
+                    enemy.radius *= 1.5;
+                    enemy.name = "Night Terror";
+                }
+
+                // Periodic Boss in Challenge Mode
+                if (this.inChallengeMode && Math.random() < 0.02) {
+                    enemy.isBoss = true;
+                    enemy.name = "Challenge Boss";
+                    enemy.maxHp *= 3;
+                    enemy.hp = enemy.maxHp;
+                    enemy.radius = 60;
+                }
+                
+                this.enemies.push(enemy);
             }
-            
-            this.enemies.push(enemy);
         }
 
         // Boss Minion Spawning
@@ -434,7 +552,12 @@ var Game = {
             for (let c = startCol; c <= endCol; c++) {
                 let px = c * TILE_SIZE - camera.x;
                 let py = r * TILE_SIZE - camera.y;
-                if (images.bg && images.bg.complete) {
+                if (this.inChallengeMode) {
+                    ctx.fillStyle = (r+c)%2===0 ? '#2c3e50' : '#34495e';
+                    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#1a252f';
+                    ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+                } else if (images.bg && images.bg.complete) {
                     ctx.drawImage(images.bg, px, py, TILE_SIZE, TILE_SIZE);
                 } else {
                     ctx.fillStyle = (r+c)%2===0 ? '#2a4a2a' : '#1e381e';
@@ -564,6 +687,19 @@ var Game = {
             ctx.fillText("YOU HAVE FALLEN", this.canvas.width/2, this.canvas.height/2);
             ctx.font = "20px Arial";
             ctx.fillText(`Respawning in ${Math.ceil(10 - this.player.respawnTimer)}s...`, this.canvas.width/2, this.canvas.height/2 + 50);
+        }
+
+        // 9. World Overlays (Night Mode & Challenge Timer)
+        if (this.isNight && !this.inChallengeMode) {
+            ctx.fillStyle = "rgba(0, 10, 30, 0.4)";
+            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        if (this.inChallengeMode && !this.player.isDead) {
+            ctx.fillStyle = "rgba(0,0,0,0.7)";
+            ctx.fillRect(this.canvas.width/2 - 100, 40, 200, 40);
+            ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.textAlign = "center";
+            ctx.fillText(`Time: ${Math.ceil(this.challengeTimeRemaining)}s`, this.canvas.width/2, 68);
         }
 
         this.drawMinimap();
