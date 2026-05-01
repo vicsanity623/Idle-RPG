@@ -208,9 +208,9 @@ var Game = {
         if (typeof UI !== 'undefined') UI.showLootNotification("Arena Cleared", "rarity-common");
     },
 
-    showNotification(text, color) {
+    showNotification(text, rarityClass) {
         if (typeof UI !== 'undefined') {
-            UI.showLootNotification(text, "rarity-epic"); 
+            UI.showLootNotification(text, rarityClass); 
         }
     },
     castSkill(skillId) {
