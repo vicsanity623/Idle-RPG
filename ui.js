@@ -22,7 +22,8 @@ const UI = {
         const autoStatus = document.getElementById('auto-status');
         
         if (btnAuto) {
-            btnAuto.addEventListener('click', () => {
+            btnAuto.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
                 if (!window.Game || !Game.player) return;
                 Game.player.autoAttack = !Game.player.autoAttack;
                 if (autoStatus) autoStatus.innerText = Game.player.autoAttack ? "ON" : "OFF";
@@ -35,8 +36,8 @@ const UI = {
         if (btnAttack) {
             btnAttack.addEventListener('pointerdown', (e) => {
                 e.preventDefault();
-                if (window.Game && Game.player && Game.player.forceAttack) {
-                    Game.player.forceAttack();
+                if (window.Game && Game.player) {
+                    Game.player.forceAttackTriggered = true;
                 }
             });
         }
@@ -117,6 +118,36 @@ const UI = {
         if (window.Game && Game.player) this.updateInventory(Game.player);
     },
 
+    sortInventory(criteria) {
+        if (window.Game && Game.player) this.updateInventory(Game.player);
+    },
+
+    purgeInventory() {
+        if (!window.Game || !Game.player) return;
+        const player = Game.player;
+        const rarityMap = { legendary: 4, epic: 3, rare: 2, common: 1 };
+
+        if (!confirm("Are you sure you want to delete all lower quality items? This cannot be undone.")) return;
+
+        player.inventory = player.inventory.filter(item => {
+            if (item.type !== 'equipment') return true; // Keep consumables
+            
+            const equipped = player.equipment[item.slot];
+            if (equipped) {
+                // Delete if rarity is lower than equipped
+                return rarityMap[item.rarity] >= rarityMap[equipped.rarity];
+            } else {
+                // If nothing equipped in this slot, find the best item for this slot in inventory
+                const sameSlotItems = player.inventory.filter(i => i.slot === item.slot);
+                const maxRarity = Math.max(...sameSlotItems.map(i => rarityMap[i.rarity] || 0));
+                return rarityMap[item.rarity] === maxRarity;
+            }
+        });
+
+        this.updateInventory(player);
+        this.showLootNotification("Purged lower quality gear", "rarity-common");
+    },
+
     updateInventory(player) {
         const grid = document.getElementById('inv-grid');
         const goldTxt = document.getElementById('inv-gold');
@@ -125,9 +156,20 @@ const UI = {
         grid.innerHTML = '';
         if (goldTxt) goldTxt.innerText = player.gold.toLocaleString();
 
-        const items = player.inventory.filter(item => 
+        let items = player.inventory.filter(item => 
             (this.currentInvTab === 'equip' ? item.type === 'equipment' : item.type !== 'equipment')
         );
+
+        // Apply Sorting
+        const sortCriteria = document.getElementById('inv-sort')?.value || 'rarity';
+        const rarityMap = { legendary: 4, epic: 3, rare: 2, common: 1 };
+        
+        items.sort((a, b) => {
+            if (sortCriteria === 'rarity') return (rarityMap[b.rarity] || 0) - (rarityMap[a.rarity] || 0);
+            if (sortCriteria === 'value') return (b.value || 0) - (a.value || 0);
+            if (sortCriteria === 'attack') return (b.stats?.attack || 0) - (a.stats?.attack || 0);
+            return 0;
+        });
 
         // Render Exactly 40 Slots
         const fragment = document.createDocumentFragment();
@@ -137,20 +179,11 @@ const UI = {
             
             if (item) {
                 slot.className = `inv-slot rarity-${item.rarity} slot-icon`;
-                slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; 
+                slot.innerHTML = `<div class="item-icon-text">${item.icon || item.name[0]}</div>`; 
                 if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
                 
-                // Tooltip & Click Logic
-                slot.onpointerdown = (e) => {
-                    this.isLongPress = false;
-                    this.pressTimer = setTimeout(() => { this.isLongPress = true; this.showTooltip(item, e); }, 400); 
-                };
-                slot.onpointerup = () => {
-                    clearTimeout(this.pressTimer);
-                    this.hideTooltip();
-                    if (!this.isLongPress) this.handleItemClick(item);
-                };
-                slot.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
+                // Click Logic
+                slot.onclick = () => this.showItemDetails(item);
                 slot.oncontextmenu = (e) => e.preventDefault();
             } else {
                 slot.className = 'inv-slot';
@@ -161,35 +194,33 @@ const UI = {
 
         // Update Equipment Slots
         let equipAtk = 0;
+        let equipDef = 0;
         Object.keys(player.equipment).forEach(slotName => {
             const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
             const item = player.equipment[slotName];
             if (el) {
                 el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''} slot-icon`;
-                el.innerHTML = item ? `<div class="item-label">${item.name[0]}</div>` : '';
+                el.innerHTML = item ? `<div class="item-icon-text">${item.icon || item.name[0]}</div>` : '';
                 if (item) {
                     equipAtk += (item.stats.attack || 0);
-                    el.onpointerdown = (e) => {
-                        this.isLongPress = false;
-                        this.pressTimer = setTimeout(() => { this.isLongPress = true; this.showTooltip(item, e); }, 400); 
-                    };
-                    el.onpointerup = () => {
-                        clearTimeout(this.pressTimer);
-                        this.hideTooltip();
-                        if (!this.isLongPress) this.handleItemClick(item);
-                    };
-                    el.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
+                    equipDef += (item.stats.defense || 0);
+                    el.onclick = () => this.showItemDetails(item);
                     el.oncontextmenu = (e) => e.preventDefault();
                 } else {
-                    el.onpointerdown = null; el.onpointerup = null;
+                    el.onclick = null;
+                    el.oncontextmenu = null;
                 }
             }
         });
         
-        const cp = Math.floor((player.level * 150) + (equipAtk * 10));
+        const cp = Math.floor((player.level * 150) + (equipAtk * 10) + (equipDef * 15));
         const cpEl = document.getElementById('combat-power');
-        if (cpEl) cpEl.innerText = `CP: ${cp.toLocaleString()}`;
-        this.updateStatsModal(player, cp, equipAtk);
+        if (cpEl) cpEl.innerText = cp.toLocaleString();
+
+        const gearSummary = document.getElementById('gear-summary-stats');
+        if (gearSummary) gearSummary.innerHTML = `<span style="color:#e74c3c">⚔️ +${equipAtk}</span> &nbsp;|&nbsp; <span style="color:#3498db">🛡️ +${equipDef}</span>`;
+
+        this.updateStatsModal(player, cp, equipAtk, equipDef);
     },
 
     handleItemClick(item) {
@@ -213,6 +244,7 @@ const UI = {
                 Game.spawnDamageText(p.x, p.y - 50, statText, "#f1c40f");
                 this.showLootNotification(`Equipped ${item.name}`, 'rarity-epic');
             }
+            p.recalculateStats();
         } else if (item.name.includes("Health Potion")) {
             p.hp = Math.min(p.maxHp, p.hp + 200);
             Game.spawnDamageText(p.x, p.y - 50, "HP +200", "#2ecc71"); 
@@ -230,52 +262,245 @@ const UI = {
         Game.saveGame(); 
     },
 
-    // --- Tooltips ---
-    showTooltip(item, event) {
-        const tt = document.getElementById('item-tooltip');
-        if (!tt) return;
+    // --- Modals ---
+    showItemDetails(item) {
+        const modal = document.getElementById('item-details-modal');
+        if (!modal) return;
         
-        document.getElementById('tt-name').innerText = item.name;
-        document.getElementById('tt-name').className = `rarity-${item.rarity}`;
-        document.getElementById('tt-rarity').innerText = item.rarity + " " + (item.slot || item.type);
+        document.getElementById('detail-name').innerText = item.name;
+        document.getElementById('detail-name').className = `rarity-${item.rarity}`;
+        document.getElementById('detail-icon').innerText = item.icon || item.name[0];
         
         let statStr = "";
         if (item.stats) {
-            if (item.stats.attack) statStr += `Attack: +${item.stats.attack}<br>`;
-            if (item.stats.defense) statStr += `Defense: +${item.stats.defense}`;
+            for (const [key, value] of Object.entries(item.stats)) {
+                // Capitalize key
+                const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                statStr += `<div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;"><span style="color:#aaa;">${displayKey}</span> <span style="color:#2ecc71;">+${value}</span></div>`;
+            }
         } else if (item.type === 'potion') {
-            statStr = "Consumable Buff";
+            statStr = "Restores HP/MP instantly.";
         } else if (item.type === 'rune') {
-            statStr = "Mysterious Material";
+            statStr = "A mysterious rune glowing with energy.";
         }
-        document.getElementById('tt-stats').innerHTML = statStr;
-        
-        let x = event.touches ? event.touches[0].clientX : event.clientX;
-        let y = event.touches ? event.touches[0].clientY : event.clientY;
-        tt.style.left = x + 'px';
-        tt.style.top = y + 'px';
-        tt.classList.remove('hidden');
-    },
+        document.getElementById('detail-stats').innerHTML = statStr;
 
-    hideTooltip() {
-        const tt = document.getElementById('item-tooltip');
-        if (tt) tt.classList.add('hidden');
+        const compareBox = document.getElementById('detail-compare-box');
+        const actionBtn = document.getElementById('detail-action-btn');
+
+        actionBtn.onclick = null;
+        actionBtn.style.display = 'block';
+
+        if (item.type === 'equipment') {
+            const isEquipped = Object.values(Game.player.equipment).includes(item);
+            
+            if (isEquipped) {
+                compareBox.style.display = 'none';
+                actionBtn.innerText = "Unequip";
+                actionBtn.onclick = () => {
+                    this.handleItemClick(item);
+                    modal.style.display = 'none';
+                };
+            } else {
+                actionBtn.innerText = "Equip";
+                actionBtn.onclick = () => {
+                    this.handleItemClick(item);
+                    modal.style.display = 'none';
+                };
+
+                const currentEquipped = Game.player.equipment[item.slot];
+                if (currentEquipped) {
+                    compareBox.style.display = 'block';
+                    document.getElementById('compare-icon').innerText = currentEquipped.icon || currentEquipped.name[0];
+                    let compStr = "";
+                    if (currentEquipped.stats) {
+                        for (const [key, value] of Object.entries(currentEquipped.stats)) {
+                            const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                            compStr += `<div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:2px;"><span style="color:#888;">${displayKey}</span> <span style="color:#999;">+${value}</span></div>`;
+                        }
+                    }
+                    document.getElementById('compare-stats').innerHTML = compStr;
+                } else {
+                    compareBox.style.display = 'none';
+                }
+            }
+        } else {
+            compareBox.style.display = 'none';
+            if (item.type === 'potion') {
+                actionBtn.innerText = "Use";
+                actionBtn.onclick = () => {
+                    this.handleItemClick(item);
+                    modal.style.display = 'none';
+                };
+            } else {
+                actionBtn.style.display = 'none';
+            }
+        }
+
+        modal.style.display = 'block';
     },
 
     // --- Stats & Quests ---
-    updateStatsModal(player, cp, equipAtk) {
+    updateStatsModal(player, cp, equipAtk, equipDef = 0) {
         const list = document.getElementById('stats-list');
         if (!list) return;
+        
+        const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
+        const mpPct = Math.max(0, Math.min(100, (player.mp / player.maxMp) * 100));
+        const xpPct = Math.max(0, Math.min(100, (player.xp / player.maxXp) * 100));
+
+        const statConfig = [
+            {
+                title: "ATK",
+                color: "#d4af37",
+                stats: [
+                    { key: "atkSpeed", label: "ATK Speed", pct: true },
+                    { key: "skillSpeed", label: "Skill Speed", pct: true },
+                    { key: "attack", label: "ATK", pct: false },
+                    { key: "magicAtk", label: "Magic ATK", pct: false },
+                    { key: "weaponAtk", label: "Weapon ATK", pct: false },
+                    { key: "fatalityRate", label: "Fatality Rate", pct: true },
+                    { key: "critRate", label: "CRIT Rate", pct: true },
+                    { key: "magicCritRate", label: "Magic CRIT Rate", pct: true },
+                    { key: "bashRate", label: "Bash Rate", pct: true },
+                    { key: "accuracy", label: "Accuracy", pct: false },
+                    { key: "magicAccuracy", label: "Magic Accuracy", pct: false }
+                ]
+            },
+            {
+                title: "DEF",
+                color: "#d4af37",
+                stats: [
+                    { key: "maxHp", label: "Max HP", pct: false },
+                    { key: "defense", label: "DEF", pct: false },
+                    { key: "basicAtkRes", label: "Basic ATK DMG RES Rate", pct: true },
+                    { key: "skillDmgRes", label: "Skill DMG RES Rate", pct: true },
+                    { key: "finalDmgRes", label: "Final DMG RES Rate", pct: true },
+                    { key: "dmgReduction", label: "DMG Reduction", pct: false },
+                    { key: "evade", label: "Evade", pct: false },
+                    { key: "block", label: "Block", pct: false }
+                ]
+            },
+            {
+                title: "Support",
+                color: "#d4af37",
+                stats: [
+                    { key: "moveSpeed", label: "Movement Speed", pct: true },
+                    { key: "cdReduction", label: "CD Reduction", pct: true },
+                    { key: "hpRecovery", label: "HP Recovery", pct: false },
+                    { key: "hpPotionRcvRate", label: "HP Potion RCV Rate", pct: true },
+                    { key: "maxHpPotionCap", label: "Max HP Potion Capacity", pct: false },
+                    { key: "mpRecovery", label: "MP Recovery", pct: false }
+                ]
+            },
+            {
+                title: "Immobile",
+                color: "#d4af37",
+                stats: [
+                    { key: "immobileHitRate", label: "Immobile Hit Rate", pct: true },
+                    { key: "immobileRes", label: "Immobile RES", pct: true }
+                ]
+            },
+            {
+                title: "Status Effect",
+                color: "#d4af37",
+                stats: [
+                    { key: "statusTimeInc", label: "Status Effect Time INC Rate", pct: true },
+                    { key: "statusTimeDec", label: "Status Effect Time DEC Rate", pct: true },
+                    { key: "statusHitRate", label: "Status Effect Hit Rate", pct: true },
+                    { key: "statusRes", label: "Status Effect RES", pct: true }
+                ]
+            },
+            {
+                title: "Weakening",
+                color: "#d4af37",
+                stats: [
+                    { key: "weakTimeInc", label: "Weakened Time INC Rate", pct: true },
+                    { key: "weakTimeDec", label: "Weakened Time DEC Rate", pct: true },
+                    { key: "weakHitRate", label: "Weakened Hit Rate", pct: true },
+                    { key: "weakRes", label: "Weakened RES", pct: true }
+                ]
+            },
+            {
+                title: "Misc",
+                color: "#d4af37",
+                stats: [
+                    { key: "maxQuests", label: "Max Quests", pct: false },
+                    { key: "maxDailyCorps", label: "Max Daily Special Corps", pct: false }
+                ]
+            }
+        ];
+
+        let statListHTML = '';
+        statConfig.forEach(group => {
+            statListHTML += `
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: ${group.color}; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin: 0 0 10px 0; font-size: 16px; letter-spacing: 0.5px;">${group.title}</h3>
+            `;
+            group.stats.forEach(stat => {
+                const val = player.stats[stat.key] || 0;
+                const displayVal = stat.pct ? `${val}%` : val;
+                statListHTML += `
+                    <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px;">
+                        <span style="color: #888;">${stat.label}</span>
+                        <span style="color: #ddd; font-weight: bold;">${displayVal}</span>
+                    </div>
+                `;
+            });
+            statListHTML += `</div>`;
+        });
+
         list.innerHTML = `
-            <div style="background:#222; padding:15px; border-radius:5px; border:1px solid #444;">
-                <h2 style="color:#d4af37; margin-bottom:10px;">Level ${player.level} Ninja</h2>
-                <div class="stat-row"><span>Combat Power</span><span style="color:#f1c40f">${cp}</span></div>
-                <div class="stat-row"><span>Health</span><span>${Math.floor(player.hp)} / ${player.maxHp}</span></div>
-                <div class="stat-row"><span>Mana</span><span>${Math.floor(player.mp)} / ${player.maxMp}</span></div>
-                <div class="stat-row"><span>Base Attack</span><span>${player.level * 10}</span></div>
-                <div class="stat-row"><span>Gear Attack</span><span style="color:#2ecc71">+${equipAtk}</span></div>
+            <div style="background: rgba(20,20,25,0.95); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.15); box-shadow: inset 0 0 20px rgba(0,0,0,0.5); max-height: 70vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; position: sticky; top: -20px; background: rgba(20,20,25,0.95); z-index: 10;">
+                    <div>
+                        <h2 style="color:#d4af37; margin:0; text-shadow: 0 0 10px rgba(212,175,55,0.5); letter-spacing: 1px; font-size: 20px;">Level ${player.level} Ninja</h2>
+                        <div style="font-size: 14px; color: #aaa; margin-top: 4px;">CP: <span style="color: #f1c40f; font-weight: bold;">${cp.toLocaleString()}</span></div>
+                    </div>
+                    <div style="text-align: right; font-size: 12px; color: #bbb; line-height: 1.6;">
+                        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-bottom: 3px;">
+                            <span style="width: 20px; text-align: left; color: #e74c3c; font-weight: bold;">HP</span>
+                            <div style="width: 100px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;"><div style="width: ${hpPct}%; background: #e74c3c; height: 100%;"></div></div>
+                            <span style="width: 70px; text-align: right;">${Math.floor(player.hp)} / ${player.maxHp}</span>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 5px; margin-bottom: 3px;">
+                            <span style="width: 20px; text-align: left; color: #3498db; font-weight: bold;">MP</span>
+                            <div style="width: 100px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;"><div style="width: ${mpPct}%; background: #3498db; height: 100%;"></div></div>
+                            <span style="width: 70px; text-align: right;">${Math.floor(player.mp)} / ${player.maxMp}</span>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 5px;">
+                            <span style="width: 20px; text-align: left; color: #9b59b6; font-weight: bold;">XP</span>
+                            <div style="width: 100px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;"><div style="width: ${xpPct}%; background: #9b59b6; height: 100%;"></div></div>
+                            <span style="width: 70px; text-align: right;">${Math.floor(player.xp)} / ${player.maxXp}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comprehensive Stat List -->
+                <div style="padding-right: 10px;">
+                    ${statListHTML}
+                </div>
             </div>
         `;
+    },
+
+    updateSkillsModal(player) {
+        const list = document.getElementById('skills-list');
+        if (!list || !player.skills) return;
+        
+        let html = '';
+        player.skills.forEach(skill => {
+            const isUnlocked = player.level >= skill.unlockLevel;
+            const status = isUnlocked ? '<span style="color:#2ecc71">Unlocked</span>' : `<span style="color:#e74c3c">Unlocks at Lv ${skill.unlockLevel}</span>`;
+            html += `
+                <div style="background:#222; padding:15px; border-radius:5px; border:1px solid #444; margin-bottom:10px; opacity: ${isUnlocked ? 1 : 0.5}">
+                    <h3 style="color:#d4af37; margin-bottom:5px;">${skill.name}</h3>
+                    <p style="font-size:12px; color:#aaa; margin-bottom:5px;">Type: ${skill.type} | MP Cost: ${skill.mpCost} | Cooldown: ${skill.cooldown}s</p>
+                    <p style="font-size:14px; font-weight:bold;">${status}</p>
+                </div>
+            `;
+        });
+        list.innerHTML = html;
     },
 
     updatePlayerStats(player) {
@@ -318,9 +543,25 @@ const UI = {
         if (hpLabel) hpLabel.innerText = hpPot ? hpPot.count : 0;
         if (mpLabel) mpLabel.innerText = mpPot ? mpPot.count : 0;
         
-        // Skill unlock
-        const skillBtn = document.getElementById('btn-skill-1');
-        if (skillBtn && player.level >= 5) skillBtn.classList.remove('locked');
+        // Skills unlock and cooldowns
+        if (player.skills) {
+            player.skills.forEach(skill => {
+                const btn = document.getElementById(`btn-skill-${skill.id}`);
+                if (btn) {
+                    if (player.level >= skill.unlockLevel) {
+                        btn.classList.remove('locked');
+                        const overlay = btn.querySelector('.cooldown-overlay');
+                        if (overlay) {
+                            const pct = skill.timer > 0 ? (skill.timer / skill.cooldown) * 100 : 0;
+                            overlay.style.height = `${pct}%`;
+                        }
+                    } else {
+                        btn.classList.add('locked');
+                    }
+                }
+            });
+            this.updateSkillsModal(player);
+        }
 
         // Health & Mana Bars
         const hpFill = document.getElementById('hp-fill');
@@ -399,7 +640,87 @@ const UI = {
             fragment.appendChild(slot);
         }
         grid.appendChild(fragment);
+    },
+
+    // --- Map & Realms Modal ---
+    setMapTab(tab) {
+        this.currentMapTab = tab;
+        document.querySelectorAll('#map-content .tab').forEach(btn => btn.classList.toggle('active', btn.innerText.toLowerCase().includes(tab)));
+        this.updateMapModal();
+    },
+
+    updateMapModal() {
+        const sidebar = document.getElementById('realm-sidebar');
+        const view = document.getElementById('map-view');
+        if (!sidebar || !view || !window.Realms) return;
+
+        // Render Sidebar
+        sidebar.innerHTML = '<h4 style="color:#d4af37; margin-bottom:10px;">Travel Realms</h4>';
+        Realms.list.forEach((realm, idx) => {
+            const btn = document.createElement('button');
+            const isActive = Realms.currentRealm === idx;
+            btn.className = `menu-btn ${isActive ? 'active' : ''}`;
+            btn.style.width = '100%';
+            btn.style.marginBottom = '8px';
+            btn.style.textAlign = 'left';
+            btn.style.padding = '12px';
+            btn.style.background = isActive ? 'rgba(184, 153, 71, 0.2)' : 'rgba(30, 30, 30, 0.5)';
+            btn.style.border = isActive ? '1px solid var(--color-gold)' : '1px solid #444';
+            btn.style.borderLeft = `4px solid ${realm.color}`;
+            btn.style.borderRadius = '6px';
+            btn.style.transition = 'all 0.2s ease';
+            
+            btn.innerHTML = `
+                <div style="font-weight:bold; color:${isActive ? '#fff' : '#aaa'};">${realm.name}</div>
+                <div style="font-size:10px; color:${isActive ? 'var(--color-gold-glow)' : '#666'};">Difficulty: ${(realm.difficulty * 100).toFixed(0)}%</div>
+            `;
+            btn.onclick = () => {
+                Realms.setRealm(idx);
+                this.updateMapModal();
+            };
+            sidebar.appendChild(btn);
+        });
+
+        // Render Main View
+        if (this.currentMapTab === 'boss') {
+            view.innerHTML = `
+                <div style="text-align:center; color:white;">
+                    <img src="assets/sleepless_ghost.png" style="width:300px; filter: drop-shadow(0 0 20px #9b59b6); margin-bottom:20px;">
+                    <h2>The Sleepless Ghost Lord</h2>
+                    <p style="color:#aaa; max-width:400px; margin:10px auto;">Challenge the spirit lord in a gladiator battle. Earn unique ranks and test your damage!</p>
+                    <button class="menu-btn" style="background:#8e44ad; color:white; font-size:18px; padding:12px 30px; margin-top:20px; border:none; box-shadow: 0 4px 15px rgba(142, 68, 173, 0.4);" onclick="Game.enterBossArena()">
+                        CHALLENGE BOSS <br>
+                        <span style="font-size:12px; opacity:0.8;">💰 ${Game.getBossEntryCost().toLocaleString()} Gold</span>
+                    </button>
+                    <div style="margin-top:30px; display:flex; gap:20px; justify-content:center;">
+                        <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                            <div style="font-size:12px; color:#888;">Highest Rank</div>
+                            <div style="font-size:20px; color:#f1c40f;">${Game.player.bossRank || 'Unranked'}</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px;">
+                            <div style="font-size:12px; color:#888;">Max Damage</div>
+                            <div style="font-size:20px; color:#e74c3c;">${(Game.player.maxBossDmg || 0).toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            view.innerHTML = `
+                <div style="position:relative; width:100%; height:100%; background:url('assets/grass.png'); background-size:100px;">
+                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:rgba(255,255,255,0.2); font-size:40px; font-weight:bold; pointer-events:none;">${Realms.list[Realms.currentRealm].name}</div>
+                    <div style="position:absolute; top:${Game.player.y/Game.WORLD_SIZE*100}%; left:${Game.player.x/Game.WORLD_SIZE*100}%; color:lime; font-size:24px;">📍</div>
+                </div>
+            `;
+        }
     }
 };
 
-window.addEventListener('DOMContentLoaded', () => UI.init());
+window.addEventListener('DOMContentLoaded', () => {
+    UI.init();
+    // Add minimap click listener
+    const mm = document.getElementById('minimap-container');
+    if (mm) mm.onclick = () => {
+        UI.toggleModal('map-modal');
+        UI.updateMapModal();
+    };
+});

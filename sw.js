@@ -1,4 +1,4 @@
-const CACHE_NAME = 'raged-v0.0.4';
+const CACHE_NAME = 'raged-v0.0.5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,7 +7,8 @@ const ASSETS_TO_CACHE = [
   './entities.js',
   './engine.js',
   './manifest.json',
-  
+  './realms.js'
+
   // Base World Assets
   './assets/grass.png',
   './assets/sleepless_ghost.png',

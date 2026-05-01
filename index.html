@@ -18,6 +18,9 @@
     <link rel="preload" href="style.css" as="style">
     <link rel="preload" href="engine.js" as="script">
 
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,6 +32,15 @@
         </div>
     </noscript>
 
+    <!-- Realm Transition Loading Screen -->
+    <div id="loading-overlay" class="hidden">
+        <div class="loading-content">
+            <div class="shuriken-spinner"></div>
+            <h2 id="loading-realm-name">Traveling...</h2>
+            <p>Prepare for battle!</p>
+        </div>
+    </div>
+
     <main id="game-ui-container">
         <!-- Core Game Canvas -->
         <canvas id="gameCanvas"></canvas>
@@ -37,7 +49,7 @@
              HUD: Top Left (Player Stats) 
              ========================================== -->
         <section id="player-hud" aria-label="Player Status">
-            <div class="portrait">
+            <div class="portrait" onclick="UI.toggleModal('stats-modal')" style="cursor: pointer;" title="View Full Stats">
                 <img src="assets/idle/idle00.png" alt="Player Portrait" onerror="this.style.display='none'">
             </div>
             <div class="status-bars">
@@ -117,8 +129,17 @@
             </button>
             
             <!-- Skills (Fixed positioning inside Action Bar) -->
-            <button class="action-slot skill locked" id="btn-skill-1" onclick="Game.castFireArrow()" aria-label="Cast Fire Arrow">
-                <span class="skill-label" style="font-size: 8px; top: 2px; left: 10px;">FIRE ARROW</span>
+            <button class="action-slot skill locked" id="btn-skill-fire_arrow" onclick="Game.castSkill('fire_arrow')" aria-label="Cast Fire Arrow">
+                <span class="skill-label">FIRE ARROW</span>
+                <div class="cooldown-overlay"></div>
+            </button>
+            <button class="action-slot skill locked" id="btn-skill-whirlwind" onclick="Game.castSkill('whirlwind')" aria-label="Cast Whirlwind">
+                <span class="skill-label">WHIRLWIND</span>
+                <div class="cooldown-overlay"></div>
+            </button>
+            <button class="action-slot skill locked" id="btn-skill-heal" onclick="Game.castSkill('heal')" aria-label="Cast Heal">
+                <span class="skill-label">HEAL</span>
+                <div class="cooldown-overlay"></div>
             </button>
         </section>
 
@@ -134,6 +155,33 @@
             <div id="exp-fill"></div>
             <div id="exp-text">EXP 0.000%</div>
         </div>
+
+        <!-- Item Details & Comparison Modal -->
+        <dialog id="item-details-modal" class="ui-modal" style="display: none; width: 90%; max-width: 400px; height: auto; max-height: 80%; padding: 20px; z-index: 1000; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 12px; background: rgba(15, 15, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(15px);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
+                <h2 id="detail-name" style="margin:0; font-size: 20px;">Item Name</h2>
+                <button class="close-btn" onclick="document.getElementById('item-details-modal').style.display='none'" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <!-- Selected Item -->
+                <div style="flex: 1; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; border: 1px solid #333;">
+                    <div id="detail-icon" style="font-size: 40px; text-align: center; margin-bottom: 15px; text-shadow: 0 0 10px rgba(255,255,255,0.5);">❓</div>
+                    <div id="detail-stats" style="color: #ccc; font-size: 14px; text-align: center; line-height: 1.5;">Stats</div>
+                </div>
+
+                <!-- Comparison Item (if applicable) -->
+                <div id="detail-compare-box" style="flex: 1; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; border: 1px solid #333; display: none;">
+                    <div style="font-size: 10px; color: #888; text-align: center; margin-bottom: 5px; font-weight: bold; letter-spacing: 1px;">EQUIPPED</div>
+                    <div id="compare-icon" style="font-size: 30px; text-align: center; margin-bottom: 10px; opacity: 0.7;">❓</div>
+                    <div id="compare-stats" style="color: #999; font-size: 12px; text-align: center; line-height: 1.5;">Stats</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="detail-action-btn" class="action-btn" style="width: 100%; padding: 15px; font-size: 16px; font-weight: bold; background: linear-gradient(180deg, var(--color-gold), #b89947); color: #000; border: none; border-radius: 8px; cursor: pointer; text-shadow: 0 1px 0 rgba(255,255,255,0.5);">Equip</button>
+            </div>
+        </dialog>
 
         <!-- Inventory Modal -->
         <dialog id="inventory-modal" class="ui-modal hidden" aria-labelledby="inv-modal-title">
@@ -156,6 +204,7 @@
                     <div class="char-preview">
                         <img src="assets/idle/idle00.png" alt="Character Preview">
                         <div class="cp-stats">CP: <span id="combat-power">0</span></div>
+                        <div id="gear-summary-stats" style="margin-top: 8px; font-size: 14px; background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 6px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); display: inline-block;">⚔️ +0 &nbsp;|&nbsp; 🛡️ +0</div>
                     </div>
                 </div>
                 <div class="inv-tabs-container">
@@ -168,6 +217,14 @@
                     </div>
                     <div class="inventory-footer">
                         <div class="gold-display">💰 <span id="inv-gold">0</span></div>
+                        <div class="inventory-controls" style="display:flex; gap:10px;">
+                            <select id="inv-sort" onchange="UI.sortInventory(this.value)" style="background:#333; color:white; border:1px solid #555; border-radius:4px; font-size:12px;">
+                                <option value="rarity">Sort: Rarity</option>
+                                <option value="value">Sort: Value</option>
+                                <option value="attack">Sort: Attack</option>
+                            </select>
+                            <button onclick="UI.purgeInventory()" style="background:#c0392b; color:white; border:none; border-radius:4px; padding:2px 8px; font-size:12px; cursor:pointer;" title="Delete lower quality items than equipped">Purge Low Quality</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -203,9 +260,35 @@
             <div id="tt-rarity">Rarity</div>
             <div id="tt-stats">Stats</div>
         </div>
+        
+        <!-- Full-Screen Map & Realms Modal -->
+        <dialog id="map-modal" class="ui-modal hidden" style="width: 95%; height: 90%; max-width: 1200px;">
+            <div class="modal-header">
+                <h3>World Map & Realms</h3>
+                <button class="close-btn" onclick="UI.toggleModal('map-modal')">X</button>
+            </div>
+            <div class="modal-body" style="display:flex; height:100%; overflow:hidden;">
+                <!-- Realm Sidebar -->
+                <div id="realm-sidebar" style="width:250px; background:rgba(0,0,0,0.5); border-right:1px solid #444; padding:15px; display:flex; flex-direction:column; gap:10px;">
+                    <h4 style="color:#d4af37; margin-bottom:10px;">Travel Realms</h4>
+                    <!-- Realms injected by JS -->
+                </div>
+                <!-- Map Content -->
+                <div id="map-content" style="flex:1; position:relative; background:#111; display:flex; flex-direction:column;">
+                    <div class="tab-header" style="padding:10px;">
+                        <button class="tab active" onclick="UI.setMapTab('world')">World Map</button>
+                        <button class="tab" onclick="UI.setMapTab('boss')">Boss Arena</button>
+                    </div>
+                    <div id="map-view" style="flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <!-- World Map or Boss View -->
+                    </div>
+                </div>
+            </div>
+        </dialog>
     </main>
 
     <!-- Game Scripts (Order logic: UI first, Entities second, Engine last to bind it all together) -->
+    <script src="realms.js" defer></script>
     <script src="ui.js" defer></script>
     <script src="entities.js" defer></script>
     <script src="engine.js" defer></script>

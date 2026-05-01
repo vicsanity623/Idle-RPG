@@ -3,7 +3,7 @@
  * Standards: ES6+, Performance Optimized, Separation of Concerns
  */
 
-const Game = {
+var Game = {
     // --- Configuration ---
     WORLD_SIZE: 3000,
     TILE_SIZE: 100,
@@ -23,6 +23,7 @@ const Game = {
     npcs: [],
     lootItems: [],
     projectiles:[],
+    visualEffects:[],
     damageTexts:[], 
     kills: 0,
     images: {},
@@ -156,12 +157,97 @@ const Game = {
             UI.showLootNotification(`${npc.name}: "Finish your task first!"`, "rarity-common");
         }
     },
+    clearEnemies() {
+        this.enemies = [];
+    },
 
-    castFireArrow() {
-        if (this.player.level < 5 || this.player.mp < 50 || !this.player.target || this.player.isDead) return;
-        this.player.mp -= 50;
-        this.projectiles.push(new Projectile(this.player.x, this.player.y - 30, this.player.target, 500));
-        if (typeof UI !== 'undefined') UI.showLootNotification("FIRE ARROW!", "rarity-epic");
+    getBossEntryCost() {
+        const rank = this.player.bossRank || 0;
+        return Math.floor(1000 * Math.pow(1.25, rank));
+    },
+
+    enterBossArena() {
+        if (!this.player || this.player.isDead) return;
+        
+        const cost = this.getBossEntryCost();
+        if (this.player.gold < cost) {
+            this.showNotification(`Need ${cost.toLocaleString()} Gold to enter!`, "#e74c3c");
+            return;
+        }
+
+        this.player.gold -= cost;
+        this.isBossState = true;
+        this.bossMinionTimer = 0;
+        this.clearEnemies();
+        
+        // Spawn the Boss
+        const boss = new Enemy(this.player.x + 200, this.player.y);
+        boss.isBoss = true;
+        boss.name = "Sleepless Ghost Lord";
+        boss.hp = 10000 * (1 + (this.player.bossRank || 0) * 0.5);
+        boss.maxHp = boss.hp;
+        boss.attackPower = 100 * (1 + (this.player.bossRank || 0) * 0.2);
+        boss.radius = 80;
+        boss.speed = 80;
+        this.enemies.push(boss);
+        this.player.target = boss;
+        this.player.currentBossDmg = 0;
+
+        if (typeof UI !== 'undefined') {
+            UI.toggleModal('map-modal');
+            UI.showLootNotification("THE LORD HAS AWOKEN", "rarity-legendary");
+            UI.updatePlayerStats(this.player);
+        }
+    },
+
+    exitBossArena() {
+        this.isBossState = false;
+        this.clearEnemies();
+        this.projectiles = []; // Clear projectiles too
+        this.visualEffects = [];
+        if (typeof UI !== 'undefined') UI.showLootNotification("Arena Cleared", "rarity-common");
+    },
+
+    showNotification(text, color) {
+        if (typeof UI !== 'undefined') {
+            UI.showLootNotification(text, "rarity-epic"); 
+        }
+    },
+    castSkill(skillId) {
+        if (!this.player || this.player.isDead) return;
+        const skill = this.player.skills.find(s => s.id === skillId);
+        if (!skill || this.player.level < skill.unlockLevel) return;
+        if (skill.timer > 0 || this.player.mp < skill.mpCost) return;
+
+        this.player.mp -= skill.mpCost;
+        skill.timer = skill.cooldown;
+
+        if (skill.id === 'fire_arrow') {
+            if (!this.player.target) this.player.target = this.player.findClosestEnemy(this.enemies, 800);
+            if (this.player.target) {
+                this.projectiles.push(new Projectile(this.player.x, this.player.y - 30, this.player.target, this.player.stats.attack * skill.damageMult));
+                if (typeof UI !== 'undefined') UI.showLootNotification("FIRE ARROW!", "rarity-epic");
+            } else {
+                this.player.mp += skill.mpCost;
+                skill.timer = 0;
+            }
+        } 
+        else if (skill.id === 'whirlwind') {
+            this.visualEffects.push({ type: 'whirlwind', x: this.player.x, y: this.player.y, life: 0.5, maxLife: 0.5, radius: 150 });
+            this.enemies.forEach(e => {
+                if (this.player.distanceTo(e) <= 150) {
+                    e.takeDamage(this.player.stats.attack * skill.damageMult, this.player);
+                    e.x += (e.x - this.player.x) > 0 ? 30 : -30; // Knockback
+                }
+            });
+            if (typeof UI !== 'undefined') UI.showLootNotification("WHIRLWIND!", "rarity-legendary");
+        }
+        else if (skill.id === 'heal') {
+            this.visualEffects.push({ type: 'heal', x: this.player.x, y: this.player.y, life: 1.0, maxLife: 1.0 });
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + skill.healAmount);
+            this.spawnDamageText(this.player.x, this.player.y - 50, `+${skill.healAmount} HP`, "#2ecc71");
+            if (typeof UI !== 'undefined') UI.showLootNotification("HEAL!", "rarity-rare");
+        }
     },
 
     saveGame() {
@@ -171,6 +257,8 @@ const Game = {
             xp: this.player.xp,
             maxXp: this.player.maxXp,
             gold: this.player.gold,
+            bossRank: this.player.bossRank,
+            maxBossDmg: this.player.maxBossDmg,
             inventory: this.player.inventory,
             equipment: this.player.equipment,
             kills: this.kills,
@@ -204,6 +292,7 @@ const Game = {
 
     update(dt) {
         if (this.player.isDead) {
+            if (this.isBossState) this.exitBossArena(); // Fix: Cleanup boss if player dies
             this.player.update(dt, this.enemies); // Handle respawn timer
             return;
         }
@@ -223,6 +312,15 @@ const Game = {
         this.projectiles.forEach(p => p.update(dt));
         this.projectiles = this.projectiles.filter(p => p.life > 0);
 
+        this.visualEffects.forEach(v => {
+            v.life -= dt;
+            if (v.type === 'whirlwind' || v.type === 'heal') {
+                v.x = this.player.x;
+                v.y = this.player.y;
+            }
+        });
+        this.visualEffects = this.visualEffects.filter(v => v.life > 0);
+
         this.lootItems.forEach(item => {
             item.life -= dt;
             if (this.player.distanceTo(item) < 50) {
@@ -239,8 +337,38 @@ const Game = {
         this.damageTexts = this.damageTexts.filter(dtxt => dtxt.life > 0);
 
         // Respawn Enemies
-        if (this.enemies.length < this.MAX_ENEMIES) {
-            this.enemies.push(new Enemy(Math.random() * this.WORLD_SIZE, Math.random() * this.WORLD_SIZE));
+        if (!this.isBossState && this.enemies.length < this.MAX_ENEMIES) {
+            const rx = Math.random() * this.WORLD_SIZE;
+            const ry = Math.random() * this.WORLD_SIZE;
+            const enemy = new Enemy(rx, ry);
+            
+            // Apply Realm Scaling
+            if (window.Realms) {
+                const mult = Realms.getMultiplier();
+                enemy.hp = Math.floor(enemy.hp * mult);
+                enemy.maxHp = enemy.hp;
+                enemy.attackPower = Math.floor(25 * mult); 
+            }
+            
+            this.enemies.push(enemy);
+        }
+
+        // Boss Minion Spawning
+        if (this.isBossState) {
+            this.bossMinionTimer += dt;
+            if (this.bossMinionTimer > 5) {
+                this.bossMinionTimer = 0;
+                const minion = new Enemy(this.player.x + (Math.random() - 0.5) * 400, this.player.y + (Math.random() - 0.5) * 400);
+                minion.hp = 100; minion.maxHp = 100;
+                this.enemies.push(minion);
+            }
+            // Check if boss is dead
+            const boss = this.enemies.find(e => e.isBoss);
+            if (!boss || boss.isDead) {
+                this.exitBossArena();
+                this.player.bossRank = (this.player.bossRank || 0) + 1;
+                if (typeof UI !== 'undefined') UI.showLootNotification(`Boss Defeated! Rank Up: ${this.player.bossRank}`, "rarity-legendary");
+            }
         }
 
         // Logic-based UI updates (throttled to save CPU)
@@ -304,11 +432,32 @@ const Game = {
             ctx.beginPath(); ctx.arc(p.x - camera.x, p.y - camera.y, 12, 0, Math.PI*2); ctx.fill();
         });
 
+        // 4.5 Draw Visual Effects
+        this.visualEffects.forEach(v => {
+            const sx = v.x - camera.x; const sy = v.y - camera.y;
+            ctx.save();
+            if (v.type === 'whirlwind') {
+                ctx.beginPath();
+                ctx.arc(sx, sy, v.radius * (1 - v.life / v.maxLife), 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(200, 200, 255, ${v.life / v.maxLife})`;
+                ctx.lineWidth = 10;
+                ctx.stroke();
+            } else if (v.type === 'heal') {
+                ctx.beginPath();
+                ctx.arc(sx, sy, 50 + (1 - v.life / v.maxLife) * 100, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(46, 204, 113, ${(v.life / v.maxLife) * 0.5})`;
+                ctx.fill();
+            }
+            ctx.restore();
+        });
+
         // 5. Draw Enemies
         this.enemies.forEach(e => {
             const sx = e.x - camera.x; const sy = e.y - camera.y;
-            if (images.ghost && images.ghost.complete) {
-                ctx.drawImage(images.ghost, sx - e.radius, sy - e.radius, e.radius*2, e.radius*2);
+            const drawInfo = e.getDrawInfo ? e.getDrawInfo() : { image: images.ghost, drawWidth: e.radius*2, drawHeight: e.radius*2 };
+            
+            if (drawInfo.image && drawInfo.image.complete) {
+                ctx.drawImage(drawInfo.image, sx - drawInfo.drawWidth/2, sy - drawInfo.drawHeight/2, drawInfo.drawWidth, drawInfo.drawHeight);
             } else {
                 ctx.fillStyle = '#888'; ctx.beginPath(); ctx.arc(sx, sy, e.radius, 0, Math.PI * 2); ctx.fill();
             }
