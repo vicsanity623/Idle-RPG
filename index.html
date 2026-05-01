@@ -2,168 +2,221 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport settings for mobile game scaling -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- strict mobile viewport to prevent zooming, double-tap-to-zoom, and ensure 1:1 pixel mapping -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <title>Mobile MMO Prototype</title>
     
-    <!-- PWA Manifest & Theme -->
+    <!-- PWA Manifest & Browser Theming -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2c3e50"> <!-- Sets the browser address bar color -->
-    <link rel="apple-touch-icon" href="assets/idle/idle00.png"> <!-- Fallback icon for iOS -->
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/idle/idle00.png">
+
+    <!-- Performance: Preload critical assets -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="engine.js" as="script">
 
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-ui-container">
-        <!-- Core Game Canvas (Assets drawn here are handled in engine.js/entities.js) -->
+    <!-- Fallback for disabled JavaScript -->
+    <noscript>
+        <div style="color: white; text-align: center; padding: 50px; background: #000; height: 100vh;">
+            <h2>JavaScript is required to run this game.</h2>
+            <p>Please enable JavaScript in your browser settings.</p>
+        </div>
+    </noscript>
+
+    <main id="game-ui-container">
+        <!-- Core Game Canvas -->
         <canvas id="gameCanvas"></canvas>
 
-        <!-- Top Left: Player Status -->
-        <div id="player-hud">
-            <div class="portrait"><img src="assets/idle/idle00.png" alt="P" onerror="this.style.display='none'"></div>
+        <!-- ==========================================
+             HUD: Top Left (Player Stats) 
+             ========================================== -->
+        <section id="player-hud" aria-label="Player Status">
+            <div class="portrait">
+                <img src="assets/idle/idle00.png" alt="Player Portrait" onerror="this.style.display='none'">
+            </div>
             <div class="status-bars">
-                <div class="level-badge" id="player-level">1</div>
+                <div class="level-badge" id="player-level" aria-label="Player Level">1</div>
                 <div class="bars-container">
-                    <div class="bar hp-bar"><div id="hp-fill" class="fill"></div><span id="hp-text">1000/1000</span></div>
-                    <div class="bar mp-bar"><div id="mp-fill" class="fill"></div></div>
+                    <div class="bar hp-bar" title="Health">
+                        <div id="hp-fill" class="fill"></div>
+                        <span id="hp-text">1000/1000</span>
+                    </div>
+                    <div class="bar mp-bar" title="Mana">
+                        <div id="mp-fill" class="fill"></div>
+                    </div>
                 </div>
             </div>
-            <div class="buffs">
-                <img src="assets/buff_attack.png" class="buff-icon" onerror="this.style.display='none'">
-                <img src="assets/buff_speed.png" class="buff-icon" onerror="this.style.display='none'">
+            <div class="buffs" aria-label="Active Buffs">
+                <img src="assets/buff_attack.png" class="buff-icon" alt="Attack Buff" onerror="this.style.display='none'">
+                <img src="assets/buff_speed.png" class="buff-icon" alt="Speed Buff" onerror="this.style.display='none'">
             </div>
-        </div>
+        </section>
 
-        <!-- Top Right: Minimap & Quests -->
-        <div id="right-hud">
-            <div id="minimap-container">
+        <!-- ==========================================
+             HUD: Top Right (Minimap & Quests) 
+             ========================================== -->
+        <section id="right-hud">
+            <div id="minimap-container" aria-label="Minimap">
                 <canvas id="minimapCanvas"></canvas>
             </div>
+            
             <!-- Clickable Quest Tracker for Auto-Pathing -->
-            <div id="quest-tracker" style="display: none;">
+            <button id="quest-tracker" style="display: none;" aria-label="Quest Tracker">
                 <div id="quest-content">
                     <h4 class="quest-title"></h4>
                     <p class="quest-obj"></p>
                 </div>
                 <div id="auto-quest-indicator" class="hidden">Auto-Pathing...</div>
-            </div>
-        </div>
+            </button>
+        </section>
 
-        <!-- Right Side: Menu Toggles -->
-        <div id="menu-toggles">
+        <!-- ==========================================
+             HUD: Right Side (Menu Toggles) 
+             ========================================== -->
+        <nav id="menu-toggles" aria-label="Game Menus">
             <button class="menu-btn" onclick="UI.toggleModal('inventory-modal')">Equip</button>
             <button class="menu-btn" onclick="UI.toggleModal('stats-modal')">Stats</button>
             <button class="menu-btn" onclick="UI.toggleModal('skills-modal')">Skills</button>
-        </div>
+        </nav>
 
-        <!-- Bottom Left: Virtual Joystick -->
-        <div id="joystick-base">
+        <!-- ==========================================
+             Controls: Bottom Left (Joystick) 
+             ========================================== -->
+        <div id="joystick-base" aria-label="Movement Joystick">
             <div id="joystick-knob"></div>
         </div>
 
-        <!-- Bottom Right: Action Bar -->
-        <div id="action-bar">
-            <div class="action-slot potion"><img src="assets/potion_hp.png" onerror="this.style.display='none'"><span id="hp-potion-count">95</span></div>
-            <div class="action-slot potion"><img src="assets/potion_mp.png" onerror="this.style.display='none'"><span id="mp-potion-count">40</span></div>
-            <div class="spacer"></div>
-            <div class="action-slot skill" id="btn-attack"><img src="assets/skill_attack.png" onerror="this.style.display='none'"></div>
-            <div class="action-slot toggle-btn" id="btn-auto">AUTO<br><span id="auto-status">OFF</span></div>
+        <!-- ==========================================
+             Controls: Bottom Right (Action Bar) 
+             ========================================== -->
+        <section id="action-bar" aria-label="Action Bar">
+            <!-- Consumables -->
+            <button class="action-slot potion" aria-label="Use Health Potion">
+                <img src="assets/potion_hp.png" alt="HP Potion" onerror="this.style.display='none'">
+                <span id="hp-potion-count" class="item-count">95</span>
+            </button>
+            <button class="action-slot potion" aria-label="Use Mana Potion">
+                <img src="assets/potion_mp.png" alt="MP Potion" onerror="this.style.display='none'">
+                <span id="mp-potion-count" class="item-count">40</span>
+            </button>
             
-        </div>
-        
-        <div class="action-slot skill locked" id="btn-skill-1" onclick="Game.castFireArrow()">
-            <span style="font-size: 8px; top: 2px; left: 10px;">FIRE ARROW</span>
-        </div>
+            <div class="spacer"></div>
+            
+            <!-- Core Actions -->
+            <button class="action-slot toggle-btn" id="btn-auto" aria-label="Toggle Auto Attack">
+                AUTO<br><span id="auto-status">OFF</span>
+            </button>
+            <button class="action-slot skill" id="btn-attack" aria-label="Basic Attack">
+                <img src="assets/skill_attack.png" alt="Attack" onerror="this.style.display='none'">
+            </button>
+            
+            <!-- Skills (Fixed positioning inside Action Bar) -->
+            <button class="action-slot skill locked" id="btn-skill-1" onclick="Game.castFireArrow()" aria-label="Cast Fire Arrow">
+                <span class="skill-label" style="font-size: 8px; top: 2px; left: 10px;">FIRE ARROW</span>
+            </button>
+        </section>
 
+        <!-- ==========================================
+             Overlays (Loot, XP, Modals, Tooltips) 
+             ========================================== -->
+             
         <!-- Loot Notification Log -->
-        <div id="loot-notification-container"></div>
+        <div id="loot-notification-container" aria-live="polite"></div>
 
         <!-- Bottom XP Bar -->
-        <div id="exp-bar-container">
+        <div id="exp-bar-container" aria-label="Experience Bar">
             <div id="exp-fill"></div>
             <div id="exp-text">EXP 0.000%</div>
         </div>
 
-        <!-- Floating Modals -->
-        <div id="inventory-modal" class="ui-modal hidden">
+        <!-- Inventory Modal -->
+        <dialog id="inventory-modal" class="ui-modal hidden" aria-labelledby="inv-modal-title">
             <div class="modal-header">
-                <h3>Inventory & Equipment</h3>
-                <button class="close-btn" onclick="UI.toggleModal('inventory-modal')">X</button>
+                <h3 id="inv-modal-title">Inventory & Equipment</h3>
+                <button class="close-btn" onclick="UI.toggleModal('inventory-modal')" aria-label="Close">X</button>
             </div>
             <div class="modal-body flex-row">
                 <div class="char-preview-container">
-                    <!-- Specific Equipment Slots -->
                     <div class="equipment-grid">
-                        <div class="eq-slot" data-slot="head" title="Head"></div>
-                        <div class="eq-slot" data-slot="cape" title="Cape"></div>
-                        <div class="eq-slot" data-slot="amulet" title="Amulet"></div>
-                        <div class="eq-slot" data-slot="armor" title="Armor"></div>
-                        <div class="eq-slot" data-slot="hands" title="Hands"></div>
-                        <div class="eq-slot" data-slot="ring1" title="Ring"></div>
-                        <div class="eq-slot" data-slot="ring2" title="Ring"></div>
-                        <div class="eq-slot" data-slot="legs" title="Legs"></div>
+                        <div class="eq-slot" data-slot="head" title="Head" role="button" tabindex="0"></div>
+                        <div class="eq-slot" data-slot="cape" title="Cape" role="button" tabindex="0"></div>
+                        <div class="eq-slot" data-slot="amulet" title="Amulet" role="button" tabindex="0"></div>
+                        <div class="eq-slot" data-slot="armor" title="Armor" role="button" tabindex="0"></div>
+                        <div class="eq-slot" data-slot="hands" title="Hands" role="button" tabindex="0"></div>
+                        <div class="eq-slot" data-slot="ring1" title="Ring 1" role="button" tabindex="0"></div>
+                        <div class="eq-slot" data-slot="ring2" title="Ring 2" role="button" tabindex="0"></div>
+                        <div class="eq-slot" data-slot="legs" title="Legs" role="button" tabindex="0"></div>
                     </div>
                     <div class="char-preview">
-                        <img src="assets/idle/idle00.png" alt="Preview">
-                        <div class="cp-stats">CP: <span id="combat-power">14,320</span></div>
+                        <img src="assets/idle/idle00.png" alt="Character Preview">
+                        <div class="cp-stats">CP: <span id="combat-power">0</span></div>
                     </div>
                 </div>
                 <div class="inv-tabs-container">
-                    <div class="tab-header">
-                        <button class="tab active" onclick="UI.setInventoryTab('equip')">Equip</button>
-                        <button class="tab" onclick="UI.setInventoryTab('consumables')">Consumables</button>
+                    <div class="tab-header" role="tablist">
+                        <button class="tab active" data-tab="equip" onclick="UI.setInventoryTab('equip')" role="tab">Equip</button>
+                        <button class="tab" data-tab="consumables" onclick="UI.setInventoryTab('consumables')" role="tab">Consumables</button>
                     </div>
-                    <div class="inventory-grid" id="inv-grid">
-                        <!-- Items will be injected here by UI script -->
+                    <div class="inventory-grid" id="inv-grid" role="tabpanel">
+                        <!-- Items dynamically injected by ui.js -->
                     </div>
                     <div class="inventory-footer">
                         <div class="gold-display">💰 <span id="inv-gold">0</span></div>
                     </div>
                 </div>
             </div>
-        </div>
+        </dialog>
 
-        <!-- Skills Modal (New) -->
-        <div id="skills-modal" class="ui-modal hidden">
+        <!-- Skills Modal -->
+        <dialog id="skills-modal" class="ui-modal hidden" aria-labelledby="skills-modal-title">
             <div class="modal-header">
-                <h3>Class Skills</h3>
-                <button class="close-btn" onclick="UI.toggleModal('skills-modal')">X</button>
+                <h3 id="skills-modal-title">Class Skills</h3>
+                <button class="close-btn" onclick="UI.toggleModal('skills-modal')" aria-label="Close">X</button>
             </div>
             <div class="modal-body">
                 <div class="skills-list" id="skills-list">
                     <p>Unlock skills by leveling up...</p>
                 </div>
             </div>
-        </div>
+        </dialog>
 
-        <div id="stats-modal" class="ui-modal hidden">
+        <!-- Stats Modal -->
+        <dialog id="stats-modal" class="ui-modal hidden" aria-labelledby="stats-modal-title">
             <div class="modal-header">
-                <h3>Ongoing Effects & Stats</h3>
-                <button class="close-btn" onclick="UI.toggleModal('stats-modal')">X</button>
+                <h3 id="stats-modal-title">Ongoing Effects & Stats</h3>
+                <button class="close-btn" onclick="UI.toggleModal('stats-modal')" aria-label="Close">X</button>
             </div>
-            <div class="modal-body" id="stats-list"></div>
-        </div>
+            <div class="modal-body" id="stats-list">
+                <!-- Stats dynamically injected by ui.js -->
+            </div>
+        </dialog>
 
-        <!-- NEW: Item Tooltip for Long Press -->
-        <div id="item-tooltip" class="hidden">
+        <!-- Item Tooltip (Hover/Long Press) -->
+        <div id="item-tooltip" class="hidden" role="tooltip">
             <h4 id="tt-name">Item Name</h4>
             <div id="tt-rarity">Rarity</div>
             <div id="tt-stats">Stats</div>
         </div>
-    </div>
+    </main>
 
-    <!-- Scripts -->
-    <script src="ui.js"></script>
-    <script src="entities.js"></script>
-    <script src="engine.js"></script>
+    <!-- Game Scripts (Order logic: UI first, Entities second, Engine last to bind it all together) -->
+    <script src="ui.js" defer></script>
+    <script src="entities.js" defer></script>
+    <script src="engine.js" defer></script>
 
     <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW registered'))
-                    .catch(err => console.log('SW failed', err));
+                    .then(reg => console.log('Service Worker registered successfully.'))
+                    .catch(err => console.warn('Service Worker registration failed:', err));
             });
         }
     </script>
