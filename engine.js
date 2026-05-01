@@ -50,6 +50,8 @@ const Game = {
 
         // Load saved data before starting loop
         this.loadGame();
+        UI.updateInventory(this.player);
+        UI.updatePlayerStats(this.player);
 
         requestAnimationFrame((t) => this.loop(t));
     },
@@ -324,36 +326,44 @@ if (typeof UI !== 'undefined') {
         const grid = document.getElementById('inv-grid');
         const goldTxt = document.getElementById('inv-gold');
         if (!grid) return;
-        grid.innerHTML = '';
+
+        grid.innerHTML = ''; // Clear current grid
         goldTxt.innerText = player.gold.toLocaleString();
 
+        // Filter items based on current tab
         const items = player.inventory.filter(item => (this.currentInvTab === 'equip' ? item.type === 'equipment' : item.type !== 'equipment'));
 
-        items.forEach(item => {
+        // ALWAYS draw exactly 40 slots to keep the grid consistent
+        for (let i = 0; i < 40; i++) {
+            const item = items[i]; // Get item at this index (if it exists)
             const slot = document.createElement('div');
-            slot.className = `inv-slot rarity-${item.rarity} slot-icon`;
-            slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; 
-            if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
             
-            // --- NEW: LONG PRESS TOOLTIP FOR INVENTORY ---
-            slot.onpointerdown = (e) => {
-                this.isLongPress = false;
-                this.pressTimer = setTimeout(() => {
-                    this.isLongPress = true;
-                    this.showTooltip(item, e);
-                }, 400); 
-            };
-            slot.onpointerup = (e) => {
-                clearTimeout(this.pressTimer);
-                this.hideTooltip();
-                if (!this.isLongPress) this.handleItemClick(item);
-            };
-            slot.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
-            slot.oncontextmenu = (e) => e.preventDefault(); 
-            
+            if (item) {
+                // Draw Slot with Item
+                slot.className = `inv-slot rarity-${item.rarity} slot-icon`;
+                slot.innerHTML = `<div class="item-label">${item.name[0]}</div>`; 
+                if (item.count > 1) slot.innerHTML += `<span class="count">${item.count}</span>`;
+                
+                // Interaction Logic
+                slot.onpointerdown = (e) => {
+                    this.isLongPress = false;
+                    this.pressTimer = setTimeout(() => { this.isLongPress = true; this.showTooltip(item, e); }, 400); 
+                };
+                slot.onpointerup = (e) => {
+                    clearTimeout(this.pressTimer);
+                    this.hideTooltip();
+                    if (!this.isLongPress) this.handleItemClick(item);
+                };
+                slot.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
+                slot.oncontextmenu = (e) => e.preventDefault();
+            } else {
+                // Draw Empty Slot
+                slot.className = 'inv-slot';
+            }
             grid.appendChild(slot);
-        });
+        }
 
+        // Update Equipment Slots Visuals
         let equipAtk = 0;
         Object.keys(player.equipment).forEach(slotName => {
             const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
@@ -361,34 +371,29 @@ if (typeof UI !== 'undefined') {
             if (el) {
                 el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''} slot-icon`;
                 el.innerHTML = item ? `<div class="item-label">${item.name[0]}</div>` : '';
-                
                 if (item) {
                     equipAtk += (item.stats.attack || 0);
-                    // --- NEW: UNEQUIP AND TOOLTIPS FOR EQUIPPED ITEMS ---
                     el.onpointerdown = (e) => {
                         this.isLongPress = false;
-                        this.pressTimer = setTimeout(() => {
-                            this.isLongPress = true;
-                            this.showTooltip(item, e);
-                        }, 400); 
+                        this.pressTimer = setTimeout(() => { this.isLongPress = true; this.showTooltip(item, e); }, 400); 
                     };
                     el.onpointerup = (e) => {
                         clearTimeout(this.pressTimer);
                         this.hideTooltip();
-                        if (!this.isLongPress) this.handleItemClick(item); // Triggers Unequip
+                        if (!this.isLongPress) this.handleItemClick(item);
                     };
                     el.onpointerleave = () => { clearTimeout(this.pressTimer); this.hideTooltip(); };
                     el.oncontextmenu = (e) => e.preventDefault();
                 } else {
-                    // Clear events if slot is empty
-                    el.onpointerdown = null; el.onpointerup = null; el.onpointerleave = null; el.oncontextmenu = null;
+                    el.onpointerdown = null; el.onpointerup = null;
                 }
             }
         });
         
+        // Calculate and Update Real Combat Power
         const cp = Math.floor((player.level * 150) + (equipAtk * 10));
         const cpEl = document.getElementById('combat-power');
-        if (cpEl) cpEl.innerText = cp.toLocaleString();
+        if (cpEl) cpEl.innerText = `CP: ${cp.toLocaleString()}`; // Updates the hardcoded HTML value
         this.updateStatsModal(player, cp, equipAtk);
     };
 
