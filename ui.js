@@ -65,6 +65,8 @@ const UI = {
     updatePlayerStats(player) {
         document.getElementById('hp-fill').style.width = Math.max(0, (player.hp / player.maxHp) * 100) + '%';
         document.getElementById('hp-text').innerText = `${Math.floor(player.hp)}/${player.maxHp}`;
+        document.getElementById('mp-fill').style.width = Math.max(0, (player.mp / player.maxMp) * 100) + '%';
+        document.getElementById('mp-text').innerText = `${Math.floor(player.mp)}/${player.maxMp}`;
         document.getElementById('quest-count').innerText = Game.kills;
     },
     populateInventory() {
