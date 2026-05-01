@@ -174,3 +174,63 @@ body, html { width: 100%; height: 100%; background: #000; overflow: hidden; touc
 #tt-name { font-size: 14px; margin-bottom: 2px; }
 #tt-rarity { font-size: 10px; font-style: italic; margin-bottom: 5px; text-transform: capitalize; border-bottom: 1px solid #444; padding-bottom: 3px; }
 #tt-stats { font-size: 11px; color: #2ecc71; font-weight: bold; }
+
+/* Target Context Menu */
+#target-context-menu {
+    position: absolute; /* Positioned by JS, can be fixed or absolute */
+    top: 60px; /* Placeholder, UI.js will set dynamic position */
+    left: 10px; /* Placeholder, UI.js will set dynamic position */
+    background: rgba(15, 15, 20, 0.95);
+    border: 2px solid #b89947;
+    border-radius: 4px;
+    padding: 5px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.9);
+    pointer-events: auto; /* Essential for clickable elements */
+}
+#target-context-menu.hidden {
+    display: none;
+}
+.context-menu-item {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid #666;
+    color: #aaa;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.context-menu-item:hover {
+    background: rgba(50, 50, 50, 0.9);
+    border-color: #b89947;
+    color: #fff;
+}
+.context-menu-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+#item-tooltip {
+    position: fixed; /* Fixed to screen coordinates */
+    background: rgba(15, 15, 20, 0.95);
+    border: 2px solid #b89947;
+    border-radius: 4px;
+    padding: 10px;
+    color: #fff;
+    z-index: 9999;
+    pointer-events: none;
+    width: 160px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.9);
+    text-shadow: 1px 1px 0 #000;
+    transform: translate(-50%, -110%); /* Centers above finger */
+}
+#item-tooltip.hidden { display: none; }
+#tt-name { font-size: 14px; margin-bottom: 2px; }
+#tt-rarity { font-size: 10px; font-style: italic; margin-bottom: 5px; text-transform: capitalize; border-bottom: 1px solid #444; padding-bottom: 3px; }
+#tt-stats { font-size: 11px; color: #2ecc71; font-weight: bold; }
