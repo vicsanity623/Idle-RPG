@@ -371,7 +371,7 @@ html, body {
 
 .skill-label {
     position: absolute;
-    top: 5px;
+    bottom: 5px; /* Moved to bottom for icon space */
     width: 100%;
     text-align: center;
     font-size: 8px;
@@ -379,18 +379,33 @@ html, body {
     font-weight: bold;
     text-shadow: 1px 1px 2px #000;
     z-index: 2;
+    pointer-events: none;
+}
+
+.skill-icon-wrap {
+    font-size: 24px;
+    z-index: 2;
+    margin-top: -10px;
+    text-shadow: 0 0 8px rgba(255,255,255,0.4);
+    pointer-events: none;
+}
+
+.action-slot.skill:not(.locked):hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px var(--color-gold);
 }
 
 .cooldown-overlay {
     position: absolute;
-    bottom: 0;
+    top: 0;
     left: 0;
     width: 100%;
-    height: 0%;
-    background: rgba(0, 0, 0, 0.7);
+    height: 100%;
+    background: conic-gradient(rgba(0, 0, 0, 0.7) var(--cd-pct, 0%), transparent 0);
     border-radius: 50%;
     z-index: 1;
-    transition: height 0.1s linear;
+    pointer-events: none;
+    transform: rotate(-90deg); /* Start from top */
 }
 
 /* --- 7. BOTTOM EXP BAR --- */
@@ -808,3 +823,264 @@ html, body {
 }
 
 .hidden { display: none !important; }
+
+/* --- 12. PREMIUM SKILLS SYSTEM UI --- */
+.skills-layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.skills-sidebar {
+    width: 350px;
+    background: rgba(20, 20, 25, 0.95);
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+
+.skills-category-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.cat-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 11px;
+    padding: 8px 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.cat-tab.active {
+    color: var(--color-gold-glow);
+    border-bottom: 2px solid var(--color-gold-glow);
+}
+
+.skills-scroll-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.skill-card {
+    aspect-ratio: 1;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #444;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+    pointer-events: auto !important; /* Ensure clicks register */
+}
+
+.skill-card.active-skill {
+    border-color: var(--color-gold);
+    box-shadow: 0 0 10px rgba(184, 153, 71, 0.4);
+}
+
+.skill-card.selected {
+    background: rgba(184, 153, 71, 0.2);
+    border-color: var(--color-gold-glow);
+}
+
+.skill-rarity-tag {
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.skills-preset-bar {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #888;
+}
+
+.preset-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.preset-btn {
+    width: 32px;
+    height: 32px;
+    background: #1a1a1f;
+    border: 1px solid #444;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.preset-btn.active {
+    background: #2a2a35;
+    border-color: var(--color-gold);
+}
+
+.skills-main-panel {
+    flex: 1;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    background: radial-gradient(circle at center, rgba(30,30,40,0.5), transparent);
+}
+
+.skill-detail-view {
+    text-align: center;
+    width: 100%;
+    max-width: 500px;
+}
+
+.detail-icon-large {
+    font-size: 80px;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 15px rgba(255,255,255,0.2));
+}
+
+.detail-title {
+    font-size: 28px;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.detail-rarity {
+    font-size: 14px;
+    color: var(--color-gold-glow);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.detail-desc {
+    color: #aaa;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.detail-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 40px;
+    background: rgba(0,0,0,0.3);
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.stat-item {
+    text-align: left;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.stat-val {
+    font-size: 18px;
+    color: #eee;
+}
+
+.activate-btn {
+    background: linear-gradient(135deg, #444, #222);
+    border: 1px solid #555;
+    color: #888;
+    padding: 12px 40px;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.activate-btn.active {
+    background: linear-gradient(135deg, #8e44ad, #5e3370);
+    border-color: #9b59b6;
+    color: white;
+    box-shadow: 0 4px 15px rgba(142, 68, 173, 0.4);
+}
+
+.modal-close-icon {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+/* Enhancement View */
+.enhancement-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ritual-backdrop {
+    width: 300px;
+    height: 300px;
+    border: 2px solid rgba(231, 76, 60, 0.2);
+    border-radius: 50%;
+    position: relative;
+    margin-bottom: 40px;
+    animation: rotate 20s infinite linear;
+}
+
+.ritual-inner {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px;
+    height: 200px;
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    border-radius: 50%;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.enhance-target-icon {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 60px;
+    z-index: 10;
+}

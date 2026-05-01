@@ -216,37 +216,52 @@ var Game = {
     castSkill(skillId) {
         if (!this.player || this.player.isDead) return;
         const skill = this.player.skills.find(s => s.id === skillId);
-        if (!skill || this.player.level < skill.unlockLevel) return;
+        if (!skill || !skill.active) return;
         if (skill.timer > 0 || this.player.mp < skill.mpCost) return;
 
         this.player.mp -= skill.mpCost;
         skill.timer = skill.cooldown;
 
-        if (skill.id === 'fire_arrow') {
-            if (!this.player.target) this.player.target = this.player.findClosestEnemy(this.enemies, 800);
+        if (skill.id === 'spirit_spear' || skill.id === 'lightning_bullet') {
+            if (!this.player.target || this.player.target.isDead) this.player.target = this.player.findClosestEnemy(this.enemies, 800);
             if (this.player.target) {
-                this.projectiles.push(new Projectile(this.player.x, this.player.y - 30, this.player.target, this.player.stats.attack * skill.damageMult));
-                if (typeof UI !== 'undefined') UI.showLootNotification("FIRE ARROW!", "rarity-epic");
+                const dmg = this.player.stats.attack * skill.damageMult;
+                this.projectiles.push(new Projectile(this.player.x, this.player.y - 30, this.player.target, dmg));
+                
+                // Spirit Spear Heal Effect
+                if (skill.id === 'spirit_spear') {
+                    const heal = Math.floor(dmg * 0.1);
+                    this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+                    this.spawnDamageText(this.player.x, this.player.y - 60, `+${heal} HP`, "#2ecc71");
+                }
+
+                if (typeof UI !== 'undefined') UI.showLootNotification(`${skill.name.toUpperCase()}!`, "rarity-epic");
             } else {
                 this.player.mp += skill.mpCost;
                 skill.timer = 0;
             }
         } 
-        else if (skill.id === 'whirlwind') {
-            this.visualEffects.push({ type: 'whirlwind', x: this.player.x, y: this.player.y, life: 0.5, maxLife: 0.5, radius: 150 });
+        else if (skill.id === 'liston_cutoff') {
+            // EXPLOSIVE AOE EFFECT
+            this.visualEffects.push({ type: 'shockwave', x: this.player.x, y: this.player.y, life: 0.6, maxLife: 0.6, radius: 250, color: '#3498db' });
+            this.visualEffects.push({ type: 'explosion', x: this.player.x, y: this.player.y, life: 0.8, maxLife: 0.8, radius: 200, color: '#ffffff' });
+            
             this.enemies.forEach(e => {
-                if (this.player.distanceTo(e) <= 150) {
+                if (this.player.distanceTo(e) <= 250) {
                     e.takeDamage(this.player.stats.attack * skill.damageMult, this.player);
-                    e.x += (e.x - this.player.x) > 0 ? 30 : -30; // Knockback
+                    this.spawnDamageText(e.x, e.y - 50, "CRITICAL!", "#e67e22");
                 }
             });
-            if (typeof UI !== 'undefined') UI.showLootNotification("WHIRLWIND!", "rarity-legendary");
+            if (typeof UI !== 'undefined') UI.showLootNotification("LISTON CUT OFF!", "rarity-legendary");
         }
-        else if (skill.id === 'heal') {
-            this.visualEffects.push({ type: 'heal', x: this.player.x, y: this.player.y, life: 1.0, maxLife: 1.0 });
-            this.player.hp = Math.min(this.player.maxHp, this.player.hp + skill.healAmount);
-            this.spawnDamageText(this.player.x, this.player.y - 50, `+${skill.healAmount} HP`, "#2ecc71");
-            if (typeof UI !== 'undefined') UI.showLootNotification("HEAL!", "rarity-rare");
+        else if (skill.id === 'cannibal_devour') {
+            this.visualEffects.push({ type: 'shockwave', x: this.player.x, y: this.player.y, life: 1, maxLife: 1, radius: 150, color: '#e74c3c' });
+            this.visualEffects.push({ type: 'heal', x: this.player.x, y: this.player.y, life: 1.2, maxLife: 1.2 });
+            
+            const heal = 300 * skill.level;
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+            this.spawnDamageText(this.player.x, this.player.y - 60, "DEVOUR!", "#c0392b");
+            if (typeof UI !== 'undefined') UI.showLootNotification("CANNIBAL DEVOUR!", "rarity-epic");
         }
     },
 
@@ -261,6 +276,7 @@ var Game = {
             maxBossDmg: this.player.maxBossDmg,
             inventory: this.player.inventory,
             equipment: this.player.equipment,
+            skills: this.player.skills, // FIX: Save skills
             kills: this.kills,
             activeQuest: this.activeQuest
         };
@@ -272,10 +288,27 @@ var Game = {
         if (saved) {
             try {
                 const data = JSON.parse(saved);
+                
+                // Skill merge logic: Keep existing skill object structures but update active/level from save
+                if (data.skills) {
+                    data.skills.forEach(savedSkill => {
+                        const existing = this.player.skills.find(s => s.id === savedSkill.id);
+                        if (existing) {
+                            existing.active = savedSkill.active;
+                            existing.level = savedSkill.level;
+                        }
+                    });
+                    delete data.skills; // Don't overwrite the whole skill array to preserve methods/icons
+                }
+
                 Object.assign(this.player, data);
+                this.player.recalculateStats(); // Apply passives from loaded skills
                 this.kills = data.kills || 0;
                 this.activeQuest = data.activeQuest || null;
-                if (typeof UI !== 'undefined') UI.showLootNotification("Progress Loaded", "rarity-legendary");
+                if (typeof UI !== 'undefined') {
+                    UI.updatePlayerStats(this.player);
+                    UI.showLootNotification("Progress Loaded", "rarity-legendary");
+                }
             } catch (e) {
                 console.error("Save data corrupted.");
             }
@@ -432,21 +465,41 @@ var Game = {
             ctx.beginPath(); ctx.arc(p.x - camera.x, p.y - camera.y, 12, 0, Math.PI*2); ctx.fill();
         });
 
-        // 4.5 Draw Visual Effects
+        // 4.5 Draw Visual Effects (DRAMATIC ENHANCEMENT)
         this.visualEffects.forEach(v => {
             const sx = v.x - camera.x; const sy = v.y - camera.y;
+            const progress = 1 - v.life / v.maxLife;
             ctx.save();
-            if (v.type === 'whirlwind') {
+            
+            if (v.type === 'shockwave') {
                 ctx.beginPath();
-                ctx.arc(sx, sy, v.radius * (1 - v.life / v.maxLife), 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(200, 200, 255, ${v.life / v.maxLife})`;
-                ctx.lineWidth = 10;
+                ctx.arc(sx, sy, v.radius * progress, 0, Math.PI * 2);
+                ctx.strokeStyle = v.color || '#fff';
+                ctx.lineWidth = 15 * (1 - progress);
+                ctx.stroke();
+            } else if (v.type === 'explosion') {
+                ctx.beginPath();
+                ctx.arc(sx, sy, v.radius * Math.sin(progress * Math.PI), 0, Math.PI * 2);
+                const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, v.radius);
+                grad.addColorStop(0, v.color || '#fff');
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.globalAlpha = 1 - progress;
+                ctx.fill();
+            } else if (v.type === 'whirlwind') {
+                ctx.beginPath();
+                ctx.arc(sx, sy, v.radius * progress, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(155, 89, 182, ${1 - progress})`;
+                ctx.lineWidth = 20;
                 ctx.stroke();
             } else if (v.type === 'heal') {
                 ctx.beginPath();
-                ctx.arc(sx, sy, 50 + (1 - v.life / v.maxLife) * 100, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(46, 204, 113, ${(v.life / v.maxLife) * 0.5})`;
+                ctx.arc(sx, sy, 60 + progress * 120, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(46, 204, 113, ${(1 - progress) * 0.4})`;
                 ctx.fill();
+                // Vertical light beam
+                ctx.fillStyle = `rgba(255, 255, 255, ${(1 - progress) * 0.6})`;
+                ctx.fillRect(sx - 20, sy - 200 * (1-progress), 40, 200 * (1-progress));
             }
             ctx.restore();
         });

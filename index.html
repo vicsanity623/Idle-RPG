@@ -88,6 +88,11 @@
             </button>
         </section>
 
+        <!-- HUD: Top Center (Gold) -->
+        <div id="top-gold-display" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 20px; border: 1px solid var(--color-gold); color: var(--color-gold-glow); font-weight: 800; font-size: 18px; z-index: var(--z-hud); display: flex; align-items: center; gap: 10px; box-shadow: 0 0 15px rgba(184, 153, 71, 0.3); backdrop-filter: blur(5px);">
+            <span style="font-size: 20px;">💰</span> <span id="main-gold-count">0</span>
+        </div>
+
         <!-- ==========================================
              HUD: Right Side (Menu Toggles) 
              ========================================== -->
@@ -128,19 +133,10 @@
                 <img src="assets/skill_attack.png" alt="Attack" onerror="this.style.display='none'">
             </button>
             
-            <!-- Skills (Fixed positioning inside Action Bar) -->
-            <button class="action-slot skill locked" id="btn-skill-fire_arrow" onclick="Game.castSkill('fire_arrow')" aria-label="Cast Fire Arrow">
-                <span class="skill-label">FIRE ARROW</span>
-                <div class="cooldown-overlay"></div>
-            </button>
-            <button class="action-slot skill locked" id="btn-skill-whirlwind" onclick="Game.castSkill('whirlwind')" aria-label="Cast Whirlwind">
-                <span class="skill-label">WHIRLWIND</span>
-                <div class="cooldown-overlay"></div>
-            </button>
-            <button class="action-slot skill locked" id="btn-skill-heal" onclick="Game.castSkill('heal')" aria-label="Cast Heal">
-                <span class="skill-label">HEAL</span>
-                <div class="cooldown-overlay"></div>
-            </button>
+            <!-- Skills (Dynamic Static Grid) -->
+            <div id="skill-buttons-container" style="display:flex; gap:10px;">
+                <!-- Skills dynamically injected by ui.js -->
+            </div>
         </section>
 
         <!-- ==========================================
@@ -231,15 +227,38 @@
         </dialog>
 
         <!-- Skills Modal -->
-        <dialog id="skills-modal" class="ui-modal hidden" aria-labelledby="skills-modal-title">
-            <div class="modal-header">
-                <h3 id="skills-modal-title">Class Skills</h3>
-                <button class="close-btn" onclick="UI.toggleModal('skills-modal')" aria-label="Close">X</button>
-            </div>
-            <div class="modal-body">
-                <div class="skills-list" id="skills-list">
-                    <p>Unlock skills by leveling up...</p>
-                </div>
+        <dialog id="skills-modal" class="ui-modal hidden" style="width: 95%; max-width: 900px; height: 90%; background: #0b0b0d;">
+            <div class="skills-layout">
+                <!-- Sidebar: Categories & Skill Icons -->
+                <aside class="skills-sidebar">
+                    <div class="skills-category-tabs">
+                        <button class="cat-tab active" onclick="UI.setSkillCategory('unique')">Unique Skills</button>
+                        <button class="cat-tab" onclick="UI.setSkillCategory('heavenstone')">Heavenstone</button>
+                        <button class="cat-tab" onclick="UI.setSkillCategory('enhancement')">Skill Enhancement</button>
+                    </div>
+                    
+                    <div class="skills-scroll-container">
+                        <div id="skills-item-list" class="skills-grid">
+                            <!-- Skill icons injected by ui.js -->
+                        </div>
+                    </div>
+
+                    <div class="skills-preset-bar">
+                        <span>Skill Preset</span>
+                        <div class="preset-btns">
+                            <button class="preset-btn active" onclick="UI.setSkillPreset('A')">A</button>
+                            <button class="preset-btn" onclick="UI.setSkillPreset('B')">B</button>
+                            <button class="preset-btn" onclick="UI.setSkillPreset('C')">C</button>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main Content: Details or Enhancement -->
+                <main class="skills-main-panel" id="skill-detail-panel">
+                    <!-- Dynamic content: Detail View or Enhancement Ritual -->
+                </main>
+
+                <button class="modal-close-icon" onclick="UI.toggleModal('skills-modal')">✕</button>
             </div>
         </dialog>
 

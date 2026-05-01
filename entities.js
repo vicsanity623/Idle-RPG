@@ -33,7 +33,7 @@ class Player extends Entity {
         this.maxHp = 1000;
         this.mp = 200;
         this.maxMp = 200;
-        this.mpRegen = 2; // Per second
+        this.mpRegen = 10; // Per second
 
         this.level = 1;
         this.xp = 0;
@@ -61,7 +61,7 @@ class Player extends Entity {
             dmgReduction: 0, evade: 5, block: 0,
 
             moveSpeed: 100, cdReduction: 0, hpRecovery: 1, hpPotionRcvRate: 100,
-            maxHpPotionCap: 1000, mpRecovery: 5,
+            maxHpPotionCap: 1000, mpRecovery: 10,
 
             immobileHitRate: 0, immobileRes: 0,
             statusTimeInc: 0, statusTimeDec: 0, statusHitRate: 0, statusRes: 0,
@@ -79,10 +79,58 @@ class Player extends Entity {
         this.respawnTimer = 0;
 
         this.skills = [
-            { id: 'fire_arrow', name: 'Fire Arrow', type: 'projectile', damageMult: 2.0, mpCost: 50, cooldown: 5, timer: 0, unlockLevel: 1 },
-            { id: 'whirlwind', name: 'Whirlwind', type: 'aoe', damageMult: 1.5, mpCost: 80, cooldown: 8, timer: 0, unlockLevel: 5 },
-            { id: 'heal', name: 'Heal', type: 'buff', healAmount: 300, mpCost: 100, cooldown: 15, timer: 0, unlockLevel: 10 }
+            { 
+                id: 'spirit_spear', name: 'Spirit Spear', type: 'projectile', 
+                rarity: 'uncommon', category: 'Active',
+                damageMult: 2.8, mpCost: 22, cooldown: 11, timer: 0, 
+                level: 2, active: true,
+                desc: "Summons a Spear of Souls and throws it at the target, dealing 280% damage and converts part of the damage dealt to heal you.",
+                icon: '🏹' 
+            },
+            { 
+                id: 'liston_cutoff', name: 'Liston: Cut Off', type: 'aoe', 
+                rarity: 'uncommon', category: 'Active', // FIX: Change to Active so it shows on HUD
+                damageMult: 2.3, mpCost: 15, cooldown: 12, timer: 0, 
+                level: 2, active: true,
+                desc: "Summons a fragment of Specter Liston to perform a spinning attack that deals 230% damage to nearby enemies.",
+                icon: '⚔️'
+            },
+            { 
+                id: 'cannibal_devour', name: 'Cannibal: Devour', type: 'buff', 
+                rarity: 'rare', category: 'Active',
+                damageMult: 1.5, mpCost: 45, cooldown: 15, timer: 0, 
+                level: 2, active: true,
+                desc: "Consumes a portion of the enemy's essence, instantly healing you and increasing power.",
+                icon: '🦷'
+            },
+            { 
+                id: 'soul_walker', name: 'Soul Walker', type: 'passive', 
+                rarity: 'uncommon', category: 'Passive',
+                damageMult: 0, mpCost: 0, cooldown: 0, timer: 0, 
+                level: 2, active: true,
+                desc: "The longer the battle continues, the more you resonate with the Specter, increasing Movement Speed by 7%.",
+                icon: '👻',
+                stats: { moveSpeed: 7 }
+            },
+            { 
+                id: 'phantom_rage', name: 'Phantom Rage', type: 'buff', 
+                rarity: 'rare', category: 'Passive',
+                damageMult: 0, mpCost: 0, cooldown: 0, timer: 0, 
+                level: 2, active: true,
+                desc: "Increases Attack Speed and Critical Rate as your HP decreases.",
+                icon: '💢'
+            },
+            { 
+                id: 'lightning_bullet', name: 'Lightning Bullet', type: 'projectile', 
+                rarity: 'epic', category: 'Active',
+                damageMult: 3.5, mpCost: 60, cooldown: 8, timer: 0, 
+                level: 1, active: true,
+                desc: "Fires a concentrated bolt of lightning that chains to nearby enemies.",
+                icon: '⚡'
+            }
         ];
+
+        this.recalculateStats();
 
         // Animation Engine
         this.spriteScale = 0.25;
@@ -122,6 +170,19 @@ class Player extends Entity {
 
         this.hp = Math.min(this.hp, this.stats.maxHp);
         this.maxHp = this.stats.maxHp;
+
+        // Apply Skill Passives
+        if (this.skills) {
+            this.skills.forEach(skill => {
+                if (skill.active && skill.category === 'Passive' && skill.stats) {
+                    for (const key in skill.stats) {
+                        if (this.stats[key] !== undefined) {
+                            this.stats[key] += skill.stats[key];
+                        }
+                    }
+                }
+            });
+        }
     }
 
     gainXp(amount) {
@@ -222,22 +283,39 @@ class Player extends Entity {
 
         // Auto-Targeting
         if (!this.target || this.target.isDead) {
-            this.target = this.findClosestEnemy(enemies, 400);
+            this.target = this.findClosestEnemy(enemies, 800);
         }
 
-        // Auto-Cast Skills
+        // Auto-Cast Skills (Sequential Turn-Taking Logic)
         if ((this.autoAttack || this.autoQuest) && typeof Game !== 'undefined') {
-            this.skills.forEach(skill => {
-                if (this.level >= skill.unlockLevel && skill.timer <= 0 && this.mp >= skill.mpCost) {
-                    if (skill.id === 'heal') {
-                        if (this.hp < this.maxHp * 0.7) Game.castSkill(skill.id);
-                    } else if (this.target) {
-                        const dist = this.distanceTo(this.target);
-                        if (skill.id === 'whirlwind' && dist <= 150) Game.castSkill(skill.id);
-                        else if (skill.id === 'fire_arrow' && dist <= 800) Game.castSkill(skill.id);
+            // Find ALL available skills first
+            const availableSkills = this.skills.filter(skill => 
+                skill.active && 
+                skill.category === 'Active' && 
+                skill.timer <= 0 && 
+                this.mp >= skill.mpCost
+            );
+
+            // Cast the first one that meets range requirements
+            for (const skill of availableSkills) {
+                if (this.target) {
+                    const dist = this.distanceTo(this.target);
+                    let canCast = false;
+
+                    if (skill.id === 'spirit_spear' || skill.id === 'lightning_bullet') {
+                        if (dist <= 800) canCast = true;
+                    } else if (skill.id === 'liston_cutoff' && dist <= 180) {
+                        canCast = true;
+                    } else if (skill.id === 'cannibal_devour' && this.hp < this.maxHp * 0.9) {
+                        canCast = true;
+                    }
+
+                    if (canCast) {
+                        Game.castSkill(skill.id);
+                        break; // Cast only one skill per turn to ensure they "take turns"
                     }
                 }
-            });
+            }
         }
 
         let attacked = false;

@@ -14,6 +14,11 @@ const UI = {
         this.setupJoystick();
         this.bindEvents();
         this.populateInventoryPlaceholder();
+        
+        // Skill Overhaul States
+        this.currentSkillCategory = 'unique';
+        this.currentSkillPreset = 'A';
+        this.selectedSkillId = 'spirit_spear';
     },
 
     bindEvents() {
@@ -151,10 +156,11 @@ const UI = {
     updateInventory(player) {
         const grid = document.getElementById('inv-grid');
         const goldTxt = document.getElementById('inv-gold');
+        const mainGoldTxt = document.getElementById('main-gold-count');
         if (!grid || !player) return;
 
-        grid.innerHTML = '';
         if (goldTxt) goldTxt.innerText = player.gold.toLocaleString();
+        if (mainGoldTxt) mainGoldTxt.innerText = player.gold.toLocaleString();
 
         let items = player.inventory.filter(item => 
             (this.currentInvTab === 'equip' ? item.type === 'equipment' : item.type !== 'equipment')
@@ -484,23 +490,120 @@ const UI = {
         `;
     },
 
-    updateSkillsModal(player) {
-        const list = document.getElementById('skills-list');
-        if (!list || !player.skills) return;
+    setSkillCategory(cat) {
+        this.currentSkillCategory = cat;
+        document.querySelectorAll('.cat-tab').forEach(btn => btn.classList.toggle('active', btn.innerText.toLowerCase().includes(cat)));
+        if (window.Game && Game.player) this.updateSkillsModal(Game.player);
+    },
+
+    setSkillPreset(preset) {
+        this.currentSkillPreset = preset;
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.toggle('active', btn.innerText === preset));
+        // Reset skills to active/inactive based on preset (simplified for now: presets just visual)
+        if (window.Game && Game.player) this.updateSkillsModal(Game.player);
+    },
+
+    selectSkill(id) {
+        this.selectedSkillId = id;
+        if (window.Game && Game.player) this.updateSkillsModal(Game.player);
+    },
+
+    toggleSkillActive(id) {
+        if (!window.Game || !Game.player) return;
+        const skill = Game.player.skills.find(s => s.id === id);
+        if (skill) {
+            skill.active = !skill.active;
+            Game.player.recalculateStats();
+            this.updateSkillsModal(Game.player);
+        }
+    },
+
+    triggerSkillSlot(slotIdx) {
+        if (!window.Game || !Game.player) return;
+        const activeSkills = Game.player.skills.filter(s => s.active && s.category === 'Active');
+        const skillPool = activeSkills.filter((s, i) => i % 3 === slotIdx);
+        const nextSkill = skillPool.find(s => s.timer <= 0 && Game.player.mp >= s.mpCost) || skillPool[0];
         
-        let html = '';
+        if (nextSkill) {
+            Game.castSkill(nextSkill.id);
+        }
+    },
+
+    updateSkillsModal(player) {
+        const itemList = document.getElementById('skills-item-list');
+        const detailPanel = document.getElementById('skill-detail-panel');
+        if (!itemList || !detailPanel || !player.skills) return;
+
+        // Optimized Rendering: Only update if modal is visible to prevent lag
+        if (document.getElementById('skills-modal').classList.contains('hidden')) return;
+
+        // 1. Render Sidebar List
+        let gridHTML = '';
         player.skills.forEach(skill => {
-            const isUnlocked = player.level >= skill.unlockLevel;
-            const status = isUnlocked ? '<span style="color:#2ecc71">Unlocked</span>' : `<span style="color:#e74c3c">Unlocks at Lv ${skill.unlockLevel}</span>`;
-            html += `
-                <div style="background:#222; padding:15px; border-radius:5px; border:1px solid #444; margin-bottom:10px; opacity: ${isUnlocked ? 1 : 0.5}">
-                    <h3 style="color:#d4af37; margin-bottom:5px;">${skill.name}</h3>
-                    <p style="font-size:12px; color:#aaa; margin-bottom:5px;">Type: ${skill.type} | MP Cost: ${skill.mpCost} | Cooldown: ${skill.cooldown}s</p>
-                    <p style="font-size:14px; font-weight:bold;">${status}</p>
+            const isSelected = this.selectedSkillId === skill.id;
+            const isActive = skill.active;
+            const rarityColor = skill.rarity === 'epic' ? '#9b59b6' : skill.rarity === 'rare' ? '#3498db' : '#2ecc71';
+            
+            gridHTML += `
+                <div class="skill-card ${isSelected ? 'selected' : ''} ${isActive ? 'active-skill' : ''}" 
+                     onclick="UI.selectSkill('${skill.id}')"
+                     style="border-bottom: 2px solid ${rarityColor}">
+                    <span style="z-index:2;">${skill.icon}</span>
+                    <div class="skill-rarity-tag" style="background:${rarityColor}">${skill.rarity}</div>
                 </div>
             `;
         });
-        list.innerHTML = html;
+        itemList.innerHTML = gridHTML;
+
+        // 2. Render Detail View
+        const skill = player.skills.find(s => s.id === this.selectedSkillId) || player.skills[0];
+        if (this.currentSkillCategory === 'enhancement') {
+            detailPanel.innerHTML = `
+                <div class="enhancement-view">
+                    <h2 class="detail-title">Target to Enhance</h2>
+                    <div class="ritual-backdrop">
+                        <div class="ritual-inner"></div>
+                        <div class="enhance-target-icon">${skill.icon}</div>
+                    </div>
+                    <div style="text-align:left; width:100%; max-width:400px; background:rgba(0,0,0,0.4); padding:20px; border-radius:12px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <span style="color:#888;">Skill Level</span>
+                            <span style="color:white; font-weight:bold;">+${skill.level} <span style="color:var(--color-gold-glow); margin-left:10px;">▶ +${skill.level + 1}</span></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:#888;">Skill DMG</span>
+                            <span style="color:white; font-weight:bold;">${Math.floor(skill.damageMult * 100)}% <span style="color:var(--color-gold-glow); margin-left:10px;">▶ ${Math.floor((skill.damageMult + 0.2) * 100)}%</span></span>
+                        </div>
+                    </div>
+                    <p style="color:#e74c3c; margin-top:30px; font-weight:bold;">Insufficient materials required for Enhancement.</p>
+                    <button class="menu-btn" style="background:#333; color:#666; margin-top:10px;" disabled>Skill Enhancement 💰 375,000</button>
+                </div>
+            `;
+        } else {
+            detailPanel.innerHTML = `
+                <div class="skill-detail-view">
+                    <div class="detail-icon-large">${skill.icon}</div>
+                    <h2 class="detail-title">+${skill.level} ${skill.name}</h2>
+                    <div class="detail-rarity">${skill.rarity} | ${skill.category}</div>
+                    <p class="detail-desc">${skill.desc}</p>
+                    
+                    <div class="detail-stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">MP Cost</div>
+                            <div class="stat-val">${skill.mpCost}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Cooldown</div>
+                            <div class="stat-val">${skill.cooldown}s</div>
+                        </div>
+                    </div>
+
+                    <button class="activate-btn ${skill.active ? 'active' : ''}" onclick="UI.toggleSkillActive('${skill.id}')">
+                        ${skill.active ? 'ACTIVE' : 'ACTIVATE'}
+                    </button>
+                </div>
+            `;
+        }
     },
 
     updatePlayerStats(player) {
@@ -543,24 +646,54 @@ const UI = {
         if (hpLabel) hpLabel.innerText = hpPot ? hpPot.count : 0;
         if (mpLabel) mpLabel.innerText = mpPot ? mpPot.count : 0;
         
-        // Skills unlock and cooldowns
+        const mainGoldTxt = document.getElementById('main-gold-count');
+        if (mainGoldTxt) mainGoldTxt.innerText = player.gold.toLocaleString();
+        
+        // Skills Action Bar (Dynamic Sync)
         if (player.skills) {
-            player.skills.forEach(skill => {
-                const btn = document.getElementById(`btn-skill-${skill.id}`);
-                if (btn) {
-                    if (player.level >= skill.unlockLevel) {
-                        btn.classList.remove('locked');
-                        const overlay = btn.querySelector('.cooldown-overlay');
-                        if (overlay) {
-                            const pct = skill.timer > 0 ? (skill.timer / skill.cooldown) * 100 : 0;
-                            overlay.style.height = `${pct}%`;
-                        }
-                    } else {
-                        btn.classList.add('locked');
+            const skillContainer = document.getElementById('skill-buttons-container');
+            if (skillContainer) {
+                const activeSkills = player.skills.filter(s => s.active && (s.category === 'Active' || s.category === 'Combat'));
+                
+                // 1. Remove buttons for skills no longer active
+                const currentButtons = skillContainer.querySelectorAll('.action-slot.skill');
+                currentButtons.forEach(btn => {
+                    const skillId = btn.id.replace('hud-skill-', '');
+                    if (!activeSkills.find(s => s.id === skillId)) {
+                        btn.remove();
                     }
-                }
-            });
-            this.updateSkillsModal(player);
+                });
+
+                // 2. Add or update buttons for active skills
+                activeSkills.forEach((skill) => {
+                    let btn = document.getElementById(`hud-skill-${skill.id}`);
+                    if (!btn) {
+                        btn = document.createElement('button');
+                        btn.id = `hud-skill-${skill.id}`;
+                        btn.className = `action-slot skill`;
+                        btn.onclick = () => Game.castSkill(skill.id);
+                        btn.innerHTML = `
+                            <div class="skill-icon-wrap">${skill.icon}</div>
+                            <span class="skill-label">${skill.name.toUpperCase()}</span>
+                            <div class="cooldown-overlay"></div>
+                        `;
+                        skillContainer.appendChild(btn);
+                    }
+                    
+                    const overlay = btn.querySelector('.cooldown-overlay');
+                    const pct = skill.timer > 0 ? (skill.timer / skill.cooldown) * 100 : 0;
+                    if (overlay) {
+                        // Use CSS variable for the conic-gradient sweep
+                        overlay.style.setProperty('--cd-pct', `${pct}%`);
+                    }
+                    btn.classList.toggle('locked', skill.timer > 0 || player.mp < skill.mpCost);
+                });
+            }
+
+            // Responsiveness fix: Only update modal if open
+            if (!document.getElementById('skills-modal').classList.contains('hidden')) {
+                this.updateSkillsModal(player);
+            }
         }
 
         // Health & Mana Bars
