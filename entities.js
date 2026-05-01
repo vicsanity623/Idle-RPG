@@ -263,7 +263,7 @@ class Player extends Entity {
         // Auto-Quest or Auto-Attack Logic
         else if (this.autoQuest || this.autoAttack) {
             if (!this.target || this.target.isDead) {
-                this.target = this.findClosestEnemy(enemies, 2000);
+                this.target = this.findClosestEnemy(enemies, 800); // Align with combat targeting range
             }
             if (this.target) {
                 const dist = this.distanceTo(this.target);
