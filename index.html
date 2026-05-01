@@ -145,11 +145,19 @@
         </div>
 
         <!-- NEW: Item Tooltip for Long Press -->
-        <div id="item-tooltip" class="hidden">
-            <h4 id="tt-name">Item Name</h4>
-            <div id="tt-rarity">Rarity</div>
-            <div id="tt-stats">Stats</div>
-        </div>
+<div id="item-tooltip" class="hidden">
+    <h4 id="tt-name">Item Name</h4>
+    <div id="tt-rarity">Rarity</div>
+    <div id="tt-stats">Stats</div>
+    <!-- New elements for comparison -->
+    <div id="tt-equipped-comparison" class="hidden">
+        <hr>
+        <h5>Currently Equipped:</h5>
+        <div id="tt-eq-name" class="item-name"></div>
+        <div id="tt-eq-stats" class="item-stats"></div>
+        <div id="tt-comparison-summary" class="comparison-summary"></div>
+    </div>
+</div>
     </div>
 
     <!-- Scripts -->
