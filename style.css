@@ -84,8 +84,8 @@ html, body {
 /* --- 4. TOP-LEFT HUD (Player Stats) --- */
 #player-hud {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    left: calc(env(safe-area-inset-left, 0px) + 10px);
     display: flex;
     align-items: flex-start;
     gap: 10px;
@@ -182,8 +182,8 @@ html, body {
 /* --- 5. TOP-RIGHT HUD (Minimap & Quests) --- */
 #right-hud {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    right: calc(env(safe-area-inset-right, 0px) + 10px);
     z-index: var(--z-hud);
     pointer-events: none;
     text-align: right;
@@ -274,8 +274,8 @@ html, body {
 /* --- 6. CONTROLS (Joystick & Action Bar) --- */
 #joystick-base {
     position: absolute;
-    bottom: 30px;
-    left: 30px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 30px);
+    left: calc(env(safe-area-inset-left, 0px) + 30px);
     width: 130px;
     height: 130px;
     background: radial-gradient(circle, rgba(50,50,50,0.6) 0%, rgba(10,10,10,0.8) 100%);
@@ -302,8 +302,8 @@ html, body {
 
 #action-bar {
     position: absolute;
-    bottom: 20px;
-    right: 20px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    right: calc(env(safe-area-inset-right, 0px) + 20px);
     display: flex;
     gap: 10px;
     z-index: var(--z-hud);
@@ -411,7 +411,7 @@ html, body {
 /* --- 7. BOTTOM EXP BAR --- */
 #exp-bar-container {
     position: absolute;
-    bottom: 0;
+    bottom: env(safe-area-inset-bottom, 0px);
     left: 0;
     width: 100%;
     height: 6px; /* Slightly thicker for better visibility */

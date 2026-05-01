@@ -280,12 +280,11 @@ const UI = {
             slot.setAttribute('role', 'button');
             slot.setAttribute('tabindex', '0');
             
-            const img = document.createElement('img');
-            img.src = item.icon || 'assets/skill_attack.png';
-            img.alt = item.name;
-            img.onerror = () => img.style.display = 'none';
+            slot.innerHTML = `<div class="item-icon-text">${item.icon || item.name[0]}</div>`;
+            if (item.stackable && item.count > 1) {
+                slot.innerHTML += `<div class="count">${item.count}</div>`;
+            }
             
-            slot.appendChild(img);
             slot.onclick = () => this.handleItemClick(item);
             
             fragment.appendChild(slot);
@@ -297,18 +296,20 @@ const UI = {
         // Update Equipment Slots
         let equipAtk = 0;
         let equipDef = 0;
+        const defaultIcons = { head: '🪖', armor: '🛡️', hands: '🧤', legs: '👖', cape: '🦹', amulet: '📿', ring1: '💍', ring2: '💍' };
         Object.keys(player.equipment).forEach(slotName => {
             const el = document.querySelector(`.eq-slot[data-slot="${slotName}"]`);
             const item = player.equipment[slotName];
             if (el) {
                 el.className = `eq-slot ${item ? 'rarity-' + item.rarity : ''} slot-icon`;
-                el.innerHTML = item ? `<div class="item-icon-text">${item.icon || item.name[0]}</div>` : '';
                 if (item) {
+                    el.innerHTML = `<div class="item-icon-text">${item.icon || item.name[0]}</div>`;
                     equipAtk += (item.stats.attack || 0);
                     equipDef += (item.stats.defense || 0);
                     el.onclick = () => this.showItemDetails(item);
                     el.oncontextmenu = (e) => e.preventDefault();
                 } else {
+                    el.innerHTML = `<div class="item-icon-text" style="opacity: 0.3;">${defaultIcons[slotName] || '❓'}</div>`;
                     el.onclick = null;
                     el.oncontextmenu = null;
                 }
@@ -320,7 +321,36 @@ const UI = {
         if (cpEl) cpEl.innerText = this.formatNumber(cp);
 
         const gearSummary = document.getElementById('gear-summary-stats');
-        if (gearSummary) gearSummary.innerHTML = `<span style="color:#e74c3c">⚔️ +${equipAtk}</span> &nbsp;|&nbsp; <span style="color:#3498db">🛡️ +${equipDef}</span>`;
+        if (gearSummary) {
+            let equipStats = {};
+            Object.values(player.equipment).forEach(item => {
+                if (item && item.stats) {
+                    for (let key in item.stats) {
+                        equipStats[key] = (equipStats[key] || 0) + item.stats[key];
+                    }
+                }
+            });
+
+            let summaryHTML = `<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px; font-size:12px; margin-top:5px;">`;
+            const statIcons = {
+                attack: '⚔️', defense: '🛡️', maxHp: '❤️', critRate: '💥', moveSpeed: '👟', 
+                atkSpeed: '⚡', evade: '💨', hpRecovery: '💖'
+            };
+            let hasStats = false;
+            for (let key in equipStats) {
+                if (equipStats[key] > 0) {
+                    hasStats = true;
+                    const icon = statIcons[key] || '✨';
+                    const displayKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                    summaryHTML += `<span style="color:#a8e6cf">${icon} ${displayKey}: +${equipStats[key]}</span>`;
+                }
+            }
+            if (!hasStats) {
+                summaryHTML += `<span style="color:#888;">No Gear Stats</span>`;
+            }
+            summaryHTML += `</div>`;
+            gearSummary.innerHTML = summaryHTML;
+        }
 
         this.updateStatsModal(player, cp, equipAtk, equipDef);
     },

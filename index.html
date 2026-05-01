@@ -89,7 +89,7 @@
         </section>
 
         <!-- HUD: Gold Display (True Centered) -->
-        <div id="top-gold-display" style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 20px; border: 1px solid var(--color-gold); color: var(--color-gold-glow); font-weight: 800; font-size: 16px; z-index: 100; display: flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(184, 153, 71, 0.4); backdrop-filter: blur(8px); pointer-events: none;">
+        <div id="top-gold-display" style="position: absolute; top: calc(env(safe-area-inset-top, 0px) + 15px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 20px; border: 1px solid var(--color-gold); color: var(--color-gold-glow); font-weight: 800; font-size: 16px; z-index: 100; display: flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(184, 153, 71, 0.4); backdrop-filter: blur(8px); pointer-events: none;">
             <span style="font-size: 18px;">💰</span> <span id="main-gold-count">0</span>
         </div>
 

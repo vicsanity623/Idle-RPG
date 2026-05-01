@@ -79,51 +79,51 @@ class Player extends Entity {
         this.respawnTimer = 0;
 
         this.skills = [
-            { 
-                id: 'spirit_spear', name: 'Spirit Spear', type: 'projectile', 
+            {
+                id: 'spirit_spear', name: 'Spirit Spear', type: 'projectile',
                 rarity: 'uncommon', category: 'Active',
-                damageMult: 2.8, mpCost: 22, cooldown: 11, timer: 0, 
+                damageMult: 2.8, mpCost: 22, cooldown: 11, timer: 0,
                 level: 2, active: true,
                 desc: "Summons a Spear of Souls and throws it at the target, dealing 280% damage and converts part of the damage dealt to heal you.",
-                icon: '🏹' 
+                icon: '🏹'
             },
-            { 
-                id: 'liston_cutoff', name: 'Liston: Cut Off', type: 'aoe', 
+            {
+                id: 'liston_cutoff', name: 'Liston: Cut Off', type: 'aoe',
                 rarity: 'uncommon', category: 'Active', // FIX: Change to Active so it shows on HUD
-                damageMult: 2.3, mpCost: 15, cooldown: 12, timer: 0, 
+                damageMult: 2.3, mpCost: 15, cooldown: 12, timer: 0,
                 level: 2, active: true,
                 desc: "Summons a fragment of Specter Liston to perform a spinning attack that deals 230% damage to nearby enemies.",
                 icon: '⚔️'
             },
-            { 
-                id: 'cannibal_devour', name: 'Cannibal: Devour', type: 'buff', 
+            {
+                id: 'cannibal_devour', name: 'Cannibal: Devour', type: 'buff',
                 rarity: 'rare', category: 'Active',
-                damageMult: 1.5, mpCost: 45, cooldown: 15, timer: 0, 
+                damageMult: 1.5, mpCost: 45, cooldown: 15, timer: 0,
                 level: 2, active: true,
                 desc: "Consumes a portion of the enemy's essence, instantly healing you and increasing power.",
                 icon: '🦷'
             },
-            { 
-                id: 'soul_walker', name: 'Soul Walker', type: 'passive', 
+            {
+                id: 'soul_walker', name: 'Soul Walker', type: 'passive',
                 rarity: 'uncommon', category: 'Passive',
-                damageMult: 0, mpCost: 0, cooldown: 0, timer: 0, 
+                damageMult: 0, mpCost: 0, cooldown: 0, timer: 0,
                 level: 2, active: true,
                 desc: "The longer the battle continues, the more you resonate with the Specter, increasing Movement Speed by 7%.",
                 icon: '👻',
                 stats: { moveSpeed: 7 }
             },
-            { 
-                id: 'phantom_rage', name: 'Phantom Rage', type: 'buff', 
+            {
+                id: 'phantom_rage', name: 'Phantom Rage', type: 'buff',
                 rarity: 'rare', category: 'Passive',
-                damageMult: 0, mpCost: 0, cooldown: 0, timer: 0, 
+                damageMult: 0, mpCost: 0, cooldown: 0, timer: 0,
                 level: 2, active: true,
                 desc: "Increases Attack Speed and Critical Rate as your HP decreases.",
                 icon: '💢'
             },
-            { 
-                id: 'lightning_bullet', name: 'Lightning Bullet', type: 'projectile', 
+            {
+                id: 'lightning_bullet', name: 'Lightning Bullet', type: 'projectile',
                 rarity: 'epic', category: 'Active',
-                damageMult: 3.5, mpCost: 60, cooldown: 8, timer: 0, 
+                damageMult: 3.5, mpCost: 60, cooldown: 8, timer: 0,
                 level: 1, active: true,
                 desc: "Fires a concentrated bolt of lightning that chains to nearby enemies.",
                 icon: '⚡'
@@ -139,7 +139,7 @@ class Player extends Entity {
         this.animations = {
             idle: { frames: this.loadFrames('assets/idle', 'idle', 10), speed: 0.12 },
             run: { frames: this.loadFrames('assets/run', 'run', 8), speed: 0.08 },
-            attack: { frames: this.loadFrames('assets/attack', 'atk', 18), speed: 0.03 }
+            attack: { frames: this.loadFrames('assets/attack', 'atk', 9), speed: 0.03 }
         };
     }
 
@@ -157,6 +157,19 @@ class Player extends Entity {
         this.stats.attack = this.level * 10;
         this.stats.maxHp = 1000 + ((this.level - 1) * 150);
         this.maxMp = 200 + ((this.level - 1) * 20);
+
+        const lvlMult = Math.pow(1.015, this.level - 1);
+        for (const key in this.stats) {
+            if (key !== 'attack' && key !== 'maxHp' && key !== 'moveSpeed' && key !== 'maxQuests' && key !== 'maxDailyCorps') {
+                if (typeof this.stats[key] === 'number') {
+                    if (this.stats[key] === 0) {
+                        this.stats[key] = Math.floor((this.level - 1) * 0.5); // Provide a tiny flat boost for zero-base stats
+                    } else {
+                        this.stats[key] = Math.floor(this.stats[key] * lvlMult);
+                    }
+                }
+            }
+        }
 
         Object.values(this.equipment).forEach(item => {
             if (item && item.stats) {
@@ -187,7 +200,7 @@ class Player extends Entity {
         // Max CDR: 60%
         this.stats.cdReduction = Math.min(this.stats.cdReduction, 60);
         // Max Attack Speed: 0.1s cooldown (Lower is faster)
-        this.attackCooldown = Math.max(0.1, 0.4 - (this.stats.cdReduction / 200)); 
+        this.attackCooldown = Math.max(0.1, 0.4 - (this.stats.cdReduction / 200));
         // Max Critical Rate: 80%
         this.stats.critRate = Math.min(this.stats.critRate || 0, 80);
 
@@ -239,10 +252,10 @@ class Player extends Entity {
         this.skills.forEach(s => { if (s.timer > 0) s.timer -= dt; });
 
         this.handleMovement(dt, enemies);
-        
+
         // Ensure dead targets are dropped before combat logic
         if (this.target && this.target.isDead) this.target = null;
-        
+
         this.handleCombat(enemies);
         this.handleAnimation(dt);
     }
@@ -303,10 +316,10 @@ class Player extends Entity {
         // Auto-Cast Skills (Sequential Turn-Taking Logic)
         if ((this.autoAttack || this.autoQuest) && typeof Game !== 'undefined') {
             // Find ALL available skills first
-            const availableSkills = this.skills.filter(skill => 
-                skill.active && 
-                skill.category === 'Active' && 
-                skill.timer <= 0 && 
+            const availableSkills = this.skills.filter(skill =>
+                skill.active &&
+                skill.category === 'Active' &&
+                skill.timer <= 0 &&
                 this.mp >= skill.mpCost
             );
 
