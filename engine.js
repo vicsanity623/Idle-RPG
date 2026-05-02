@@ -742,15 +742,13 @@ class Projectile {
         this.trail =[];
     }
     update(dt) {
-        this.trail.push({x: this.x, y: this.y, alpha: 1.0});
-        if (this.trail.length > 12) this.trail.shift();
-        if (this.life > 0) { // Only update trail if projectile is active
+        if (this.life > 0) { // Only add new trail points if projectile is active
             this.trail.push({x: this.x, y: this.y, alpha: 1.0});
             if (this.trail.length > 12) this.trail.shift();
-            this.trail.forEach(t => t.alpha -= 0.08);
         }
-
-        if (!this.target || this.target.isDead) { 
+        this.trail.forEach(t => t.alpha -= 0.08); // Always fade existing trail particles
+        this.trail = this.trail.filter(t => t.alpha > 0); // Remove fully faded particles
+            if (!this.target || this.target.isDead) { 
             this.life = 0; // Immediately remove if target is invalid or dead
             return; 
         }
