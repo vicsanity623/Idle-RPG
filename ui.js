@@ -688,6 +688,10 @@ const UI = {
 
         // 2. Render Detail View
         const skill = player.skills.find(s => s.id === this.selectedSkillId) || player.skills[0];
+        if (!skill) { // Guard against no skills
+            detailPanel.innerHTML = '<p style="color:#888; text-align:center; margin-top:50px;">No skills available.</p>';
+            return;
+        }
         if (this.currentSkillCategory === 'enhancement') {
             detailPanel.innerHTML = `
                 <div class="enhancement-view">
