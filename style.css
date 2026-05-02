@@ -894,7 +894,7 @@ html, body {
     cursor: pointer;
     position: relative;
     transition: all 0.2s;
-    pointer-events: auto !important; /* Ensure clicks register */
+    pointer-events: auto; /* Ensure clicks register */
 }
 
 .skill-card.active-skill {
