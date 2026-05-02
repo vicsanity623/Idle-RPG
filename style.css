@@ -29,6 +29,9 @@
     --rarity-epic: #9b59b6;
     --rarity-legendary: #f1c40f;
 
+    /* Borders */
+    --color-border-light: #666;
+
     /* Z-Index Hierarchy */
     --z-hud: 10;
     --z-loot: 15;
