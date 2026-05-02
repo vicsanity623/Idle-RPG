@@ -744,10 +744,17 @@ class Projectile {
     update(dt) {
         this.trail.push({x: this.x, y: this.y, alpha: 1.0});
         if (this.trail.length > 12) this.trail.shift();
-        this.trail.forEach(t => t.alpha -= 0.08);
+        if (this.life > 0) { // Only update trail if projectile is active
+            this.trail.push({x: this.x, y: this.y, alpha: 1.0});
+            if (this.trail.length > 12) this.trail.shift();
+            this.trail.forEach(t => t.alpha -= 0.08);
+        }
 
-        if (!this.target || this.target.isDead) { this.life -= dt; return; }
-        
+        if (!this.target || this.target.isDead) { 
+            this.life = 0; // Immediately remove if target is invalid or dead
+            return; 
+        }
+
         const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
         this.x += Math.cos(angle) * this.speed * dt;
         this.y += Math.sin(angle) * this.speed * dt;
