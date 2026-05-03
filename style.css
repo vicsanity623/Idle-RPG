@@ -1087,3 +1087,251 @@ html, body {
     font-size: 60px;
     z-index: 10;
 }
+
+/* --- 13. QUEST LOG MODAL --- */
+#quest-log-modal {
+    /* Inherits .ui-modal styles */
+}
+
+.quest-log-layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.quest-list-sidebar {
+    width: 300px; /* Similar to skills sidebar */
+    background: rgba(20, 20, 25, 0.95);
+    border-right: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+
+.quest-filter-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.quest-filter-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 11px;
+    padding: 8px 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.quest-filter-tab.active {
+    color: var(--color-gold-glow);
+    border-bottom: 2px solid var(--color-gold-glow);
+}
+
+.quest-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.quest-list-item {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid #333;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quest-list-item:hover {
+    background: rgba(10,10,15,0.6);
+    border-color: var(--color-gold);
+}
+
+.quest-list-item.active-quest {
+    border-color: var(--color-gold-glow);
+    box-shadow: 0 0 8px rgba(184, 153, 71, 0.3);
+}
+
+.quest-list-item.completed-quest {
+    opacity: 0.7;
+    filter: grayscale(0.5);
+}
+
+.quest-item-icon {
+    font-size: 20px;
+    color: var(--color-gold-light);
+}
+
+.quest-item-info {
+    flex-grow: 1;
+}
+
+.quest-item-title {
+    font-size: 14px;
+    color: var(--color-text-main);
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.quest-item-progress {
+    font-size: 10px;
+    color: var(--color-text-dim);
+}
+
+.quest-detail-panel {
+    flex: 1;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: radial-gradient(circle at center, rgba(30,30,40,0.5), transparent);
+}
+
+.quest-detail-title {
+    font-size: 28px;
+    color: var(--color-gold-light);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.quest-detail-status {
+    font-size: 12px;
+    color: var(--color-success); /* Or danger/dim for active/failed */
+    text-align: center;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.quest-detail-description {
+    color: #aaa;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    text-align: justify;
+}
+
+.quest-detail-objectives {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+}
+
+.objective-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    color: #eee;
+    font-size: 13px;
+}
+
+.objective-item.completed {
+    color: var(--color-success);
+    text-decoration: line-through;
+}
+
+.objective-checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #666;
+    background: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+
+.objective-checkbox.checked {
+    background: var(--color-success);
+    border-color: var(--color-success);
+}
+
+.quest-detail-rewards {
+    margin-top: auto; /* Push to bottom */
+    padding-top: 20px;
+    border-top: 1px solid #333;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reward-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-gold-light);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.reward-icon {
+    font-size: 20px;
+}
+
+.quest-action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.quest-action-btn {
+    background: linear-gradient(135deg, #444, #222);
+    border: 1px solid #555;
+    color: #888;
+    padding: 10px 25px;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.quest-action-btn:hover {
+    background: linear-gradient(135deg, var(--color-gold), var(--color-gold-light));
+    border-color: var(--color-gold-glow);
+    color: #000;
+    box-shadow: 0 4px 10px rgba(184, 153, 71, 0.4);
+}
+
+.quest-action-btn.primary {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    border-color: #2ecc71;
+    color: white;
+    box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
+}
+
+.quest-action-btn.danger {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border-color: #e74c3c;
+    color: white;
+    box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);
+}
+
+/* Responsive adjustments for Quest Log Modal */
+@media (max-width: 768px) {
+    .quest-log-layout { flex-direction: column; }
+    .quest-list-sidebar {
+        width: 100%;
+        height: 40%; /* Take up less vertical space */
+        border-right: none;
+        border-bottom: 1px solid #333;
+    }
+    .quest-detail-panel {
+        flex: 1;
+        padding: 20px;
+    }
+}
