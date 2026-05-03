@@ -232,6 +232,8 @@
                     <div class="tab-header" role="tablist">
                         <button class="tab active" data-tab="equip" onclick="UI.setInventoryTab('equip')" role="tab">Equip</button>
                         <button class="tab" data-tab="consumables" onclick="UI.setInventoryTab('consumables')" role="tab">Consumables</button>
+                        <!-- NEW: Sell Tab -->
+                        <button class="tab" data-tab="sell" onclick="UI.setInventoryTab('sell')" role="tab">Sell</button>
                     </div>
                     <div class="inventory-grid" id="inv-grid" role="tabpanel">
                         <!-- Items dynamically injected by ui.js -->
@@ -246,6 +248,8 @@
                             </select>
                             <button onclick="UI.autoEquip()" style="background:var(--color-gold); color:black; border:none; border-radius:4px; padding:2px 10px; font-size:12px; font-weight:bold; cursor:pointer;" title="Equip best available gear">Auto Equip</button>
                             <button onclick="UI.purgeInventory()" style="background:#c0392b; color:white; border:none; border-radius:4px; padding:2px 8px; font-size:12px; cursor:pointer;" title="Delete lower quality items than equipped">Purge Low Quality</button>
+                            <!-- NEW: Sell All Junk Button -->
+                            <button id="btn-sell-all-junk" onclick="UI.sellAllJunk()" style="background:#27ae60; color:white; border:none; border-radius:4px; padding:2px 8px; font-size:12px; cursor:pointer; display:none;" title="Sell all non-equipped items below a certain rarity/value threshold">Sell All Junk</button>
                         </div>
                     </div>
                 </div>
