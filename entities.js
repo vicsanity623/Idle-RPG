@@ -202,7 +202,7 @@ class Player extends Entity {
         // Max Attack Speed: 0.1s cooldown (Lower is faster)
         this.attackCooldown = Math.max(0.1, 0.4 - (this.stats.cdReduction / 200));
         // Max Critical Rate: 80%
-        this.stats.critRate = Math.min(this.stats.critRate || 0, 80);
+        this.stats.critRate = Math.min(this.stats.critRate, 80); // critRate is guaranteed to be a number due to baseStats and recalculation logic
 
         this.hp = Math.min(this.hp, this.stats.maxHp);
         this.maxHp = this.stats.maxHp;
