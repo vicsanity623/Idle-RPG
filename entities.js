@@ -57,7 +57,7 @@ class Player extends Entity {
             fatalityRate: 0, critRate: 5, magicCritRate: 0, bashRate: 0, magicBashRate: 0,
             accuracy: 100, magicAccuracy: 100,
 
-            maxHp: 1000, defense: 0, basicAtkRes: 0, skillDmgRes: 0, finalDmgRes: 0,
+            maxHp: 1000, maxMp: 200, defense: 0, basicAtkRes: 0, skillDmgRes: 0, finalDmgRes: 0,
             dmgReduction: 0, evade: 5, block: 0,
 
             moveSpeed: 100, cdReduction: 0, hpRecovery: 1, hpPotionRcvRate: 100,
