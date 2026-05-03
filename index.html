@@ -107,6 +107,7 @@
             <button class="menu-btn" onclick="UI.toggleModal('inventory-modal')">Equip</button>
             <button class="menu-btn" onclick="UI.toggleModal('stats-modal')">Stats</button>
             <button class="menu-btn" onclick="UI.toggleModal('skills-modal')">Skills</button>
+            <button class="menu-btn" onclick="UI.toggleModal('quest-log-modal')">Quests</button>
         </nav>
 
         <!-- ==========================================
@@ -183,6 +184,19 @@
 
             <div style="margin-top: 20px; text-align: center;">
                 <button id="detail-action-btn" class="action-btn" style="width: 100%; padding: 15px; font-size: 16px; font-weight: bold; background: linear-gradient(180deg, var(--color-gold), #b89947); color: #000; border: none; border-radius: 8px; cursor: pointer; text-shadow: 0 1px 0 rgba(255,255,255,0.5);">Equip</button>
+            </div>
+        </dialog>
+
+        <!-- Quest Log Modal -->
+        <dialog id="quest-log-modal" class="ui-modal hidden" aria-labelledby="quest-log-title">
+            <div class="modal-header">
+                <h3 id="quest-log-title">Quest Log</h3>
+                <button class="close-btn" onclick="UI.toggleModal('quest-log-modal')" aria-label="Close">X</button>
+            </div>
+            <div class="modal-body">
+                <!-- Quests dynamically injected by ui.js -->
+                <div id="active-quests-list"></div>
+                <div id="completed-quests-list"></div>
             </div>
         </dialog>
 
