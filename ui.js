@@ -853,12 +853,14 @@ const UI = {
         }
 
         // Health & Mana Bars
-        const hpFill = document.getElementById('hp-fill');
-        const mpFill = document.getElementById('mp-fill');
-        const hpTxt = document.getElementById('hp-text');
-        if (hpFill) hpFill.style.width = Math.max(0, (player.hp / player.maxHp) * 100) + "%";
-        if (mpFill) mpFill.style.width = Math.max(0, (player.mp / player.maxMp) * 100) + "%";
-        if (hpTxt) hpTxt.innerText = `${this.formatNumber(Math.floor(player.hp))}/${this.formatNumber(player.maxHp)}`;
+const hpFill = document.getElementById('hp-fill');
+const mpFill = document.getElementById('mp-fill');
+const hpTxt = document.getElementById('hp-text');
+const mpTxt = document.getElementById('mp-text'); // Added mp-text element
+if (hpFill) hpFill.style.width = Math.max(0, (player.hp / player.maxHp) * 100) + "%";
+if (mpFill) mpFill.style.width = Math.max(0, (player.mp / player.maxMp) * 100) + "%";
+if (hpTxt) hpTxt.innerText = `${this.formatNumber(Math.floor(player.hp))}/${this.formatNumber(player.maxHp)}`;
+if (mpTxt) mpTxt.innerText = `${this.formatNumber(Math.floor(player.mp))}/${this.formatNumber(player.maxMp)}`; // Update mp-text
     },
 
     updateXpBar(player) {
