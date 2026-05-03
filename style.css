@@ -731,9 +731,9 @@ html, body {
 }
 
 /* Rarity System Integrations */
-.rarity-common { border-color: var(--rarity-common) !important; color: var(--rarity-common); }
-.rarity-rare { border-color: var(--rarity-rare) !important; color: var(--rarity-rare); }
-.rarity-epic { border-color: var(--rarity-epic) !important; color: var(--rarity-epic); }
+.rarity-common { border-color: var(--rarity-common) !important; color: var(--rarity-common) !important; }
+.rarity-rare { border-color: var(--rarity-rare) !important; color: var(--rarity-rare) !important; }
+.rarity-epic { border-color: var(--rarity-epic) !important; color: var(--rarity-epic) !important; }
 .rarity-legendary { 
     border-color: var(--rarity-legendary) !important; 
     color: var(--rarity-legendary); 
