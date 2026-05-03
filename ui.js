@@ -6,7 +6,7 @@
 const UI = {
     // --- State ---
     joystick: { active: false, vector: { x: 0, y: 0 } },
-    currentInvTab: 'equip',
+    // currentInvTab: 'equip', // Logic moved to ui.inventory.js
     isLongPress: false,
     pressTimer: null,
 
@@ -31,11 +31,8 @@ const UI = {
         return (val < 10 ? val.toFixed(2) : val.toFixed(1)) + suffixes[i];
     },
 
-    autoEquip() {
-        if (!window.Game || !Game.player) return;
-        const p = Game.player;
-        const slots = ['head', 'armor', 'hands', 'legs', 'cape', 'amulet', 'ring1', 'ring2'];
-        const rarityMap = { legendary: 4, epic: 3, rare: 2, uncommon: 1.5, common: 1 };
+    // Delegate inventory/equipment methods to UI_Inventory
+    autoEquip(...args) { return window.UI_Inventory.autoEquip(...args); },
         
         let changed = false;
         slots.forEach(slot => {
@@ -65,17 +62,18 @@ const UI = {
 
         if (changed) {
             p.recalculateStats();
-            this.updateInventory(p);
+            window.UI_Inventory.updateInventory(p); // Delegated to new module
             this.showLootNotification("Auto-Equipped Best Gear", "rarity-legendary");
         } else {
             this.showLootNotification("Already wearing best gear", "rarity-common");
         }
     },
+    // [Logic moved to new module]
 
     init() {
         this.setupJoystick();
         this.bindEvents();
-        this.populateInventoryPlaceholder();
+        window.UI_Inventory.populateInventoryPlaceholder(); // Delegated to new module
         this.startPreviewAnimation();
         
         // Skill Overhaul States
@@ -213,21 +211,11 @@ const UI = {
     },
 
     // --- Inventory System ---
-    setInventoryTab(tab, event) {
-        this.currentInvTab = tab;
-        document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
-        if (event && event.target) event.target.classList.add('active');
-        if (window.Game && Game.player) this.updateInventory(Game.player);
-    },
+    setInventoryTab(...args) { return window.UI_Inventory.setInventoryTab(...args); },
 
-    sortInventory(criteria) {
-        if (window.Game && Game.player) this.updateInventory(Game.player);
-    },
+    sortInventory(...args) { return window.UI_Inventory.sortInventory(...args); },
 
-    purgeInventory() {
-        if (!window.Game || !Game.player) return;
-        const player = Game.player;
-        const rarityMap = { legendary: 4, epic: 3, rare: 2, common: 1 };
+    purgeInventory(...args) { return window.UI_Inventory.purgeInventory(...args); },
 
         if (!confirm("Are you sure you want to delete all lower quality items? This cannot be undone.")) return;
 
@@ -246,15 +234,12 @@ const UI = {
             }
         });
 
-        this.updateInventory(player);
+        window.UI_Inventory.updateInventory(player); // Delegated to new module
         this.showLootNotification("Purged lower quality gear", "rarity-common");
     },
+    // [Logic moved to new module]
 
-    updateInventory(player) {
-        const grid = document.getElementById('inv-grid');
-        const goldTxt = document.getElementById('inv-gold');
-        const mainGoldTxt = document.getElementById('main-gold-count');
-        if (!grid || !player) return;
+    updateInventory(...args) { return window.UI_Inventory.updateInventory(...args); },
 
         if (goldTxt) goldTxt.innerText = this.formatNumber(player.gold);
         if (mainGoldTxt) mainGoldTxt.innerText = this.formatNumber(player.gold);
@@ -356,10 +341,9 @@ const UI = {
 
         this.updateStatsModal(player, cp, equipAtk, equipDef);
     },
+    // [Logic moved to new module]
 
-    handleItemClick(item) {
-        if (!window.Game || !Game.player) return;
-        const p = Game.player;
+    handleItemClick(...args) { return window.UI_Inventory.handleItemClick(...args); },
 
         if (item.type === 'equipment') {
             const isEquipped = Object.values(p.equipment).includes(item);
@@ -392,14 +376,13 @@ const UI = {
             if (item.count <= 0) p.inventory = p.inventory.filter(i => i !== item);
         }
         
-        this.updateInventory(p);
+        window.UI_Inventory.updateInventory(p); // Delegated to new module
         Game.saveGame(); 
     },
+    // [Logic moved to new module]
 
     // --- Modals ---
-    showItemDetails(item) {
-        const modal = document.getElementById('item-details-modal');
-        if (!modal) return;
+    showItemDetails(...args) { return window.UI_Inventory.showItemDetails(...args); },
         
         document.getElementById('detail-name').innerText = item.name;
         document.getElementById('detail-name').className = `rarity-${item.rarity}`;
@@ -473,6 +456,7 @@ const UI = {
 
         modal.style.display = 'block';
     },
+    // [Logic moved to new module]
 
     // --- Stats & Quests ---
     updateStatsModal(player, cp, equipAtk, equipDef = 0) {
@@ -898,11 +882,11 @@ if (mpTxt) mpTxt.innerText = `${this.formatNumber(Math.floor(player.mp))}/${this
         
         Game.kills = 0; 
         Game.activeQuest = null; 
-        
+
         const questBox = document.getElementById('quest-tracker');
         if (questBox) questBox.style.display = 'none';
-        
-        this.updateInventory(player);
+
+        window.UI_Inventory.updateInventory(player); // Delegated to new module
         Game.saveGame(); 
     },
 
@@ -919,19 +903,8 @@ if (mpTxt) mpTxt.innerText = `${this.formatNumber(Math.floor(player.mp))}/${this
         setTimeout(() => el.remove(), 3500);
     },
 
-    populateInventoryPlaceholder() {
-        const grid = document.getElementById('inv-grid');
-        if (!grid) return;
-        
-        grid.innerHTML = '';
-        const fragment = document.createDocumentFragment();
-        for (let i = 0; i < 40; i++) { 
-            const slot = document.createElement('div');
-            slot.className = 'inv-slot';
-            fragment.appendChild(slot);
-        }
-        grid.appendChild(fragment);
-    },
+    populateInventoryPlaceholder(...args) { return window.UI_Inventory.populateInventoryPlaceholder(...args); },
+    // [Logic moved to new module]
 
     // --- Map & Realms Modal ---
     setMapTab(tab) {
