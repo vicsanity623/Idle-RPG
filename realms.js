@@ -16,7 +16,10 @@ const Realms = {
     globalDifficultyMultiplier: 1.0,
 
     getMultiplier() {
-        return this.list[this.currentRealm].difficulty * this.globalDifficultyMultiplier;
+        const realm = this.list[this.currentRealm];
+        const difficulty = realm && typeof realm.difficulty === 'number' && !isNaN(realm.difficulty) ? realm.difficulty : 1.0;
+        const safeGlobalMultiplier = typeof this.globalDifficultyMultiplier === 'number' && !isNaN(this.globalDifficultyMultiplier) ? this.globalDifficultyMultiplier : 1.0;
+        return difficulty * safeGlobalMultiplier;
     },
 
     setRealm(index) {
