@@ -747,11 +747,12 @@ class Projectile {
             if (this.trail.length > 12) this.trail.shift();
         }
         this.trail.forEach(t => t.alpha -= 0.08); // Always fade existing trail particles
-        this.trail = this.trail.filter(t => t.alpha > 0); // Remove fully faded particles
-            if (!this.target || this.target.isDead) { 
-            this.life = 0; // Immediately remove if target is invalid or dead
-            return; 
-        }
+this.trail = this.trail.filter(t => t.alpha > 0); // Remove fully faded particles
+
+if (this.life <= 0 || !this.target || this.target.isDead) { // Consolidate checks for early exit
+    this.life = 0; // Ensure it's explicitly 0 for Game.update filtering
+    return;
+}
 
         const angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
         this.x += Math.cos(angle) * this.speed * dt;
