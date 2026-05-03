@@ -34,7 +34,9 @@ const Realms = {
                 if (realmNameTxt) realmNameTxt.innerText = realm.name;
                 
                 // Close Map Modal
-                if (window.UI) UI.toggleModal('map-modal');
+                if (window.UI) {
+                    UI.toggleModal('map-modal');
+                }
             }
 
             setTimeout(() => {
