@@ -528,7 +528,7 @@ var Game = {
                 
                 // --- WORLD SCALING ---
                 // Every boss defeat increases global enemy power by 20%
-                if (typeof Realms !== 'undefined') {
+                if (typeof Realms !== 'undefined' && Realms.globalDifficultyMultiplier !== undefined) {
                     Realms.globalDifficultyMultiplier *= 1.2;
                 }
                 
