@@ -736,7 +736,7 @@ html, body {
 .rarity-epic { border-color: var(--rarity-epic) !important; color: var(--rarity-epic) !important; }
 .rarity-legendary { 
     border-color: var(--rarity-legendary) !important; 
-    color: var(--rarity-legendary); 
+    color: var(--rarity-legendary) !important; 
     font-weight: bold; 
     text-shadow: 0 0 5px rgba(241, 196, 15, 0.3);
 }
