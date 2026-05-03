@@ -10,6 +10,8 @@ const UI = {
     isLongPress: false,
     pressTimer: null,
 
+    RARITY_MAP: { legendary: 4, epic: 3, rare: 2, uncommon: 1.5, common: 1 },
+
     formatNumber(num) {
         if (num < 1000) return Math.floor(num).toString();
         const suffixes = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
