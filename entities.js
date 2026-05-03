@@ -41,7 +41,7 @@ class Player extends Entity {
         this.gold = 0;
 
         this.attackRange = 125;
-        this.attackCooldown = 0.6; // Seconds between attacks
+        this.attackCooldown = 0.4; // Seconds between attacks (effective base from recalculateStats)
         this.attackTimer = 0;
 
         this.inventory = [];
