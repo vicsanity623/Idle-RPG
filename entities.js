@@ -156,7 +156,7 @@ class Player extends Entity {
         this.stats = { ...this.baseStats };
         this.stats.attack = this.level * 10;
         this.stats.maxHp = 1000 + ((this.level - 1) * 150);
-        this.maxMp = 200 + ((this.level - 1) * 20);
+        this.stats.maxMp = 200 + ((this.level - 1) * 20); // Align maxMp calculation with maxHp
 
         const lvlMult = Math.pow(1.015, this.level - 1);
         for (const key in this.stats) {
