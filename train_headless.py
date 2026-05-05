@@ -6,7 +6,7 @@ Runs at max CPU speed for --minutes duration, then saves:
   - brain.json              (read by index.html GitHub Pages viewer)
 """
 
-import numpy as np
+import numpy as np  # type: ignore
 import pickle
 import os
 import time
