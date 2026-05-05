@@ -1,0 +1,47 @@
+name: 🧠 Evolve Brain
+
+on:
+  schedule:
+    - cron: '0 */7 * * *'   # Every 7 hours
+  workflow_dispatch:          # Manual trigger from GitHub Actions UI
+
+permissions:
+  contents: write             # Needed to commit brain files back to repo
+
+jobs:
+  evolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 415      # Hard cap ~6h 55m (Action limit safety buffer)
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy --quiet
+
+      - name: Run headless evolution (6.5 hours)
+        run: python train_headless.py --minutes 390
+
+      - name: Commit updated brain files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add evolved_core_brain.pkl brain.json
+          # Only commit if something actually changed
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            GEN=$(python -c "import json; d=json.load(open('brain.json')); print(d['meta']['generation'])")
+            SCORE=$(python -c "import json; d=json.load(open('brain.json')); print(d['meta']['score'])")
+            FOOD=$(python -c "import json; d=json.load(open('brain.json')); print(d['meta']['food'])")
+            git commit -m "🧠 gen=${GEN} score=${SCORE} food=${FOOD} [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git push
+          fi

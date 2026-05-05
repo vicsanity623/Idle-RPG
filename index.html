@@ -1,350 +1,410 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <!-- strict mobile viewport to prevent zooming, double-tap-to-zoom, and ensure 1:1 pixel mapping -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <title>Mobile MMO Prototype</title>
-    
-    <!-- PWA Manifest & Browser Theming -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2c3e50">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="assets/idle/idle00.png">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BrainSim — Live Evolved Agent</title>
+<meta name="description" content="Live visualization of an evolutionarily trained CTRNN neural network agent navigating a 2D world."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050508;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);
+  --accent:#00e5ff;--green:#00ff88;--red:#ff3366;--amber:#ffb300;--purple:#c084fc;
+  --text:#e2e8f0;--muted:#64748b;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+/* animated bg */
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 20% 20%,rgba(0,229,255,0.06) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 80% at 80% 80%,rgba(192,132,252,0.06) 0%,transparent 60%);
+  pointer-events:none;z-index:0}
 
-    <!-- Performance: Preload critical assets -->
-    <link rel="preload" href="style.css" as="style">
-    <link rel="preload" href="engine.js" as="script">
+header{position:relative;z-index:1;text-align:center;padding:28px 20px 12px}
+header h1{font-size:clamp(1.4rem,4vw,2.2rem);font-weight:700;letter-spacing:0.05em;
+  background:linear-gradient(90deg,var(--accent),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+header p{color:var(--muted);font-size:.85rem;margin-top:4px}
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="style.css">
+.main{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:16px;
+  padding:0 16px 24px;max-width:1100px;margin:0 auto;align-items:flex-start}
+
+/* stat panel */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px;backdrop-filter:blur(12px);flex:0 0 220px}
+.panel h2{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.stat{display:flex;justify-content:space-between;align-items:center;
+  padding:6px 0;border-bottom:1px solid var(--border);font-size:.82rem}
+.stat:last-child{border-bottom:none}
+.stat-label{color:var(--muted)}
+.stat-val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7rem;font-weight:600;margin-top:10px}
+.badge.live{background:rgba(0,255,136,.15);color:var(--green);border:1px solid rgba(0,255,136,.3)}
+.badge.loading{background:rgba(255,179,0,.15);color:var(--amber);border:1px solid rgba(255,179,0,.3)}
+
+/* canvas wrapper */
+.canvas-wrap{flex:1;min-width:300px}
+#world{display:block;width:100%;border-radius:14px;border:1px solid var(--border);
+  background:#080810;image-rendering:pixelated}
+
+/* health bar */
+.hbar-wrap{margin-top:10px;background:rgba(255,255,255,.06);border-radius:6px;height:8px;overflow:hidden}
+.hbar{height:100%;border-radius:6px;transition:width .3s,background .3s}
+
+/* bottom row */
+.info-row{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px;
+  padding:0 16px 32px;max-width:1100px;margin:0 auto}
+.chip{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:6px 14px;font-size:.78rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.chip span{color:var(--text)}
+
+button#resetBtn{margin-left:auto;background:rgba(0,229,255,.1);border:1px solid rgba(0,229,255,.3);
+  color:var(--accent);border-radius:8px;padding:6px 16px;font-size:.8rem;cursor:pointer;
+  font-family:'Inter',sans-serif;transition:background .2s}
+button#resetBtn:hover{background:rgba(0,229,255,.2)}
+
+footer{text-align:center;padding-bottom:24px;color:var(--muted);font-size:.75rem;position:relative;z-index:1}
+footer a{color:var(--accent);text-decoration:none}
+</style>
 </head>
 <body>
-    <!-- Fallback for disabled JavaScript -->
-    <noscript>
-        <div style="color: white; text-align: center; padding: 50px; background: #000; height: 100vh;">
-            <h2>JavaScript is required to run this game.</h2>
-            <p>Please enable JavaScript in your browser settings.</p>
-        </div>
-    </noscript>
+<header>
+  <h1>🧠 BRAINSIM — LIVE EVOLVED AGENT</h1>
+  <p>Continuous CTRNN neural network, evolved via GitHub Actions · Auto-refreshes every 60 s</p>
+</header>
 
-    <!-- Realm Transition Loading Screen -->
-    <div id="loading-overlay" class="hidden">
-        <div class="loading-content">
-            <div class="shuriken-spinner"></div>
-            <h2 id="loading-realm-name">Traveling...</h2>
-            <p>Prepare for battle!</p>
-        </div>
-    </div>
+<div class="main">
+  <div class="panel">
+    <h2>Brain Stats</h2>
+    <div class="stat"><span class="stat-label">Generation</span><span class="stat-val" id="sGen">—</span></div>
+    <div class="stat"><span class="stat-label">Best Score</span><span class="stat-val" id="sScore">—</span></div>
+    <div class="stat"><span class="stat-label">Top Food</span><span class="stat-val" id="sFood">—</span></div>
+    <div class="stat"><span class="stat-label">Max HP</span><span class="stat-val" id="sHP">—</span></div>
+    <div class="stat"><span class="stat-label">Brain Size</span><span class="stat-val" id="sBrainSz">—</span></div>
+    <div class="stat"><span class="stat-label">Health</span><span class="stat-val" id="sHealth">—</span></div>
+    <div class="stat"><span class="stat-label">Food Eaten</span><span class="stat-val" id="sEaten">—</span></div>
+    <div class="stat"><span class="stat-label">Senses</span><span class="stat-val" id="sSenses">—</span></div>
+    <br/>
+    <span class="badge loading" id="statusBadge">Loading…</span>
+    <br/><br/>
+    <div style="font-size:.7rem;color:var(--muted)" id="lastTrained">—</div>
+  </div>
 
-    <main id="game-ui-container">
-        <!-- Core Game Canvas -->
-        <canvas id="gameCanvas"></canvas>
+  <div class="canvas-wrap">
+    <canvas id="world" width="600" height="600"></canvas>
+    <div class="hbar-wrap"><div class="hbar" id="hbar" style="width:100%;background:var(--green)"></div></div>
+  </div>
+</div>
 
-        <!-- ==========================================
-             HUD: Top Left (Player Stats) 
-             ========================================== -->
-        <section id="player-hud" aria-label="Player Status">
-            <div class="portrait" onclick="UI.toggleModal('stats-modal')" style="cursor: pointer;" title="View Full Stats">
-                <img src="assets/idle/idle00.png" alt="Player Portrait" onerror="this.style.display='none'">
-            </div>
-            <div class="status-bars">
-                <div class="level-badge" id="player-level" aria-label="Player Level">1</div>
-                <div class="bars-container">
-                    <div class="bar hp-bar" title="Health">
-                        <div id="hp-fill" class="fill"></div>
-                        <span id="hp-text">1000/1000</span>
-                    </div>
-                    <div class="bar mp-bar" title="Mana">
-                        <div id="mp-fill" class="fill"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="buffs" aria-label="Active Buffs">
-                <img src="assets/buff_attack.png" class="buff-icon" alt="Attack Buff" onerror="this.style.display='none'">
-                <img src="assets/buff_speed.png" class="buff-icon" alt="Speed Buff" onerror="this.style.display='none'">
-            </div>
-            
-            <!-- Day/Time Clock & Night Status -->
-            <div id="day-night-clock" style="margin-top: 5px; padding: 5px 10px; background: rgba(0,0,0,0.6); border-radius: 6px; border: 1px solid #444; text-align: center; font-size: 12px; color: #eee; text-shadow: 0 1px 2px #000;">
-                <div style="font-weight: bold; color: #f1c40f;">Day <span id="clock-day-count">1</span></div>
-                <div id="clock-time" style="font-size: 14px; margin: 2px 0;">12:00 PM</div>
-                <div id="night-status" style="display: none; color: #9b59b6; font-weight: bold; font-size: 10px; text-transform: uppercase;">2x XP & Gold Active</div>
-            </div>
-        </section>
+<div class="info-row">
+  <div class="chip">Tick <span id="cTick">0</span></div>
+  <div class="chip">FPS <span id="cFps">—</span></div>
+  <div class="chip">Mode <span id="cMode">Fast</span></div>
+  <div class="chip">Predator <span id="cPred">—</span></div>
+  <button id="resetBtn">↺ Reset Agent</button>
+</div>
 
-        <!-- ==========================================
-             HUD: Top Right (Minimap & Quests) 
-             ========================================== -->
-        <section id="right-hud">
-            <div id="minimap-container" aria-label="Minimap">
-                <canvas id="minimapCanvas"></canvas>
-            </div>
-            
-            <!-- Clickable Quest Tracker for Auto-Pathing -->
-            <button id="quest-tracker" style="display: none;" aria-label="Quest Tracker">
-                <div id="quest-content">
-                    <h4 class="quest-title"></h4>
-                    <p class="quest-obj"></p>
-                </div>
-                <div id="auto-quest-indicator" class="hidden">Auto-Pathing...</div>
-            </button>
-        </section>
+<footer>
+  <a href="https://github.com/vicsanity623/brainSim" target="_blank">github.com/vicsanity623/brainSim</a>
+  &nbsp;·&nbsp; Evolved continuously on GitHub Actions &nbsp;·&nbsp; CTRNN + DeepSeek-style sparse attention
+</footer>
 
-        <!-- HUD: Gold Display (True Centered) -->
-        <div id="top-gold-display" style="position: absolute; top: calc(env(safe-area-inset-top, 0px) + 15px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 20px; border: 1px solid var(--color-gold); color: var(--color-gold-glow); font-weight: 800; font-size: 16px; z-index: 100; display: flex; align-items: center; gap: 10px; box-shadow: 0 0 20px rgba(184, 153, 71, 0.4); backdrop-filter: blur(8px); pointer-events: none;">
-            <span style="font-size: 18px;">💰</span> <span id="main-gold-count">0</span>
-        </div>
+<script>
+// ─── Constants (must match Python) ───────────────────────────────────────────
+const BRAIN_SIZE      = 100;
+const MEMORY_SIZE     = 32;
+const ATTENTION_WIN   = 16;
+const BRAIN_TICK_EVERY= 3;
+const WORLD_SIZE      = 50;
 
-        <!-- ==========================================
-             HUD: Right Side (Menu Toggles) 
-             ========================================== -->
-        <nav id="menu-toggles" aria-label="Game Menus">
-            <button class="menu-btn" onclick="UI.toggleModal('inventory-modal')">Equip</button>
-            <button class="menu-btn" onclick="UI.toggleModal('stats-modal')">Stats</button>
-            <button class="menu-btn" onclick="UI.toggleModal('skills-modal')">Skills</button>
-        </nav>
+// ─── CTRNN ───────────────────────────────────────────────────────────────────
+class CTRNN {
+  constructor(data) {
+    this.size          = data.size || BRAIN_SIZE;
+    this.weights       = data.weights;       // 2D array [size][size]
+    this.biases        = data.biases;        // 1D array
+    this.tauArr        = data.time_constants;
+    this.compressW     = data.compress_weights;  // [MEMORY_SIZE][19]
+    this.attnW         = data.attention_weights; // [size][ATTN_WIN]
+    this.voltages      = new Float64Array(this.size);
+    this.adaptation    = new Float64Array(this.size);
+    this.ltmTrace      = new Float64Array(data.ltm_trace);
+    this.compMem       = new Float64Array(data.compressed_memory);
+    this.lastOutputs   = new Float64Array(this.size).fill(0.5);
+    this.voltHistory   = [];
+    this.thinkingMode  = 0;
+    this._batchedNetIn = null;
+  }
 
-        <!-- ==========================================
-             Controls: Bottom Left (Joystick) 
-             ========================================== -->
-        <div id="joystick-base" aria-label="Movement Joystick">
-            <div id="joystick-knob"></div>
-        </div>
+  sigmoid(x){ return 1/(1+Math.exp(-Math.max(-50,Math.min(50,x)))) }
 
-        <!-- ==========================================
-             Controls: Bottom Right (Action Bar) 
-             ========================================== -->
-        <section id="action-bar" aria-label="Action Bar">
-            <!-- Consumables -->
-            <button class="action-slot potion" aria-label="Use Health Potion">
-                <img src="assets/potion_hp.png" alt="HP Potion" onerror="this.style.display='none'">
-                <span id="hp-potion-count" class="item-count">95</span>
-            </button>
-            <button class="action-slot potion" aria-label="Use Mana Potion">
-                <img src="assets/potion_mp.png" alt="MP Potion" onerror="this.style.display='none'">
-                <span id="mp-potion-count" class="item-count">40</span>
-            </button>
-            
-            <div class="spacer"></div>
-            
-            <!-- Core Actions -->
-            <button class="action-slot toggle-btn" id="btn-auto" aria-label="Toggle Auto Attack">
-                AUTO<br><span id="auto-status">OFF</span>
-            </button>
-            <button class="action-slot skill" id="btn-attack" aria-label="Basic Attack">
-                <img src="assets/skill_attack.png" alt="Attack" onerror="this.style.display='none'">
-            </button>
-            
-            <!-- Skills (Dynamic Static Grid) -->
-            <div id="skill-buttons-container" style="display:flex; gap:10px;">
-                <!-- Skills dynamically injected by ui.js -->
-            </div>
-        </section>
+  getOutputs(uncertainty=null){
+    if(uncertainty!==null) this.thinkingMode = uncertainty>0.7 ? 1 : 0;
+    const out = new Float64Array(this.size);
+    for(let n=0;n<this.size;n++){
+      const v = Math.max(-50,Math.min(50, this.voltages[n]-this.adaptation[n]*1.5));
+      out[n] = this.sigmoid(v);
+    }
+    return out;
+  }
 
-        <!-- ==========================================
-             Overlays (Loot, XP, Modals, Tooltips) 
-             ========================================== -->
-             
-        <!-- Loot Notification Log -->
-        <div id="loot-notification-container" aria-live="polite"></div>
+  compressSensors(sensors){
+    const c = new Float64Array(MEMORY_SIZE);
+    for(let m=0;m<MEMORY_SIZE;m++){
+      let s=0; for(let j=0;j<19;j++) s+=this.compressW[m][j]*sensors[j];
+      c[m]=Math.tanh(s);
+    }
+    for(let m=0;m<MEMORY_SIZE;m++) this.compMem[m]=0.9*this.compMem[m]+0.1*c[m];
+    return this.compMem;
+  }
 
-        <!-- Bottom XP Bar -->
-        <div id="exp-bar-container" aria-label="Experience Bar">
-            <div id="exp-fill"></div>
-            <div id="exp-text">EXP 0.000%</div>
-        </div>
+  // Matmul: weights(size×size) × outputs(size) → net(size)
+  matmul(outputs){
+    const net = new Float64Array(this.size);
+    for(let i=0;i<this.size;i++){
+      let s=0; for(let j=0;j<this.size;j++) s+=this.weights[i][j]*outputs[j];
+      net[i]=s;
+    }
+    return net;
+  }
 
-        <!-- Item Details & Comparison Modal -->
-        <dialog id="item-details-modal" class="ui-modal hidden" style="width: 90%; max-width: 400px; height: auto; max-height: 80%; padding: 20px; z-index: 1000; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 12px; background: rgba(15, 15, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(15px);">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">
-                <h2 id="detail-name" style="margin:0; font-size: 20px;">Item Name</h2>
-                <button class="close-btn" onclick="UI.toggleModal('item-details-modal')" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">&times;</button>
-            </div>
-            
-            <div style="display: flex; gap: 15px; margin-top: 10px;">
-                <!-- Selected Item -->
-                <div style="flex: 1; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; border: 1px solid #333;">
-                    <div id="detail-icon" style="font-size: 40px; text-align: center; margin-bottom: 15px; text-shadow: 0 0 10px rgba(255,255,255,0.5);">❓</div>
-                    <div id="detail-stats" style="color: #ccc; font-size: 14px; text-align: center; line-height: 1.5;">Stats</div>
-                </div>
+  tick(dt, sensors, uncertainty=null){
+    const compressed = this.compressSensors(sensors);
+    const outputs    = this.getOutputs(uncertainty);
+    const netIn      = this.matmul(outputs);
 
-                <!-- Comparison Item (if applicable) -->
-                <div id="detail-compare-box" style="flex: 1; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; border: 1px solid #333; display: none;">
-                    <div style="font-size: 10px; color: #888; text-align: center; margin-bottom: 5px; font-weight: bold; letter-spacing: 1px;">EQUIPPED</div>
-                    <div id="compare-icon" style="font-size: 30px; text-align: center; margin-bottom: 10px; opacity: 0.7;">❓</div>
-                    <div id="compare-stats" style="color: #999; font-size: 12px; text-align: center; line-height: 1.5;">Stats</div>
-                </div>
-            </div>
+    for(let n=0;n<this.size;n++){
+      let total = netIn[n]+this.biases[n];
+      if(n<MEMORY_SIZE) total+=compressed[n];
+      if(n<19)          total+=sensors[n];
+      const deriv = (-this.voltages[n]+total)/this.tauArr[n];
+      this.voltages[n] = Math.max(-100,Math.min(100, this.voltages[n]+deriv*dt));
+      this.adaptation[n]+=(outputs[n]*0.1-this.adaptation[n]*0.05)*dt;
+      this.ltmTrace[n]=this.ltmTrace[n]*0.999+outputs[n]*0.001;
+    }
+    this.voltHistory.push(Float64Array.from(this.voltages));
+    if(this.voltHistory.length>ATTENTION_WIN*2) this.voltHistory.shift();
+    this.lastOutputs = outputs;
+    return outputs;
+  }
+}
 
-            <div style="margin-top: 20px; text-align: center;">
-                <button id="detail-action-btn" class="action-btn" style="width: 100%; padding: 15px; font-size: 16px; font-weight: bold; background: linear-gradient(180deg, var(--color-gold), #b89947); color: #000; border: none; border-radius: 8px; cursor: pointer; text-shadow: 0 1px 0 rgba(255,255,255,0.5);">Equip</button>
-            </div>
-        </dialog>
+// ─── Environment ─────────────────────────────────────────────────────────────
+class Env {
+  constructor(gen, maxHealth){
+    this.gen=gen; this.maxHealth=maxHealth;
+    this.agentPos=[25,25];
+    this.foodPos=Array.from({length:10},()=>[rand(7.5,42.5),rand(7.5,42.5)]);
+    this.poisonPos=Array.from({length:3},()=>[rand(7.5,42.5),rand(7.5,42.5)]);
+    this.poisonVels=Array.from({length:3},()=>[randS(.15),randS(.15)]);
+    this.enemyPos=[2.5,2.5];
+    this.health=maxHealth; this.foodCount=0; this.ticks=0;
+    this.wallContacts=0; this.foodVisible=true;
+    this.predatorActive=(gen>=500);
+    this.lastFoodTime=0;
+  }
+  getSensors(){
+    this.foodVisible=(this.ticks%300)<240;
+    const nd=(t)=>{const dx=t[0]-this.agentPos[0],dy=t[1]-this.agentPos[1],d=Math.sqrt(dx*dx+dy*dy)+.001;return[[dx/d,dy/d],d]};
+    let foodS,foodD;
+    if(this.foodVisible){
+      let best=Infinity,bi=0;
+      this.foodPos.forEach(([fx,fy],i)=>{const d=(fx-this.agentPos[0])**2+(fy-this.agentPos[1])**2;if(d<best){best=d;bi=i}});
+      [foodS,foodD]=nd(this.foodPos[bi]);
+    }else{foodS=[0,0];foodD=50}
+    let pBest=Infinity,pi2=0;
+    this.poisonPos.forEach(([px,py],i)=>{const d=(px-this.agentPos[0])**2+(py-this.agentPos[1])**2;if(d<pBest){pBest=d;pi2=i}});
+    const[poisS,poisD]=nd(this.poisonPos[pi2]);
+    const[centerS,centerD]=nd([25,25]);
+    const fProx=Math.max(0,1-foodD/50), pProx=Math.max(0,1-poisD/50), cProx=Math.max(0,1-centerD/50);
+    const[ax,ay]=this.agentPos;
+    const wL=ax<10?(10-ax)/10:0, wR=ax>40?(ax-40)/10:0, wT=ay<10?(10-ay)/10:0, wB=ay>40?(ay-40)/10:0;
+    const pain=(ax<=.5||ax>=49.5||ay<=.5||ay>=49.5)?1:0;
+    const hunger=(100-this.health)/100;
+    const osc=Math.sin(this.ticks*.2);
+    let enemS=[0,0],eProx=0;
+    if(this.predatorActive){const[es,ed]=nd(this.enemyPos);enemS=es;eProx=Math.max(0,1-ed/50)}
+    return[foodS[0],foodS[1],poisS[0],poisS[1],wL,wR,wT,wB,hunger,osc,enemS[0],enemS[1],pain,fProx,pProx,centerS[0],centerS[1],cProx,eProx];
+  }
+  update(motor){
+    this.ticks++;
+    const dx=(motor[0]-.5)*1.4, dy=(motor[1]-.5)*1.4;
+    let[nx,ny]=[this.agentPos[0]+dx,this.agentPos[1]+dy];
+    const hitWall=(nx<=0||nx>=50||ny<=0||ny>=50);
+    if(hitWall){this.wallContacts++;nx=Math.max(2,Math.min(48,nx));ny=Math.max(2,Math.min(48,ny))}
+    this.agentPos=[Math.max(0,Math.min(50,nx)),Math.max(0,Math.min(50,ny))];
+    if(this.predatorActive){
+      const[ex,ey]=this.enemyPos,[ax,ay]=this.agentPos;
+      const d=Math.sqrt((ax-ex)**2+(ay-ey)**2)+.01;
+      this.enemyPos=[ex+(ax-ex)/d*.325,ey+(ay-ey)/d*.325];
+    }
+    this.health-=(hitWall?1.5:.008);
+    this.foodPos.forEach(([fx,fy],i)=>{
+      if((fx-this.agentPos[0])**2+(fy-this.agentPos[1])**2<6.25){
+        this.health=Math.min(100,this.health+45);this.foodCount++;this.lastFoodTime=this.ticks;
+        this.foodPos[i]=[rand(7.5,42.5),rand(7.5,42.5)];
+      }
+    });
+    this.poisonPos.forEach(([px,py],i)=>{
+      this.poisonPos[i][0]+=this.poisonVels[i][0]; this.poisonPos[i][1]+=this.poisonVels[i][1];
+      if(this.poisonPos[i][0]<0||this.poisonPos[i][0]>50) this.poisonVels[i][0]*=-1;
+      if(this.poisonPos[i][1]<0||this.poisonPos[i][1]>50) this.poisonVels[i][1]*=-1;
+      if((this.poisonPos[i][0]-this.agentPos[0])**2+(this.poisonPos[i][1]-this.agentPos[1])**2<4){
+        this.health-=70; this.poisonPos[i]=[rand(7.5,42.5),rand(7.5,42.5)];
+      }
+    });
+    const predDead=this.predatorActive&&(this.enemyPos[0]-this.agentPos[0])**2+(this.enemyPos[1]-this.agentPos[1])**2<4;
+    return this.health>0&&!predDead;
+  }
+}
 
-        <!-- Inventory Modal -->
-        <dialog id="inventory-modal" class="ui-modal hidden" aria-labelledby="inv-modal-title">
-            <div class="modal-header">
-                <h3 id="inv-modal-title">Inventory & Equipment</h3>
-                <button class="close-btn" onclick="UI.toggleModal('inventory-modal')" aria-label="Close">X</button>
-            </div>
-            <div class="modal-body flex-row">
-                <div class="char-preview-container">
-                    <div class="equipment-grid">
-                        <div class="eq-slot" data-slot="head" title="Head" role="button" tabindex="0"></div>
-                        <div class="eq-slot" data-slot="cape" title="Cape" role="button" tabindex="0"></div>
-                        <div class="eq-slot" data-slot="amulet" title="Amulet" role="button" tabindex="0"></div>
-                        <div class="eq-slot" data-slot="armor" title="Armor" role="button" tabindex="0"></div>
-                        <div class="eq-slot" data-slot="hands" title="Hands" role="button" tabindex="0"></div>
-                        <div class="eq-slot" data-slot="ring1" title="Ring 1" role="button" tabindex="0"></div>
-                        <div class="eq-slot" data-slot="ring2" title="Ring 2" role="button" tabindex="0"></div>
-                        <div class="eq-slot" data-slot="legs" title="Legs" role="button" tabindex="0"></div>
-                    </div>
-                    <div class="char-preview">
-                        <canvas id="char-preview-canvas" width="200" height="240" style="width:100%; height:auto; display:block;"></canvas>
-                        <div class="cp-stats">CP: <span id="combat-power">0</span></div>
-                        <div id="gear-summary-stats" style="margin-top: 8px; font-size: 14px; background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 6px; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); display: inline-block;">⚔️ +0 &nbsp;|&nbsp; 🛡️ +0</div>
-                    </div>
-                </div>
-                <div class="inv-tabs-container">
-                    <div class="tab-header" role="tablist">
-                        <button class="tab active" data-tab="equip" onclick="UI.setInventoryTab('equip')" role="tab">Equip</button>
-                        <button class="tab" data-tab="consumables" onclick="UI.setInventoryTab('consumables')" role="tab">Consumables</button>
-                    </div>
-                    <div class="inventory-grid" id="inv-grid" role="tabpanel">
-                        <!-- Items dynamically injected by ui.js -->
-                    </div>
-                    <div class="inventory-footer">
-                        <div class="gold-display">💰 <span id="inv-gold">0</span></div>
-                        <div class="inventory-controls" style="display:flex; gap:10px;">
-                            <select id="inv-sort" onchange="UI.sortInventory(this.value)" style="background:#333; color:white; border:1px solid #555; border-radius:4px; font-size:12px;">
-                                <option value="rarity">Sort: Rarity</option>
-                                <option value="value">Sort: Value</option>
-                                <option value="attack">Sort: Attack</option>
-                            </select>
-                            <button onclick="UI.autoEquip()" style="background:var(--color-gold); color:black; border:none; border-radius:4px; padding:2px 10px; font-size:12px; font-weight:bold; cursor:pointer;" title="Equip best available gear">Auto Equip</button>
-                            <button onclick="UI.purgeInventory()" style="background:#c0392b; color:white; border:none; border-radius:4px; padding:2px 8px; font-size:12px; cursor:pointer;" title="Delete lower quality items than equipped">Purge Low Quality</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </dialog>
+function rand(a,b){return a+Math.random()*(b-a)}
+function randS(m){return (Math.random()-.5)*2*m}
 
-        <!-- Skills Modal -->
-        <dialog id="skills-modal" class="ui-modal hidden" style="width: 95%; max-width: 900px; height: 90%; background: #0b0b0d;">
-            <div class="skills-layout">
-                <!-- Sidebar: Categories & Skill Icons -->
-                <aside class="skills-sidebar">
-                    <div class="skills-category-tabs">
-                        <button class="cat-tab active" onclick="UI.setSkillCategory('unique')">Unique Skills</button>
-                        <button class="cat-tab" onclick="UI.setSkillCategory('heavenstone')">Heavenstone</button>
-                        <button class="cat-tab" onclick="UI.setSkillCategory('enhancement')">Skill Enhancement</button>
-                    </div>
-                    
-                    <div class="skills-scroll-container">
-                        <div id="skills-item-list" class="skills-grid">
-                            <!-- Skill icons injected by ui.js -->
-                        </div>
-                    </div>
+// ─── Simulation state ─────────────────────────────────────────────────────────
+let brain=null, env=null, meta=null;
+let simTick=0, lastFrameTime=performance.now(), fps=0, frameCount=0, fpsTimer=0;
 
-                    <div class="skills-preset-bar">
-                        <span>Skill Preset</span>
-                        <div class="preset-btns">
-                            <button class="preset-btn active" onclick="UI.setSkillPreset('A')">A</button>
-                            <button class="preset-btn" onclick="UI.setSkillPreset('B')">B</button>
-                            <button class="preset-btn" onclick="UI.setSkillPreset('C')">C</button>
-                        </div>
-                    </div>
-                </aside>
+async function loadBrain(){
+  document.getElementById('statusBadge').textContent='Loading…';
+  document.getElementById('statusBadge').className='badge loading';
+  try{
+    const r=await fetch('brain.json?_='+Date.now());
+    if(!r.ok) throw new Error('brain.json not found');
+    const d=await r.json();
+    meta=d.meta;
+    brain=new CTRNN(d);
+    resetEnv();
+    document.getElementById('sGen').textContent=meta.generation.toLocaleString();
+    document.getElementById('sScore').textContent=fmtScore(meta.score);
+    document.getElementById('sFood').textContent=meta.food;
+    document.getElementById('sHP').textContent=meta.max_health;
+    document.getElementById('sBrainSz').textContent=meta.brain_size+'n';
+    document.getElementById('lastTrained').textContent='Trained: '+meta.exported_at.replace('T',' ').replace('Z',' UTC');
+    document.getElementById('statusBadge').textContent='● LIVE';
+    document.getElementById('statusBadge').className='badge live';
+  }catch(e){
+    document.getElementById('statusBadge').textContent='⚠ '+e.message;
+    console.error(e);
+  }
+}
 
-                <!-- Main Content: Details or Enhancement -->
-                <main class="skills-main-panel" id="skill-detail-panel">
-                    <!-- Dynamic content: Detail View or Enhancement Ritual -->
-                </main>
+function resetEnv(){
+  env=new Env(meta?meta.generation:1, meta?meta.max_health:150);
+  simTick=0;
+}
 
-                <button class="modal-close-icon" onclick="UI.toggleModal('skills-modal')">✕</button>
-            </div>
-        </dialog>
+// Auto-refresh brain every 60s
+setInterval(loadBrain,60000);
+document.getElementById('resetBtn').onclick=resetEnv;
 
-        <!-- Stats Modal -->
-        <dialog id="stats-modal" class="ui-modal hidden" aria-labelledby="stats-modal-title">
-            <div class="modal-header">
-                <h3 id="stats-modal-title">Ongoing Effects & Stats</h3>
-                <button class="close-btn" onclick="UI.toggleModal('stats-modal')" aria-label="Close">X</button>
-            </div>
-            <div class="modal-body" id="stats-list">
-                <!-- Stats dynamically injected by ui.js -->
-            </div>
-        </dialog>
+// ─── Rendering ────────────────────────────────────────────────────────────────
+const canvas=document.getElementById('world');
+const ctx=canvas.getContext('2d');
 
-        <!-- Item Tooltip (Hover/Long Press) -->
-        <div id="item-tooltip" class="hidden" role="tooltip">
-            <h4 id="tt-name">Item Name</h4>
-            <div id="tt-rarity">Rarity</div>
-            <div id="tt-stats">Stats</div>
-        </div>
-        
-        <!-- Full-Screen Map & Realms Modal -->
-        <dialog id="map-modal" class="ui-modal hidden" style="width: 95%; height: 90%; max-width: 1200px;">
-            <div class="modal-header">
-                <h3>World Map & Realms</h3>
-                <button class="close-btn" onclick="UI.toggleModal('map-modal')">X</button>
-            </div>
-            <div class="modal-body" style="display:flex; height:100%; overflow:hidden;">
-                <!-- Realm Sidebar -->
-                <div id="realm-sidebar" style="width:250px; background:rgba(0,0,0,0.5); border-right:1px solid #444; padding:15px; display:flex; flex-direction:column; gap:10px;">
-                    <h4 style="color:#d4af37; margin-bottom:10px;">Travel Realms</h4>
-                    <!-- Realms injected by JS -->
-                </div>
-                <!-- Map Content -->
-                <div id="map-content" style="flex:1; position:relative; background:#111; display:flex; flex-direction:column;">
-                    <div class="tab-header" style="padding:10px;">
-                        <button class="tab active" onclick="UI.setMapTab('world')">World Map</button>
-                        <button class="tab" onclick="UI.setMapTab('boss')">Boss Arena</button>
-                        <button class="tab" onclick="UI.setMapTab('challenge')">Challenge</button>
-                    </div>
-                    <div id="map-view" style="flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                        <!-- World Map or Boss View -->
-                    </div>
-                </div>
-            </div>
-        </dialog>
+function toP(x,y,W,H){return[x/WORLD_SIZE*W,y/WORLD_SIZE*H]}
 
-        <!-- Challenge Completed Modal -->
-        <dialog id="challenge-modal" class="ui-modal hidden" style="width: 90%; max-width: 400px; text-align: center;">
-            <div class="modal-header" style="justify-content: center; border-bottom: none;">
-                <h2 style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5); margin: 0; font-size: 24px;">CHALLENGE COMPLETE</h2>
-            </div>
-            <div class="modal-body" style="padding: 20px;">
-                <p style="color: #ccc; margin-bottom: 20px;">You survived the endless horde!</p>
-                <div id="challenge-rewards-list" style="background: rgba(0,0,0,0.5); border: 1px solid #444; border-radius: 8px; padding: 15px; text-align: left; margin-bottom: 20px;">
-                    <!-- Rewards injected here -->
-                </div>
-                <div style="color: #2ecc71; font-weight: bold; margin-bottom: 20px;">+5 Seconds to next Challenge!</div>
-                <button class="menu-btn" style="width: 100%; background: #3498db; color: white;" onclick="UI.toggleModal('challenge-modal')">Claim Rewards</button>
-            </div>
-        </dialog>
-    </main>
+function drawGlow(ctx,x,y,r,color){
+  const g=ctx.createRadialGradient(x,y,0,x,y,r*3);
+  g.addColorStop(0,color); g.addColorStop(1,'transparent');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r*3,0,Math.PI*2); ctx.fill();
+}
 
-    <!-- Game Scripts (Order logic: UI first, Entities second, Engine last to bind it all together) -->
-    <script src="realms.js" defer></script>
-    <script src="ui.js" defer></script>
-    <script src="entities.js" defer></script>
-    <script src="engine.js" defer></script>
+function fmtScore(n){
+  if(n>=1e12) return (n/1e12).toFixed(1)+'T';
+  if(n>=1e9)  return (n/1e9).toFixed(1)+'B';
+  if(n>=1e6)  return (n/1e6).toFixed(1)+'M';
+  if(n>=1e3)  return (n/1e3).toFixed(1)+'K';
+  return String(Math.floor(n));
+}
 
-    <!-- PWA Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker registered successfully.'))
-                    .catch(err => console.warn('Service Worker registration failed:', err));
-            });
-        }
-    </script>
+function frame(ts){
+  requestAnimationFrame(frame);
+
+  // FPS counter
+  frameCount++; fpsTimer+=ts-lastFrameTime; lastFrameTime=ts;
+  if(fpsTimer>=1000){fps=Math.round(frameCount*1000/fpsTimer);frameCount=0;fpsTimer=0;document.getElementById('cFps').textContent=fps}
+
+  if(!brain||!env){ctx.fillStyle='#050508';ctx.fillRect(0,0,canvas.width,canvas.height);return}
+
+  // Step simulation
+  if(simTick%BRAIN_TICK_EVERY===0){
+    const sensors=env.getSensors();
+    const unc= Math.max(0,(100-env.health)/100)*.4 + Math.min(1,env.wallContacts/50)*.3 + ((env.ticks-env.lastFoodTime)>200?.3:0);
+    brain.tick(0.1,sensors,unc);
+  }
+  const motor=[brain.lastOutputs[BRAIN_SIZE-2],brain.lastOutputs[BRAIN_SIZE-1]];
+  const alive=env.update(motor);
+  if(!alive) resetEnv();
+  simTick++;
+
+  // Draw world
+  const W=canvas.width, H=canvas.height;
+  ctx.fillStyle='#080812'; ctx.fillRect(0,0,W,H);
+
+  // Subtle grid
+  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+  for(let i=0;i<=10;i++){
+    const x=i/10*W; ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+    const y=i/10*H; ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+  }
+
+  // Wall danger glow
+  const[ax,ay]=env.agentPos;
+  if(ax<=2||ax>=48||ay<=2||ay>=48){
+    ctx.fillStyle='rgba(255,0,0,0.06)';ctx.fillRect(0,0,W,H);
+  }
+
+  // Food
+  env.foodPos.forEach(([fx,fy])=>{
+    const[px,py]=toP(fx,fy,W,H);
+    if(env.foodVisible){
+      drawGlow(ctx,px,py,5,'rgba(0,255,136,0.4)');
+      ctx.fillStyle='#00ff88'; ctx.beginPath(); ctx.arc(px,py,5,0,Math.PI*2); ctx.fill();
+    } else {
+      ctx.strokeStyle='rgba(0,255,136,0.25)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(px,py,5,0,Math.PI*2); ctx.stroke();
+    }
+  });
+
+  // Poison
+  env.poisonPos.forEach(([px2,py2])=>{
+    const[px,py]=toP(px2,py2,W,H);
+    drawGlow(ctx,px,py,5,'rgba(255,51,102,0.3)');
+    ctx.fillStyle='#ff3366'; ctx.fillRect(px-4,py-4,8,8);
+  });
+
+  // Predator
+  if(env.predatorActive){
+    const[px,py]=toP(env.enemyPos[0],env.enemyPos[1],W,H);
+    drawGlow(ctx,px,py,8,'rgba(255,0,100,0.5)');
+    ctx.fillStyle='#ff0066'; ctx.beginPath(); ctx.arc(px,py,8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,0,100,0.8)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(px,py,12,0,Math.PI*2); ctx.stroke();
+  }
+
+  // Agent
+  const[apx,apy]=toP(ax,ay,W,H);
+  drawGlow(ctx,apx,apy,10,'rgba(0,229,255,0.5)');
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(apx,apy,7,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(0,229,255,0.9)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(apx,apy,11,0,Math.PI*2); ctx.stroke();
+
+  // Update UI
+  const hp=env.health, maxHp=env.maxHealth, pct=Math.max(0,hp/maxHp);
+  document.getElementById('sHealth').textContent=Math.max(0,Math.floor(hp))+'/'+maxHp;
+  document.getElementById('sEaten').textContent=env.foodCount;
+  document.getElementById('sSenses').textContent=env.foodVisible?'Active':'Blind';
+  document.getElementById('cTick').textContent=simTick.toLocaleString();
+  document.getElementById('cMode').textContent=brain.thinkingMode?'Slow':'Fast';
+  document.getElementById('cPred').textContent=env.predatorActive?'Active':'Inactive';
+  const hbar=document.getElementById('hbar');
+  hbar.style.width=(pct*100)+'%';
+  hbar.style.background=pct>.5?'#00ff88':pct>.25?'#ffb300':'#ff3366';
+}
+
+loadBrain().then(()=>requestAnimationFrame(frame));
+</script>
 </body>
 </html>
