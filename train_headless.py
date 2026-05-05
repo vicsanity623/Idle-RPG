@@ -403,9 +403,11 @@ def save_and_export(brain, score, gen, food, max_health):
         "attention_weights": brain.attention_weights.tolist(),
         "ltm_trace": brain.ltm_trace.tolist(),
         "compressed_memory": brain.compressed_memory.tolist(),
+        "voltages": brain.voltages.tolist(),
+        "adaptation": brain.adaptation.tolist(),
     }
     with open("brain.json", "w") as f:
-        json.dump(data, f, separators=(",", ":"))  # compact — no extra whitespace
+        json.dump(data, f, separators=(",", ":"))  # compact â no extra whitespace
     print(f"[+] Exported brain.json  (gen={gen}, score={int(score)}, food={food})")
 
 
