@@ -64,6 +64,54 @@ button#resetBtn{margin-left:auto;background:rgba(0,229,255,.1);border:1px solid 
   font-family:'Inter',sans-serif;transition:background .2s}
 button#resetBtn:hover{background:rgba(0,229,255,.2)}
 
+/* NEW: Styles for Neuron Inspector select and pause button */
+.panel select {
+  width: auto;
+  font-size: .82rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  -webkit-appearance: none; /* Remove default dropdown arrow */
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  cursor: pointer;
+}
+.panel select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+button#pauseBtn {
+  margin-top: 12px;
+  width: 100%;
+  background: rgba(255,179,0,.1);
+  border: 1px solid rgba(255,179,0,.3);
+  color: var(--amber);
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-size: .8rem;
+  cursor: pointer;
+  font-family: 'Inter',sans-serif;
+  transition: background .2s, border-color .2s, color .2s;
+}
+button#pauseBtn:hover {
+  background: rgba(255,179,0,.2);
+}
+button#pauseBtn.paused { /* Class for when it's paused */
+  background: rgba(0,255,136,.1);
+  border-color: rgba(0,255,136,.3);
+  color: var(--green);
+}
+button#pauseBtn.paused:hover {
+  background: rgba(0,255,136,.2);
+}
+
 footer{text-align:center;padding-bottom:24px;color:var(--muted);font-size:.75rem;position:relative;z-index:1}
 footer a{color:var(--accent);text-decoration:none}
 </style>
@@ -94,6 +142,21 @@ footer a{color:var(--accent);text-decoration:none}
   <div class="canvas-wrap">
     <canvas id="world" width="600" height="600"></canvas>
     <div class="hbar-wrap"><div class="hbar" id="hbar" style="width:100%;background:var(--green)"></div></div>
+  </div>
+
+  <!-- NEW: Neuron Inspector Panel -->
+  <div class="panel">
+    <h2>Neuron Inspector</h2>
+    <div class="stat">
+      <span class="stat-label">Select Neuron</span>
+      <select id="neuronSelect" class="stat-val">
+        <!-- Options will be populated by JS -->
+      </select>
+    </div>
+    <canvas id="neuronPlot" width="200" height="100" style="margin-top:12px;border:1px solid var(--border);border-radius:8px;background:#080810;"></canvas>
+    <button id="pauseBtn">
+      Ã¢ Â¸ Pause Simulation
+    </button>
   </div>
 </div>
 
@@ -266,6 +329,10 @@ function randS(m){return (Math.random()-.5)*2*m}
 let brain=null, env=null, meta=null;
 let simTick=0, lastFrameTime=performance.now(), fps=0, frameCount=0, fpsTimer=0;
 
+// NEW: Global variables for Neuron Inspector
+let paused = false;
+let selectedNeuronIndex = 0; // Default to neuron 0
+
 async function loadBrain(){
   document.getElementById('statusBadge').textContent='Loading…';
   document.getElementById('statusBadge').className='badge loading';
@@ -275,6 +342,7 @@ async function loadBrain(){
     const d=await r.json();
     meta=d.meta;
     brain=new CTRNN(d);
+    populateNeuronSelect(); // NEW: Populate neuron dropdown after brain loads
     resetEnv();
     document.getElementById('sGen').textContent=meta.generation.toLocaleString();
     document.getElementById('sScore').textContent=fmtScore(meta.score);
@@ -293,6 +361,7 @@ async function loadBrain(){
 function resetEnv(){
   env=new Env(meta?meta.generation:1, meta?meta.max_health:150);
   simTick=0;
+  drawNeuronPlot(); // NEW: Redraw plot on env reset
 }
 
 // Auto-refresh brain every 60s
@@ -302,6 +371,86 @@ document.getElementById('resetBtn').onclick=resetEnv;
 // ─── Rendering ────────────────────────────────────────────────────────────────
 const canvas=document.getElementById('world');
 const ctx=canvas.getContext('2d');
+
+// NEW: Neuron Inspector UI elements and logic
+const neuronSelect = document.getElementById('neuronSelect');
+const neuronPlotCanvas = document.getElementById('neuronPlot');
+const neuronPlotCtx = neuronPlotCanvas.getContext('2d');
+const pauseBtn = document.getElementById('pauseBtn');
+
+function populateNeuronSelect() {
+  if (!brain) return;
+  neuronSelect.innerHTML = '';
+  for (let i = 0; i < brain.size; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = `Neuron ${i}`;
+    neuronSelect.appendChild(option);
+  }
+  neuronSelect.value = selectedNeuronIndex; // Restore or set default
+}
+
+function drawNeuronPlot() {
+  if (!brain || brain.voltHistory.length === 0) {
+    neuronPlotCtx.clearRect(0, 0, neuronPlotCanvas.width, neuronPlotCanvas.height);
+    return;
+  }
+
+  const history = brain.voltHistory.map(v => v[selectedNeuronIndex]);
+  const W = neuronPlotCanvas.width;
+  const H = neuronPlotCanvas.height;
+
+  neuronPlotCtx.clearRect(0, 0, W, H);
+  neuronPlotCtx.strokeStyle = 'rgba(0,229,255,0.7)';
+  neuronPlotCtx.lineWidth = 1.5;
+
+  // Find min/max for scaling
+  const minVal = Math.min(...history);
+  const maxVal = Math.max(...history);
+  const range = maxVal - minVal;
+
+  if (range === 0) { // Handle case where all values are the same
+    neuronPlotCtx.fillStyle = 'rgba(255,255,255,0.3)';
+    neuronPlotCtx.fillText('No voltage change', 5, H / 2);
+    return;
+  }
+
+  neuronPlotCtx.beginPath();
+  for (let i = 0; i < history.length; i++) {
+    const x = (i / (history.length - 1)) * W;
+    // Scale voltage to canvas height, inverting y-axis
+    const y = H - ((history[i] - minVal) / range) * H;
+    if (i === 0) {
+      neuronPlotCtx.moveTo(x, y);
+    } else {
+      neuronPlotCtx.lineTo(x, y);
+    }
+  }
+  neuronPlotCtx.stroke();
+
+  // Draw zero line if within range
+  if (minVal < 0 && maxVal > 0) {
+    const zeroY = H - ((0 - minVal) / range) * H;
+    neuronPlotCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+    neuronPlotCtx.lineWidth = 0.5;
+    neuronPlotCtx.beginPath();
+    neuronPlotCtx.moveTo(0, zeroY);
+    neuronPlotCtx.lineTo(W, zeroY);
+    neuronPlotCtx.stroke();
+  }
+}
+
+// NEW: Event Listeners for Neuron Inspector
+neuronSelect.addEventListener('change', (e) => {
+  selectedNeuronIndex = parseInt(e.target.value);
+  drawNeuronPlot(); // Redraw immediately on selection change
+});
+
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  pauseBtn.textContent = paused ? 'Ã¢âÂ¶ Resume Simulation' : 'Ã¢ Â¸ Pause Simulation';
+  pauseBtn.classList.toggle('paused', paused); // Toggle the 'paused' class for styling
+});
 
 function toP(x,y,W,H){return[x/WORLD_SIZE*W,y/WORLD_SIZE*H]}
 
@@ -328,16 +477,19 @@ function frame(ts){
 
   if(!brain||!env){ctx.fillStyle='#050508';ctx.fillRect(0,0,canvas.width,canvas.height);return}
 
-  // Step simulation
-  if(simTick%BRAIN_TICK_EVERY===0){
-    const sensors=env.getSensors();
-    const unc= Math.max(0,(100-env.health)/100)*.4 + Math.min(1,env.wallContacts/50)*.3 + ((env.ticks-env.lastFoodTime)>200?.3:0);
-    brain.tick(0.1,sensors,unc);
+  // NEW: Only step simulation if not paused
+  if (!paused) {
+    // Step simulation
+    if(simTick%BRAIN_TICK_EVERY===0){
+      const sensors=env.getSensors();
+      const unc= Math.max(0,(100-env.health)/100)*.4 + Math.min(1,env.wallContacts/50)*.3 + ((env.ticks-env.lastFoodTime)>200?.3:0);
+      brain.tick(0.1,sensors,unc);
+    }
+    const motor=[brain.lastOutputs[BRAIN_SIZE-2],brain.lastOutputs[BRAIN_SIZE-1]];
+    const alive=env.update(motor);
+    if(!alive) resetEnv();
+    simTick++;
   }
-  const motor=[brain.lastOutputs[BRAIN_SIZE-2],brain.lastOutputs[BRAIN_SIZE-1]];
-  const alive=env.update(motor);
-  if(!alive) resetEnv();
-  simTick++;
 
   // Draw world
   const W=canvas.width, H=canvas.height;
@@ -402,6 +554,8 @@ function frame(ts){
   const hbar=document.getElementById('hbar');
   hbar.style.width=(pct*100)+'%';
   hbar.style.background=pct>.5?'#00ff88':pct>.25?'#ffb300':'#ff3366';
+
+  drawNeuronPlot(); // NEW: Always draw plot, even when paused, to show current state
 }
 
 loadBrain().then(()=>requestAnimationFrame(frame));
