@@ -330,8 +330,10 @@ let brain=null, env=null, meta=null;
 let simTick=0, lastFrameTime=performance.now(), fps=0, frameCount=0, fpsTimer=0;
 
 // NEW: Global variables for Neuron Inspector
-let paused = false;
-let selectedNeuronIndex = 0; // Default to neuron 0
+const simulationState = {
+  paused: false,
+  selectedNeuronIndex: 0, // Default to neuron 0
+};
 
 async function loadBrain(){
   document.getElementById('statusBadge').textContent='Loading…';
