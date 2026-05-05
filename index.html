@@ -127,8 +127,8 @@ class CTRNN {
     this.tauArr        = data.time_constants;
     this.compressW     = data.compress_weights;  // [MEMORY_SIZE][19]
     this.attnW         = data.attention_weights; // [size][ATTN_WIN]
-    this.voltages      = new Float64Array(this.size);
-    this.adaptation    = new Float64Array(this.size);
+    this.voltages      = data.voltages ? new Float64Array(data.voltages) : new Float64Array(this.size);
+    this.adaptation    = data.adaptation ? new Float64Array(data.adaptation) : new Float64Array(this.size);
     this.ltmTrace      = new Float64Array(data.ltm_trace);
     this.compMem       = new Float64Array(data.compressed_memory);
     this.lastOutputs   = new Float64Array(this.size).fill(0.5);
