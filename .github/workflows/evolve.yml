@@ -1,17 +1,20 @@
-name: 🧠 Evolve Brain
+name: 🧠 Evolve Brain (Continuous)
 
 on:
   schedule:
-    - cron: '0 */7 * * *'   # Every 7 hours
-  workflow_dispatch:          # Manual trigger from GitHub Actions UI
+    # Runs every 80 minutes (approx 1.3 hours) to ensure it stays alive 
+    # if the manual trigger fails.
+    - cron: '*/80 * * * *'
+  workflow_dispatch:          # Manual trigger
 
 permissions:
-  contents: write             # Needed to commit brain files back to repo
+  contents: write             # To push brain files
+  actions: write              # To trigger the "reboot"
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    timeout-minutes: 415      # Hard cap ~6h 55m (Action limit safety buffer)
+    timeout-minutes: 80       # Safety cap slightly longer than the training run
 
     steps:
       - name: Checkout repo
@@ -27,21 +30,38 @@ jobs:
       - name: Install dependencies
         run: pip install numpy --quiet
 
-      - name: Run headless evolution (6.5 hours)
-        run: python train_headless.py --minutes 390
+      - name: Run headless evolution (1 hour)
+        # We run for exactly 60 minutes as requested
+        run: python train_headless.py --minutes 60
 
-      - name: Commit updated brain files
+      - name: Commit and Push updated brain
+        id: commit_step
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add evolved_core_brain.pkl brain.json
-          # Only commit if something actually changed
+          
           if git diff --staged --quiet; then
             echo "No changes to commit."
+            echo "changed=false" >> $GITHUB_OUTPUT
           else
             GEN=$(python -c "import json; d=json.load(open('brain.json')); print(d['meta']['generation'])")
             SCORE=$(python -c "import json; d=json.load(open('brain.json')); print(d['meta']['score'])")
-            FOOD=$(python -c "import json; d=json.load(open('brain.json')); print(d['meta']['food'])")
-            git commit -m "🧠 gen=${GEN} score=${SCORE} food=${FOOD} [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git commit -m "🧠 gen=${GEN} score=${SCORE} [$(date -u '+%Y-%m-%d %H:%M UTC')]"
             git push
+            echo "changed=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Reboot Action (Chain Trigger)
+        # This triggers a new run immediately after this one finishes.
+        # This creates the "constant updating" loop you asked for.
+        if: always()
+        run: |
+          echo "Waiting 12 minutes to hit the 1.2 hour cycle..."
+          sleep 720 
+          echo "Rebooting..."
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/evolve.yml/dispatches \
+            -d '{"ref":"main"}'
