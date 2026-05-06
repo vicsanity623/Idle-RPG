@@ -2,19 +2,23 @@ name: 🧠 Evolve Brain (Continuous)
 
 on:
   schedule:
-    # Runs every 80 minutes (approx 1.3 hours) to ensure it stays alive 
-    # if the manual trigger fails.
     - cron: '*/80 * * * *'
   workflow_dispatch:          # Manual trigger
 
+# 👇 THIS IS THE FIX 👇
+concurrency:
+  group: evolve-brain-loop
+  cancel-in-progress: false   # Prevents a new run from starting until the current one finishes
+# 👆 THIS IS THE FIX 👆
+
 permissions:
-  contents: write             # To push brain files
-  actions: write              # To trigger the "reboot"
+  contents: write             
+  actions: write              
 
 jobs:
   evolve:
     runs-on: ubuntu-latest
-    timeout-minutes: 80       # Safety cap slightly longer than the training run
+    timeout-minutes: 80       
 
     steps:
       - name: Checkout repo
@@ -31,8 +35,7 @@ jobs:
         run: pip install numpy --quiet
 
       - name: Run headless evolution (1 hour)
-        # We run for exactly 60 minutes as requested
-        run: python train_headless.py --minutes 60
+        run: python train_headless.py --minutes 59
 
       - name: Commit and Push updated brain
         id: commit_step
@@ -53,11 +56,9 @@ jobs:
           fi
 
       - name: Reboot Action (Chain Trigger)
-        # This triggers a new run immediately after this one finishes.
-        # This creates the "constant updating" loop you asked for.
         if: always()
         run: |
-          echo "Waiting 12 minutes to hit the 1.2 hour cycle..."
+          echo "Waiting 12 minutes to hit the cycle..."
           sleep 720 
           echo "Rebooting..."
           curl -X POST \
