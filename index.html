@@ -443,6 +443,7 @@ function drawNeuronPlot() {
 }
 
 // NEW: Event Listeners for Neuron Inspector
+let paused = false; // Declare paused as a global variable
 neuronSelect.addEventListener('change', (e) => {
   selectedNeuronIndex = parseInt(e.target.value);
   drawNeuronPlot(); // Redraw immediately on selection change
