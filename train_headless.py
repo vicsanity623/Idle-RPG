@@ -93,31 +93,36 @@ class ImprovedCTRNN:
             outputs = 1.0 / (1.0 + np.exp(-attended))
         return outputs
 
-    def forward_plan(self, env_copy_func, steps=PLANNING_HORIZON):
-        plans = []
-        current_state = self.voltages.copy()
-        original_mode = self.thinking_mode
-        self.thinking_mode = 0
-        for action_variation in np.linspace(-0.5, 0.5, 3):
-            sim_voltages = current_state.copy()
-            total_reward = 0
-            for step in range(steps):
-                self.voltages = sim_voltages
-                outputs = self.get_outputs()
-                _ = (
-                    outputs[-2:] + action_variation
-                )  # F841: Assign to _ to indicate intentional unused
-                total_reward += np.random.randn() * 0.1
-                sim_derivative = (-sim_voltages + self.biases) / self.time_constants
-                sim_voltages = sim_voltages + sim_derivative * 0.1
-                # Removed self.voltages = current_state to fix incorrect state reset during simulation.
-                # Note: The actual brain's self.voltages and self.adaptation are not restored to their
-                # original state at the end of forward_plan, which is a remaining architectural issue
-                # for future iterations, as it modifies the brain's state during planning.
-            plans.append((action_variation, total_reward))
-        self.thinking_mode = original_mode
-        best_action = max(plans, key=lambda x: x[1])[0]
-        return best_action
+
+def forward_plan(self, env_copy_func, steps=PLANNING_HORIZON):
+    plans = []
+    current_state = self.voltages.copy()
+    current_adaptation = self.adaptation.copy()
+    original_mode = self.thinking_mode
+    self.thinking_mode = 0
+    for action_variation in np.linspace(-0.5, 0.5, 3):
+        sim_voltages = current_state.copy()
+        sim_adaptation = current_adaptation.copy()
+        total_reward = 0
+        for step in range(steps):
+            self.voltages = sim_voltages
+            self.adaptation = sim_adaptation
+            outputs = self.get_outputs()
+            _ = (
+                outputs[-2:] + action_variation
+            )  # F841: Assign to _ to indicate intentional unused
+            total_reward += np.random.randn() * 0.1
+            sim_derivative = (-sim_voltages + self.biases) / self.time_constants
+            sim_voltages = sim_voltages + sim_derivative * 0.1
+            sim_adaptation = (
+                sim_adaptation + (outputs * 0.1 - sim_adaptation * 0.05) * 0.1
+            )
+        plans.append((action_variation, total_reward))
+    self.thinking_mode = original_mode
+    self.voltages = current_state
+    self.adaptation = current_adaptation
+    best_action = max(plans, key=lambda x: x[1])[0]
+    return best_action
 
     def tick(
         self,
