@@ -121,11 +121,12 @@ class ImprovedCTRNN:
         else:
             network_input = np.dot(self.weights, outputs) + self.biases
         total_input = network_input.copy()
+        sensor_gain = 50.0 
         inject_size = min(self.size, len(compressed))
-        total_input[:inject_size] += compressed[:inject_size]
+        total_input[:inject_size] += compressed[:inject_size] * sensor_gain
         if sensors is not None:
             sensor_inject_size = min(self.size, len(sensors))
-            total_input[:sensor_inject_size] += sensors[:sensor_inject_size]
+            total_input[:sensor_inject_size] += sensors[:sensor_inject_size] * sensor_gain
         derivative = (-self.voltages + total_input) / self.time_constants
         self.voltages = np.clip(self.voltages + derivative * dt, -100, 100)
         self.adaptation += (outputs * 0.1 - self.adaptation * 0.05) * dt
@@ -264,8 +265,8 @@ def deepseek_style_mutate(brain):
     nb = ImprovedCTRNN(brain.size)
     mask = np.random.rand(*brain.weights.shape) < 0.2
     nb.weights = np.clip(
-        brain.weights + np.random.normal(0, 0.3, brain.weights.shape) * mask,
-        -10, 10
+        brain.weights * 0.99 + np.random.normal(0, 0.15, brain.weights.shape) * mask,
+        -5, 5
     )
     if np.random.rand() < 0.1:
         nb.compress_weights = np.clip(
@@ -380,14 +381,14 @@ def main():
         for i in range(NUM_AGENTS):
             alive, _ = envs[i].update(brains[i]._last_outputs[-2:], brain=brains[i])
             if not alive:
-                score = envs[i].ticks + (envs[i].food_count * 3000) - (envs[i].wall_contact_count * 20)
-                if score > (k_score * 1.005):
+                score = envs[i].ticks + (envs[i].food_count * 5000) - (envs[i].wall_contact_count * 50)
+                
+                # REMOVE the 1.005 multiplier. Any improvement is good.
+                if score > k_score:
                     k_score, k_gen, k_food = score, k_gen + 1, envs[i].food_count
                     k_max_health = min(500, k_max_health + 3)
                     brains[0] = brains[i]
                     cycles_this_run += 1
-                else:
-                    k_score = max(0, k_score * 0.99999)
                 brains[i] = deepseek_style_mutate(brains[0])
                 envs[i]   = Environment(k_gen, k_max_health)
 
