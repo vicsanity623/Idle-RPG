@@ -6,11 +6,10 @@ Runs at max CPU speed for --minutes duration, then saves:
   - brain.json              (read by index.html GitHub Pages viewer)
 """
 
-import numpy as np
+import numpy as np  # type: ignore
 import pickle
 import os
 import time
-import random
 import json
 import argparse
 
@@ -18,10 +17,10 @@ import argparse
 # 1. THE BRAIN (CTRNN) - With Stability Governors
 # ==========================================
 BRAIN_SIZE = 100
-MEMORY_SIZE = 32        # Compressed memory vector (token-wise compression)
-ATTENTION_WINDOW = 16   # Reduced from 50 → 16 for 3x attention speedup
-PLANNING_HORIZON = 5    # Steps to simulate ahead
-BRAIN_TICK_EVERY = 3    # Brains only re-think every N physics steps
+MEMORY_SIZE = 32  # Compressed memory vector (token-wise compression)
+ATTENTION_WINDOW = 16  # Reduced from 50 → 16 for 3x attention speedup
+PLANNING_HORIZON = 5  # Steps to simulate ahead
+BRAIN_TICK_EVERY = 3  # Brains only re-think every N physics steps
 MAX_PLANNERS_PER_TICK = 5  # Cap simultaneous forward-planners
 
 _plan_budget = [MAX_PLANNERS_PER_TICK]
@@ -70,7 +69,9 @@ class ImprovedCTRNN:
             return current_voltages
         history = self.voltage_history[-ATTENTION_WINDOW:]
         if len(history) < ATTENTION_WINDOW:
-            history = [np.zeros(self.size)] * (ATTENTION_WINDOW - len(history)) + history
+            history = [np.zeros(self.size)] * (
+                ATTENTION_WINDOW - len(history)
+            ) + history
         history_matrix = np.array(history).T
         scores = self.attention_weights * history_matrix
         scores = np.clip(scores, -10, 10)
@@ -92,28 +93,45 @@ class ImprovedCTRNN:
             outputs = 1.0 / (1.0 + np.exp(-attended))
         return outputs
 
-    def forward_plan(self, env_copy_func, steps=PLANNING_HORIZON):
-        plans = []
-        current_state = self.voltages.copy()
-        original_mode = self.thinking_mode
-        self.thinking_mode = 0
-        for action_variation in np.linspace(-0.5, 0.5, 3):
-            sim_voltages = current_state.copy()
-            total_reward = 0
-            for step in range(steps):
-                self.voltages = sim_voltages
-                outputs = self.get_outputs()
-                motor = outputs[-2:] + action_variation
-                total_reward += np.random.randn() * 0.1
-                sim_derivative = (-sim_voltages + self.biases) / self.time_constants
-                sim_voltages = sim_voltages + sim_derivative * 0.1
-                self.voltages = current_state
-            plans.append((action_variation, total_reward))
-        self.thinking_mode = original_mode
-        best_action = max(plans, key=lambda x: x[1])[0]
-        return best_action
 
-    def tick(self, dt, sensors, uncertainty=None, use_planning=False, precomputed_net_input=None):
+def forward_plan(self, env_copy_func, steps=PLANNING_HORIZON):
+    plans = []
+    current_state = self.voltages.copy()
+    current_adaptation = self.adaptation.copy()
+    original_mode = self.thinking_mode
+    self.thinking_mode = 0
+    for action_variation in np.linspace(-0.5, 0.5, 3):
+        sim_voltages = current_state.copy()
+        sim_adaptation = current_adaptation.copy()
+        total_reward = 0
+        for step in range(steps):
+            self.voltages = sim_voltages
+            self.adaptation = sim_adaptation
+            outputs = self.get_outputs()
+            _ = (
+                outputs[-2:] + action_variation
+            )  # F841: Assign to _ to indicate intentional unused
+            total_reward += np.random.randn() * 0.1
+            sim_derivative = (-sim_voltages + self.biases) / self.time_constants
+            sim_voltages = sim_voltages + sim_derivative * 0.1
+            sim_adaptation = (
+                sim_adaptation + (outputs * 0.1 - sim_adaptation * 0.05) * 0.1
+            )
+        plans.append((action_variation, total_reward))
+    self.thinking_mode = original_mode
+    self.voltages = current_state
+    self.adaptation = current_adaptation
+    best_action = max(plans, key=lambda x: x[1])[0]
+    return best_action
+
+    def tick(
+        self,
+        dt,
+        sensors,
+        uncertainty=None,
+        use_planning=False,
+        precomputed_net_input=None,
+    ):
         compressed = self.compress_sensors(sensors)
         outputs = self.get_outputs(uncertainty)
         if precomputed_net_input is not None:
@@ -129,7 +147,9 @@ class ImprovedCTRNN:
         derivative = (-self.voltages + total_input) / self.time_constants
         self.voltages = np.clip(self.voltages + derivative * dt, -100, 100)
         self.adaptation += (outputs * 0.1 - self.adaptation * 0.05) * dt
-        self.ltm_trace = self.ltm_trace * self.ltm_decay + outputs * (1 - self.ltm_decay)
+        self.ltm_trace = self.ltm_trace * self.ltm_decay + outputs * (
+            1 - self.ltm_decay
+        )
         self.voltage_history.append(self.voltages.copy())
         if len(self.voltage_history) > ATTENTION_WINDOW * 2:
             self.voltage_history = self.voltage_history[-ATTENTION_WINDOW:]
@@ -150,18 +170,28 @@ class Environment:
         self.max_health = max_health
         self.agent_pos = np.array([25.0, 25.0])
         self.num_food = 10
-        self.food_positions = [np.random.uniform(7.5, 42.5, 2) for _ in range(self.num_food)]
-        self.food_vels = [np.random.uniform(-0.2, 0.2, 2) if self.gen > 200 else np.zeros(2) for _ in range(self.num_food)]
+        self.food_positions = [
+            np.random.uniform(7.5, 42.5, 2) for _ in range(self.num_food)
+        ]
+        self.food_vels = [
+            np.random.uniform(-0.2, 0.2, 2) if self.gen > 200 else np.zeros(2)
+            for _ in range(self.num_food)
+        ]
         self.num_poison = 3
-        self.poison_positions = [np.random.uniform(7.5, 42.5, 2) for _ in range(self.num_poison)]
-        self.poison_vels = [np.random.uniform(-0.15, 0.15, 2) if self.gen > 200 else np.zeros(2) for _ in range(self.num_poison)]
+        self.poison_positions = [
+            np.random.uniform(7.5, 42.5, 2) for _ in range(self.num_poison)
+        ]
+        self.poison_vels = [
+            np.random.uniform(-0.15, 0.15, 2) if self.gen > 200 else np.zeros(2)
+            for _ in range(self.num_poison)
+        ]
         self.enemy_pos = np.array([2.5, 2.5])
         self.health = float(max_health)
         self.food_count = 0
         self.ticks = 0
         self.wall_contact_count = 0
         self.food_visible = True
-        self.predator_active = (self.gen >= 500)
+        self.predator_active = self.gen >= 500
         self.last_food_time = 0
 
     def get_sensors(self):
@@ -169,16 +199,22 @@ class Environment:
 
         def norm_vec_dist(target):
             dx, dy = target[0] - self.agent_pos[0], target[1] - self.agent_pos[1]
-            dist = np.sqrt(dx*dx + dy*dy) + 0.001
+            dist = np.sqrt(dx * dx + dy * dy) + 0.001
             return [dx / dist, dy / dist], dist
 
         if self.food_visible:
-            dists_sq = [(f[0]-self.agent_pos[0])**2 + (f[1]-self.agent_pos[1])**2 for f in self.food_positions]
+            dists_sq = [
+                (f[0] - self.agent_pos[0]) ** 2 + (f[1] - self.agent_pos[1]) ** 2
+                for f in self.food_positions
+            ]
             food_s, food_dist = norm_vec_dist(self.food_positions[np.argmin(dists_sq)])
         else:
             food_s, food_dist = [0.0, 0.0], 50.0
 
-        p_dists_sq = [(p[0]-self.agent_pos[0])**2 + (p[1]-self.agent_pos[1])**2 for p in self.poison_positions]
+        p_dists_sq = [
+            (p[0] - self.agent_pos[0]) ** 2 + (p[1] - self.agent_pos[1]) ** 2
+            for p in self.poison_positions
+        ]
         pois_s, pois_dist = norm_vec_dist(self.poison_positions[np.argmin(p_dists_sq)])
         center_s, center_dist = norm_vec_dist([25.0, 25.0])
 
@@ -186,13 +222,21 @@ class Environment:
         p_prox = max(0.0, 1.0 - (pois_dist / 50.0))
         c_prox = max(0.0, 1.0 - (center_dist / 50.0))
 
-        w_l = (10.0 - self.agent_pos[0])/10.0 if self.agent_pos[0] < 10 else 0
-        w_r = (self.agent_pos[0] - 40.0)/10.0 if self.agent_pos[0] > 40 else 0
-        w_t = (10.0 - self.agent_pos[1])/10.0 if self.agent_pos[1] < 10 else 0
-        w_b = (self.agent_pos[1] - 40.0)/10.0 if self.agent_pos[1] > 40 else 0
+        w_l = (10.0 - self.agent_pos[0]) / 10.0 if self.agent_pos[0] < 10 else 0
+        w_r = (self.agent_pos[0] - 40.0) / 10.0 if self.agent_pos[0] > 40 else 0
+        w_t = (10.0 - self.agent_pos[1]) / 10.0 if self.agent_pos[1] < 10 else 0
+        w_b = (self.agent_pos[1] - 40.0) / 10.0 if self.agent_pos[1] > 40 else 0
 
-        pain = 1.0 if (self.agent_pos[0]<=0.5 or self.agent_pos[0]>=49.5 or
-                       self.agent_pos[1]<=0.5 or self.agent_pos[1]>=49.5) else 0.0
+        pain = (
+            1.0
+            if (
+                self.agent_pos[0] <= 0.5
+                or self.agent_pos[0] >= 49.5
+                or self.agent_pos[1] <= 0.5
+                or self.agent_pos[1] >= 49.5
+            )
+            else 0.0
+        )
         hunger = (100.0 - self.health) / 100.0
         osc = np.sin(self.ticks * 0.2)
 
@@ -202,18 +246,37 @@ class Environment:
         else:
             enem_s, e_prox = [0.0, 0.0], 0.0
 
-        return np.array([
-            food_s[0], food_s[1], pois_s[0], pois_s[1],
-            w_l, w_r, w_t, w_b,
-            hunger, osc, enem_s[0], enem_s[1], pain,
-            f_prox, p_prox, center_s[0], center_s[1], c_prox, e_prox
-        ])
+        return np.array(
+            [
+                food_s[0],
+                food_s[1],
+                pois_s[0],
+                pois_s[1],
+                w_l,
+                w_r,
+                w_t,
+                w_b,
+                hunger,
+                osc,
+                enem_s[0],
+                enem_s[1],
+                pain,
+                f_prox,
+                p_prox,
+                center_s[0],
+                center_s[1],
+                c_prox,
+                e_prox,
+            ]
+        )
 
     def update(self, motor_output, brain=None):
         self.ticks += 1
-        dx, dy = (motor_output[0]-0.5)*1.4, (motor_output[1]-0.5)*1.4
+        dx, dy = (motor_output[0] - 0.5) * 1.4, (motor_output[1] - 0.5) * 1.4
         new_pos = self.agent_pos + [dx, dy]
-        hit_wall = (new_pos[0]<=0 or new_pos[0]>=50 or new_pos[1]<=0 or new_pos[1]>=50)
+        hit_wall = (
+            new_pos[0] <= 0 or new_pos[0] >= 50 or new_pos[1] <= 0 or new_pos[1] >= 50
+        )
         if hit_wall:
             self.wall_contact_count += 1
             new_pos[0] = np.clip(new_pos[0], 2.0, 48.0)
@@ -223,12 +286,14 @@ class Environment:
             self.agent_pos = np.array([25.0, 25.0])
         if self.predator_active:
             dir_e = self.agent_pos - self.enemy_pos
-            dist = np.sqrt(dir_e[0]**2 + dir_e[1]**2) + 0.01
+            dist = np.sqrt(dir_e[0] ** 2 + dir_e[1] ** 2) + 0.01
             self.enemy_pos += (dir_e / dist) * 0.325
-        self.health -= (1.5 if hit_wall else 0.008)
+        self.health -= 1.5 if hit_wall else 0.008
         ate_food = False
         for i in range(self.num_food):
-            dist_sq = (self.agent_pos[0]-self.food_positions[i][0])**2 + (self.agent_pos[1]-self.food_positions[i][1])**2
+            dist_sq = (self.agent_pos[0] - self.food_positions[i][0]) ** 2 + (
+                self.agent_pos[1] - self.food_positions[i][1]
+            ) ** 2
             if dist_sq < 6.25:
                 self.health = min(100, self.health + 45)
                 self.food_count += 1
@@ -237,23 +302,33 @@ class Environment:
                 ate_food = True
         for i in range(self.num_poison):
             self.poison_positions[i] += self.poison_vels[i]
-            if self.poison_positions[i][0]<0 or self.poison_positions[i][0]>50: self.poison_vels[i][0]*=-1
-            if self.poison_positions[i][1]<0 or self.poison_positions[i][1]>50: self.poison_vels[i][1]*=-1
-            dist_sq = (self.agent_pos[0]-self.poison_positions[i][0])**2 + (self.agent_pos[1]-self.poison_positions[i][1])**2
+            if self.poison_positions[i][0] < 0 or self.poison_positions[i][0] > 50:
+                self.poison_vels[i][0] *= -1
+            if self.poison_positions[i][1] < 0 or self.poison_positions[i][1] > 50:
+                self.poison_vels[i][1] *= -1
+            dist_sq = (self.agent_pos[0] - self.poison_positions[i][0]) ** 2 + (
+                self.agent_pos[1] - self.poison_positions[i][1]
+            ) ** 2
             if dist_sq < 4.0:
                 self.health -= 70
                 self.poison_positions[i] = np.random.uniform(7.5, 42.5, 2)
-        pred_dist_sq = (self.agent_pos[0]-self.enemy_pos[0])**2 + (self.agent_pos[1]-self.enemy_pos[1])**2
-        killed = (self.health <= 0 or (self.predator_active and pred_dist_sq < 4.0))
+        pred_dist_sq = (self.agent_pos[0] - self.enemy_pos[0]) ** 2 + (
+            self.agent_pos[1] - self.enemy_pos[1]
+        ) ** 2
+        killed = self.health <= 0 or (self.predator_active and pred_dist_sq < 4.0)
         if brain is not None:
             if self.ticks % BRAIN_TICK_EVERY == 0:
                 uncertainty = 0.0
                 uncertainty += max(0, (100 - self.health) / 100) * 0.4
                 uncertainty += min(1.0, self.wall_contact_count / 50) * 0.3
                 uncertainty += 0.3 if (self.ticks - self.last_food_time) > 200 else 0.0
-                brain.tick(0.1, self.get_sensors(), uncertainty,
-                           use_planning=(uncertainty > 0.6),
-                           precomputed_net_input=getattr(brain, '_batched_net_in', None))
+                brain.tick(
+                    0.1,
+                    self.get_sensors(),
+                    uncertainty,
+                    use_planning=(uncertainty > 0.6),
+                    precomputed_net_input=getattr(brain, "_batched_net_in", None),
+                )
         return not killed, ate_food
 
 
@@ -264,22 +339,31 @@ def deepseek_style_mutate(brain):
     nb = ImprovedCTRNN(brain.size)
     mask = np.random.rand(*brain.weights.shape) < 0.2
     nb.weights = np.clip(
-        brain.weights + np.random.normal(0, 0.3, brain.weights.shape) * mask,
-        -10, 10
+        brain.weights + np.random.normal(0, 0.3, brain.weights.shape) * mask, -10, 10
     )
     if np.random.rand() < 0.1:
         nb.compress_weights = np.clip(
-            brain.compress_weights + np.random.normal(0, 0.1, brain.compress_weights.shape),
-            -1, 1
+            brain.compress_weights
+            + np.random.normal(0, 0.1, brain.compress_weights.shape),
+            -1,
+            1,
         )
-    if np.random.rand() < 0.15 and brain.attention_weights.shape == nb.attention_weights.shape:
+    if (
+        np.random.rand() < 0.15
+        and brain.attention_weights.shape == nb.attention_weights.shape
+    ):
         nb.attention_weights = np.clip(
-            brain.attention_weights + np.random.normal(0, 0.2, brain.attention_weights.shape),
-            -1, 1
+            brain.attention_weights
+            + np.random.normal(0, 0.2, brain.attention_weights.shape),
+            -1,
+            1,
         )
     nb.biases = np.clip(
-        brain.biases + np.random.normal(0, 0.2, brain.biases.shape) * (np.random.rand(*brain.biases.shape) < 0.2),
-        -5, 5
+        brain.biases
+        + np.random.normal(0, 0.2, brain.biases.shape)
+        * (np.random.rand(*brain.biases.shape) < 0.2),
+        -5,
+        5,
     )
     nb.ltm_trace = brain.ltm_trace.copy()
     nb.compressed_memory = brain.compressed_memory.copy()
@@ -291,11 +375,20 @@ def deepseek_style_mutate(brain):
 # ==========================================
 SAVE_FILE = "evolved_core_brain.pkl"
 
+
 def save_and_export(brain, score, gen, food, max_health):
     # Save pickle (continuity for next run)
     with open(SAVE_FILE, "wb") as f:
-        pickle.dump({'brain': brain, 'score': score, 'generation': gen,
-                     'food': food, 'max_health': max_health}, f)
+        pickle.dump(
+            {
+                "brain": brain,
+                "score": score,
+                "generation": gen,
+                "food": food,
+                "max_health": max_health,
+            },
+            f,
+        )
     print(f"[+] Saved {SAVE_FILE}")
 
     # Export JSON for browser viewer
@@ -306,7 +399,7 @@ def save_and_export(brain, score, gen, food, max_health):
             "food": food,
             "max_health": max_health,
             "brain_size": brain.size,
-            "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            "exported_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         },
         "weights": brain.weights.tolist(),
         "biases": brain.biases.tolist(),
@@ -315,9 +408,11 @@ def save_and_export(brain, score, gen, food, max_health):
         "attention_weights": brain.attention_weights.tolist(),
         "ltm_trace": brain.ltm_trace.tolist(),
         "compressed_memory": brain.compressed_memory.tolist(),
+        "voltages": brain.voltages.tolist(),
+        "adaptation": brain.adaptation.tolist(),
     }
     with open("brain.json", "w") as f:
-        json.dump(data, f, separators=(',', ':'))  # compact — no extra whitespace
+        json.dump(data, f, separators=(",", ":"))  # compact â no extra whitespace
     print(f"[+] Exported brain.json  (gen={gen}, score={int(score)}, food={food})")
 
 
@@ -327,44 +422,68 @@ def save_and_export(brain, score, gen, food, max_health):
 COLS, ROWS = 10, 10
 NUM_AGENTS = COLS * ROWS
 
+
 def main():
     parser = argparse.ArgumentParser(description="Headless CTRNN evolution trainer")
-    parser.add_argument("--minutes", type=int, default=390,
-                        help="Wall-clock minutes to run (default: 390 = 6.5 h)")
+    parser.add_argument(
+        "--minutes",
+        type=int,
+        default=390,
+        help="Wall-clock minutes to run (default: 390 = 6.5 h)",
+    )
     args = parser.parse_args()
 
     deadline = time.time() + args.minutes * 60
-    next_log = time.time() + 60        # Log every 60 s
-    next_save = time.time() + 1800     # Save checkpoint every 30 min
+    next_log = time.time() + 60  # Log every 60 s
+    next_save = time.time() + 1800  # Save checkpoint every 30 min
 
     # Load existing brain (continuity) or start fresh
     if os.path.exists(SAVE_FILE):
         with open(SAVE_FILE, "rb") as f:
             data = pickle.load(f)
-        k_brain = data['brain']
-        k_score = data.get('score', 0)
-        k_gen   = data.get('generation', 1)
-        k_food  = data.get('food', 0)
-        k_max_health = data.get('max_health', 150)
+        k_brain = data["brain"]
+        k_score = data.get("score", 0)
+        k_gen = data.get("generation", 1)
+        k_food = data.get("food", 0)
+        k_max_health = data.get("max_health", 150)
 
-        wrong_size = getattr(k_brain, 'size', 0) != BRAIN_SIZE
-        wrong_attn = getattr(k_brain, 'attention_weights', np.zeros((1,1))).shape != (BRAIN_SIZE, ATTENTION_WINDOW)
+        wrong_size = getattr(k_brain, "size", 0) != BRAIN_SIZE
+        wrong_attn = getattr(k_brain, "attention_weights", np.zeros((1, 1))).shape != (
+            BRAIN_SIZE,
+            ATTENTION_WINDOW,
+        )
         if wrong_size or wrong_attn:
             print("[!] Brain architecture mismatch — starting fresh.")
-            k_brain, k_score, k_gen, k_food, k_max_health = ImprovedCTRNN(BRAIN_SIZE), 0, 1, 0, 150
+            k_brain, k_score, k_gen, k_food, k_max_health = (
+                ImprovedCTRNN(BRAIN_SIZE),
+                0,
+                1,
+                0,
+                150,
+            )
         else:
-            print(f"[+] Loaded brain: gen={k_gen}, score={int(k_score)}, food={k_food}, maxHP={k_max_health}")
+            print(
+                f"[+] Loaded brain: gen={k_gen}, score={int(k_score)}, food={k_food}, maxHP={k_max_health}"
+            )
     else:
         print("[+] No saved brain found — starting fresh evolution.")
-        k_brain, k_score, k_gen, k_food, k_max_health = ImprovedCTRNN(BRAIN_SIZE), 0, 1, 0, 150
+        k_brain, k_score, k_gen, k_food, k_max_health = (
+            ImprovedCTRNN(BRAIN_SIZE),
+            0,
+            1,
+            0,
+            150,
+        )
 
     brains = [k_brain] + [deepseek_style_mutate(k_brain) for _ in range(NUM_AGENTS - 1)]
-    envs   = [Environment(k_gen, k_max_health) for _ in range(NUM_AGENTS)]
+    envs = [Environment(k_gen, k_max_health) for _ in range(NUM_AGENTS)]
 
     steps_total = 0
     cycles_this_run = 0
 
-    print(f"[*] Running headless evolution for {args.minutes} min ({NUM_AGENTS} agents, max speed)...")
+    print(
+        f"[*] Running headless evolution for {args.minutes} min ({NUM_AGENTS} agents, max speed)..."
+    )
 
     while time.time() < deadline:
         # Reset planning budget each step
@@ -380,7 +499,11 @@ def main():
         for i in range(NUM_AGENTS):
             alive, _ = envs[i].update(brains[i]._last_outputs[-2:], brain=brains[i])
             if not alive:
-                score = envs[i].ticks + (envs[i].food_count * 3000) - (envs[i].wall_contact_count * 20)
+                score = (
+                    envs[i].ticks
+                    + (envs[i].food_count * 3000)
+                    - (envs[i].wall_contact_count * 20)
+                )
                 if score > (k_score * 1.005):
                     k_score, k_gen, k_food = score, k_gen + 1, envs[i].food_count
                     k_max_health = min(500, k_max_health + 3)
@@ -389,7 +512,7 @@ def main():
                 else:
                     k_score = max(0, k_score * 0.99999)
                 brains[i] = deepseek_style_mutate(brains[0])
-                envs[i]   = Environment(k_gen, k_max_health)
+                envs[i] = Environment(k_gen, k_max_health)
 
         steps_total += 1
 
@@ -398,9 +521,11 @@ def main():
         if now >= next_log:
             elapsed_min = (now - (deadline - args.minutes * 60)) / 60
             remaining_min = (deadline - now) / 60
-            print(f"[{elapsed_min:5.1f}m elapsed | {remaining_min:5.1f}m left] "
-                  f"Cycle={k_gen} Score={int(k_score)} Food={k_food} MaxHP={k_max_health} "
-                  f"Steps={steps_total:,} NewKings={cycles_this_run}")
+            print(
+                f"[{elapsed_min:5.1f}m elapsed | {remaining_min:5.1f}m left] "
+                f"Cycle={k_gen} Score={int(k_score)} Food={k_food} MaxHP={k_max_health} "
+                f"Steps={steps_total:,} NewKings={cycles_this_run}"
+            )
             next_log = now + 60
 
         # Mid-run checkpoint save (in case Action is cancelled)
@@ -410,7 +535,9 @@ def main():
             next_save = now + 1800
 
     # Final save
-    print(f"\n[+] Run complete. Total steps: {steps_total:,} | New kings this run: {cycles_this_run}")
+    print(
+        f"\n[+] Run complete. Total steps: {steps_total:,} | New kings this run: {cycles_this_run}"
+    )
     save_and_export(brains[0], k_score, k_gen, k_food, k_max_health)
 
 
