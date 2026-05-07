@@ -17,13 +17,11 @@ import argparse
 # ==========================================
 # 1. THE BRAIN (CTRNN) - With Stability Governors
 # ==========================================
-BRAIN_SIZE = 100
-MEMORY_SIZE = 32        # Compressed memory vector (token-wise compression)
-ATTENTION_WINDOW = 16   # Reduced from 50 → 16 for 3x attention speedup
-PLANNING_HORIZON = 5    # Steps to simulate ahead
-BRAIN_TICK_EVERY = 3    # Brains only re-think every N physics steps
-MAX_PLANNERS_PER_TICK = 5  # Cap simultaneous forward-planners
-
+BRAIN_SIZE = 256         # 2.5x more neurons, ~6x more synapses
+MEMORY_SIZE = 64        # Doubled memory capacity
+ATTENTION_WINDOW = 32   # Wider "memory lookback"
+PLANNING_HORIZON = 8    # Look further ahead
+BRAIN_TICK_EVERY = 2    # Think more often for faster reactions
 _plan_budget = [MAX_PLANNERS_PER_TICK]
 
 
@@ -138,8 +136,11 @@ class ImprovedCTRNN:
             _plan_budget[0] -= 1
             action_bias = self.forward_plan(None)
             outputs[-2:] += action_bias
-        self._last_outputs = outputs
-        return outputs
+        
+        # SMOOTHING: Prevents the large brain from being too "jittery"
+        # Blends 70% of previous movement with 30% of new movement
+        self._last_outputs = 0.7 * self._last_outputs + 0.3 * outputs
+        return self._last_outputs
 
 
 # ==========================================
@@ -266,30 +267,41 @@ class Environment:
 # ==========================================
 def deepseek_style_mutate(brain):
     nb = ImprovedCTRNN(brain.size)
-    # 1. Tighter weight range (-2 to 2) prevents neural saturation
-    mask = np.random.rand(*brain.weights.shape) < 0.2
+    
+    # SPARSE WEIGHT MUTATION: Only change 5% of synapses to keep complex logic intact
+    mask = np.random.rand(*brain.weights.shape) < 0.05
     nb.weights = np.clip(
-        brain.weights * 0.95 + np.random.normal(0, 0.1, brain.weights.shape) * mask,
-        -2.0, 2.0
+        brain.weights * 0.998 + np.random.normal(0, 0.1, brain.weights.shape) * mask,
+        -3.0, 3.0
     )
     
+    # MUTATE TIME CONSTANTS: Allows the "rhythm" of the brain to evolve
+    tc_mask = np.random.rand(brain.size) < 0.1
+    nb.time_constants = np.clip(
+        brain.time_constants + np.random.normal(0, 0.2, brain.size) * tc_mask,
+        1.0, 15.0
+    )
+
     if np.random.rand() < 0.1:
         nb.compress_weights = np.clip(
             brain.compress_weights + np.random.normal(0, 0.1, brain.compress_weights.shape),
             -1, 1
         )
     
-    if np.random.rand() < 0.15 and brain.attention_weights.shape == nb.attention_weights.shape:
+    # MUTATE ATTENTION: Evolve how the brain looks at its own past
+    if np.random.rand() < 0.15:
         nb.attention_weights = np.clip(
-            brain.attention_weights + np.random.normal(0, 0.1, brain.attention_weights.shape),
+            brain.attention_weights + np.random.normal(0, 0.05, brain.attention_weights.shape),
             -1, 1
         )
         
-    # 2. Tighter Bias range (-1 to 1). Biases of 5 are why it "shoots" in one direction.
+    # PRECISE BIAS MUTATION
+    bias_mask = np.random.rand(*brain.biases.shape) < 0.1
     nb.biases = np.clip(
-        brain.biases * 0.95 + np.random.normal(0, 0.1, brain.biases.shape) * (np.random.rand(*brain.biases.shape) < 0.2),
-        -1.0, 1.0
+        brain.biases * 0.99 + np.random.normal(0, 0.05, brain.biases.shape) * bias_mask,
+        -1.5, 1.5
     )
+    
     nb.ltm_trace = brain.ltm_trace.copy()
     nb.compressed_memory = brain.compressed_memory.copy()
     return nb
