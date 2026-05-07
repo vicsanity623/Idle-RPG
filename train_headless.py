@@ -23,7 +23,7 @@ ATTENTION_WINDOW = 32   # Wider "memory lookback"
 PLANNING_HORIZON = 8    # Look further ahead
 BRAIN_TICK_EVERY = 2    # Think more often for faster reactions
 _plan_budget = [MAX_PLANNERS_PER_TICK]
-
+MAX_PLANNERS_PER_TICK = 5
 
 class ImprovedCTRNN:
     def __init__(self, size=BRAIN_SIZE):
