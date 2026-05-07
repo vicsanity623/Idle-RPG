@@ -22,8 +22,8 @@ MEMORY_SIZE = 64        # Doubled memory capacity
 ATTENTION_WINDOW = 32   # Wider "memory lookback"
 PLANNING_HORIZON = 8    # Look further ahead
 BRAIN_TICK_EVERY = 2    # Think more often for faster reactions
-_plan_budget = [MAX_PLANNERS_PER_TICK]
 MAX_PLANNERS_PER_TICK = 5
+_plan_budget = [MAX_PLANNERS_PER_TICK]
 
 class ImprovedCTRNN:
     def __init__(self, size=BRAIN_SIZE):
@@ -137,10 +137,15 @@ class ImprovedCTRNN:
             action_bias = self.forward_plan(None)
             outputs[-2:] += action_bias
         
-        # SMOOTHING: Prevents the large brain from being too "jittery"
-        # Blends 70% of previous movement with 30% of new movement
-        self._last_outputs = 0.7 * self._last_outputs + 0.3 * outputs
-        return self._last_outputs
+        # Save the raw outputs for internal state
+        self._last_outputs = outputs
+        
+        # Only smooth the final movement (last 2 outputs) to keep 
+        # internal neural logic sharp while making movement fluid.
+        final_motor = 0.7 * getattr(self, '_prev_motor', np.array([0.5, 0.5])) + 0.3 * outputs[-2:]
+        self._prev_motor = final_motor
+        
+        return outputs
 
 
 # ==========================================
@@ -399,7 +404,8 @@ def main():
             brains[i]._batched_net_in = all_net_in[i]
 
         for i in range(NUM_AGENTS):
-            alive, _ = envs[i].update(brains[i]._last_outputs[-2:], brain=brains[i])
+            motor_to_use = getattr(brains[i], '_prev_motor', brains[i]._last_outputs[-2:])
+            alive, _ = envs[i].update(motor_to_use, brain=brains[i])
             if not alive:
                 score = (envs[i].ticks * 0.1) + (envs[i].food_count * 5000) - (envs[i].wall_contact_count * 100)
                 
