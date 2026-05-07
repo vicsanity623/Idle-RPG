@@ -214,12 +214,15 @@ class Environment:
         self.ticks += 1
         dx, dy = (motor_output[0]-0.5)*1.4, (motor_output[1]-0.5)*1.4
         new_pos = self.agent_pos + [dx, dy]
-        hit_wall = (new_pos[0]<=0 or new_pos[0]>=50 or new_pos[1]<=0 or new_pos[1]>=50)
+        hit_wall = (new_pos[0]<=0.5 or new_pos[0]>=49.5 or new_pos[1]<=0.5 or new_pos[1]>=49.5)
         if hit_wall:
             self.wall_contact_count += 1
-            new_pos[0] = np.clip(new_pos[0], 2.0, 48.0)
-            new_pos[1] = np.clip(new_pos[1], 2.0, 48.0)
-        self.agent_pos = np.clip(new_pos, 0, 50)
+            # KILL VELOCITY: If they hit a wall, they stop moving for that tick
+            dx, dy = 0, 0 
+            # BIGGER PENALTY: Wall hits now cost much more health
+            self.health -= 5.0 
+        
+        self.agent_pos = np.clip(self.agent_pos + [dx, dy], 0.1, 49.9)
         if np.isnan(self.agent_pos).any():
             self.agent_pos = np.array([25.0, 25.0])
         if self.predator_active:
@@ -263,24 +266,29 @@ class Environment:
 # ==========================================
 def deepseek_style_mutate(brain):
     nb = ImprovedCTRNN(brain.size)
+    # 1. Tighter weight range (-2 to 2) prevents neural saturation
     mask = np.random.rand(*brain.weights.shape) < 0.2
     nb.weights = np.clip(
-        brain.weights * 0.99 + np.random.normal(0, 0.15, brain.weights.shape) * mask,
-        -5, 5
+        brain.weights * 0.95 + np.random.normal(0, 0.1, brain.weights.shape) * mask,
+        -2.0, 2.0
     )
+    
     if np.random.rand() < 0.1:
         nb.compress_weights = np.clip(
             brain.compress_weights + np.random.normal(0, 0.1, brain.compress_weights.shape),
             -1, 1
         )
+    
     if np.random.rand() < 0.15 and brain.attention_weights.shape == nb.attention_weights.shape:
         nb.attention_weights = np.clip(
-            brain.attention_weights + np.random.normal(0, 0.2, brain.attention_weights.shape),
+            brain.attention_weights + np.random.normal(0, 0.1, brain.attention_weights.shape),
             -1, 1
         )
+        
+    # 2. Tighter Bias range (-1 to 1). Biases of 5 are why it "shoots" in one direction.
     nb.biases = np.clip(
-        brain.biases + np.random.normal(0, 0.2, brain.biases.shape) * (np.random.rand(*brain.biases.shape) < 0.2),
-        -5, 5
+        brain.biases * 0.95 + np.random.normal(0, 0.1, brain.biases.shape) * (np.random.rand(*brain.biases.shape) < 0.2),
+        -1.0, 1.0
     )
     nb.ltm_trace = brain.ltm_trace.copy()
     nb.compressed_memory = brain.compressed_memory.copy()
@@ -381,9 +389,12 @@ def main():
         for i in range(NUM_AGENTS):
             alive, _ = envs[i].update(brains[i]._last_outputs[-2:], brain=brains[i])
             if not alive:
-                score = envs[i].ticks + (envs[i].food_count * 5000) - (envs[i].wall_contact_count * 50)
+                score = (envs[i].ticks * 0.1) + (envs[i].food_count * 5000) - (envs[i].wall_contact_count * 100)
                 
-                # REMOVE the 1.005 multiplier. Any improvement is good.
+                # Check if this agent actually moved or just sat in a corner
+                if envs[i].food_count == 0 and envs[i].ticks > 200:
+                    score = 1 # Disqualify corner-campers who never found food
+                
                 if score > k_score:
                     k_score, k_gen, k_food = score, k_gen + 1, envs[i].food_count
                     k_max_health = min(500, k_max_health + 3)
