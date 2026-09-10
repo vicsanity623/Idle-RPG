@@ -36,7 +36,7 @@ const Grid = (() => {
   function promptBuyTile(tx, ty) {
     const state = Store.get();
     if (state.player && state.player.id && state.player.id.startsWith("guest-")) {
-      alert("YOU ARE A GUEST IN THIS REALM. Sign in with Google to buy plots.");
+      showGameNotice("YOU ARE A GUEST IN THIS REALM. Sign in with Google to buy plots.");
       onBuyAttempt(false, null);
       return;
     }
@@ -45,7 +45,7 @@ const Grid = (() => {
 
     if (allPlots[tid]) {
       if (allPlots[tid].ownerId === state.player.id) openPlotModal(tid, allPlots[tid]);
-      else alert(`This tile is already claimed by ${allPlots[tid].ownerName || "another player"}!`);
+      else showGameNotice(`This tile is already claimed by ${allPlots[tid].ownerName || "another player"}!`);
       return;
     }
 
@@ -104,7 +104,17 @@ const Grid = (() => {
     const state = Store.get();
     const plot = state.plots[selectedPlotId];
     if (!plot || plot.ownerId !== state.player.id) return;
-    if (!confirm("Relocate this plot? The tile will become unoccupied and the plot will return to your bag.")) return;
+    if (typeof showGameConfirm === "function") {
+      showGameConfirm("Relocate this plot? The tile will become unoccupied and the plot will return to your bag.", completeRelocation, "Relocate Plot");
+      return;
+    }
+    completeRelocation();
+  }
+
+  function completeRelocation() {
+    const state = Store.get();
+    const plot = state.plots[selectedPlotId];
+    if (!plot || plot.ownerId !== state.player.id) return;
 
     addPlotToBag(state, plot.rarity);
     delete state.plots[selectedPlotId];
@@ -197,7 +207,7 @@ const Grid = (() => {
 
     const state = Store.get();
     if (state.player.id && state.player.id.startsWith("guest-")) {
-      alert("YOU ARE A GUEST IN THIS REALM. Sign in with Google to buy plots.");
+      showGameNotice("YOU ARE A GUEST IN THIS REALM. Sign in with Google to buy plots.");
       onBuyAttempt(false, null);
       return;
     }
