@@ -296,15 +296,15 @@ const Citadels = (() => {
         geometry: { type: "Polygon", coordinates: [coords] }
       });
 
-      // 4. Mount upright billboard at the exact tile center.
-      // Viewport pitch keeps the HTML monument vertical; map rotation keeps it geographic.
+      // 4. Mount an upright, screen-facing monument at the exact tile center.
+      // MapLibre owns geographic position; the HTML billboard does not counter-rotate with the camera.
       const el = createDysonSphereMarker(cit);
       const marker = new mapboxgl.Marker({
         element: el,
         anchor: "bottom",
         offset: [0, 0],
         pitchAlignment: "viewport",
-        rotationAlignment: "map",
+        rotationAlignment: "viewport",
       })
         .setLngLat([trueLon, trueLat])
         .addTo(mapInstance);

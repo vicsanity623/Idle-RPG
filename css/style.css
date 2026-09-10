@@ -3107,7 +3107,7 @@ button[aria-label="Close ad"],
   pointer-events: auto !important;
   cursor: pointer !important;
   z-index: 100 !important;
-  transform-style: flat !important;
+  transform-style: preserve-3d !important;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   display: flex;
@@ -3950,6 +3950,7 @@ button[aria-label="Close ad"],
 .multiplier-btn.event-50x .mult-sub {
   color: #f0d38a !important;
 }
+.screen{
   display:flex; align-items:center; justify-content:center;
   background:
     radial-gradient(1200px 800px at 50% -10%, #1c2c42 0%, transparent 60%),
@@ -7006,7 +7007,7 @@ button[aria-label="Close ad"],
   pointer-events: auto !important;
   cursor: pointer !important;
   z-index: 100 !important;
-  transform-style: flat !important;
+  transform-style: preserve-3d !important;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   display: flex;
