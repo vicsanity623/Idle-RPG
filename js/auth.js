@@ -16,6 +16,13 @@ const Auth = (() => {
   function init(onSignedIn) {
     const guestBtn = document.getElementById("guest-btn");
     const slot = document.getElementById("g_id_signin_slot");
+    let completedUid = null;
+
+    function completeSignIn(player, uid) {
+      if (completedUid === uid) return;
+      completedUid = uid;
+      onSignedIn(player);
+    }
 
     // Ensure Firebase App is initialized via Store before calling auth()
     if (typeof Store !== "undefined" && Store.getDb) {
@@ -43,7 +50,7 @@ const Auth = (() => {
               }
 
               await Store.syncFromCloud(user.uid);
-              onSignedIn(s.player);
+              completeSignIn(s.player, user.uid);
             }
           }
         });
@@ -69,14 +76,14 @@ const Auth = (() => {
           s.player.id = cred.user.uid;
           if (!s.player.name) s.player.name = "Traveler";
           Store.save();
-          onSignedIn(s.player);
+            completeSignIn(s.player, cred.user.uid);
         }
       } catch (err) {
         console.warn("[Auth] Anonymous login notice, falling back to local:", err);
         const s = Store.get();
         if (!s.player.id) s.player.id = "guest-" + Math.random().toString(36).slice(2, 10);
         Store.save();
-        onSignedIn(s.player);
+        completeSignIn(s.player, s.player.id);
       }
     }
 
@@ -121,7 +128,7 @@ const Auth = (() => {
 
               await Store.syncFromCloud(fbUser.uid);
               Store.save(true);
-              onSignedIn(s.player);
+              completeSignIn(s.player, fbUser.uid);
             } catch (authErr) {
               console.error("[Auth] Firebase credential exchange failed:", authErr);
             }

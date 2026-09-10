@@ -30,6 +30,7 @@ const Store = (() => {
       totalDividends: 0,
       plots: {},
       plotBag: {},
+      calendar: { claimedDays: 0, lastClaimTime: 0, lastClaimDate: null },
       liveDiamonds: {},
       collectedDiamondIds: [],
       lastDiamondSpawn: 0,
@@ -163,8 +164,16 @@ const Store = (() => {
         const cloudData = doc.data();
         const currentName = state?.player?.name;
         const currentAvatar = state?.player?.avatar;
+        const localCalendar = state?.calendar || {};
+        const cloudCalendar = cloudData.calendar || {};
+        const mergedCalendar = {
+          claimedDays: Math.max(Number(localCalendar.claimedDays) || 0, Number(cloudCalendar.claimedDays) || 0),
+          lastClaimTime: Math.max(Number(localCalendar.lastClaimTime) || 0, Number(cloudCalendar.lastClaimTime) || 0),
+          lastClaimDate: localCalendar.lastClaimDate || cloudCalendar.lastClaimDate || null,
+        };
 
         state = Object.assign(defaultState(), cloudData);
+        state.calendar = mergedCalendar;
         if (cloudData.player) {
           state.player = Object.assign(defaultState().player, cloudData.player);
         }
@@ -205,6 +214,9 @@ const Store = (() => {
       if (tangledPlotsRemoved) {
         console.log(`[Audit] Removed overlapping/tangled plots from ${playerId}'s save.`);
       }
+
+      localStorage.setItem(KEY, JSON.stringify(state));
+      syncToCloud();
 
       console.log(`[Cloud] Restored account for ${playerId} with ${Object.keys(state.plots || {}).length} plots.`);
       return state;
