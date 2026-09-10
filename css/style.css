@@ -327,6 +327,10 @@ html,body{
   justify-content: center;
 }
 
+#game-confirm-modal {
+  z-index: 9999;
+}
+
 /* ---------- Modals ---------- */
 .modal{
   position:fixed; inset:0; z-index:30;
