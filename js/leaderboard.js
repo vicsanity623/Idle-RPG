@@ -8,8 +8,32 @@ const Leaderboard = (() => {
   let cachedData = null;
   let lastFetchTime = 0;
   const CACHE_TTL_MS = 60000;
-  
-  // Fast Rarity Rate Lookup Table (Zero find() search overhead)
+
+  function calculatePreciseLifetimeRent(playerId, playerDoc, allPlots) {
+    const now = Date.now();
+    const playerPlots = {};
+
+    for (const tid in allPlots) {
+      if (allPlots[tid].ownerId === playerId) playerPlots[tid] = allPlots[tid];
+    }
+    for (const tid in (playerDoc.plots || {})) {
+      const plot = playerDoc.plots[tid];
+      if (!plot.ownerId || plot.ownerId === playerId) playerPlots[tid] = plot;
+    }
+
+    let totalRent = 0;
+    for (const tid in playerPlots) {
+      const plot = playerPlots[tid];
+      const claimedTime = Number(plot.claimedAt || playerDoc.createdAt || now);
+      const ageSec = Math.max(0, (now - claimedTime) / 1000);
+      const rarityKey = plot.rarity?.key || plot.rarity || "common";
+      const rarity = CONFIG.PLOT_RARITIES.find(r => r.key === rarityKey);
+      totalRent += ageSec * (rarity ? rarity.rate : CONFIG.PLOT_RARITIES[0].rate);
+    }
+
+    return Math.max(totalRent, Number(playerDoc.lifetimeRent || playerDoc.cash || 0));
+  }
+
   async function fetchRankings(forceRefresh = false) {
     const now = Date.now();
     if (!forceRefresh && cachedData && (now - lastFetchTime < CACHE_TTL_MS)) {
@@ -200,27 +224,20 @@ const Leaderboard = (() => {
     if (db) {
       try {
         const snap = await db.collection("saves").limit(50).get();
-        const now = Date.now();
 
         snap.forEach(doc => {
           const d = doc.data();
           const target = playerArray.find(p => p.id === doc.id);
 
-          // Instant O(1) rate lookup (replaces 20,000 loop iterations)
-          const lastActive = d.lastTick || d.createdAt || now;
-          const offlineSec = Math.max(0, (now - lastActive) / 1000);
-          const rate = playerRateMap[doc.id] || CONFIG.PLOT_RARITIES[0].rate;
-          const offlineAccrued = offlineSec * rate;
-
-          let finalLifetime = (d.lifetimeRent !== undefined ? d.lifetimeRent : (d.cash || 0)) + offlineAccrued;
+          let finalLifetime = calculatePreciseLifetimeRent(doc.id, d, allPlots);
 
           // Unbreakable Floor for Cwood: Guarantees his balance only moves upward!
           if ((doc.data().player?.name || "").toLowerCase().includes("cwood")) {
-            finalLifetime = Math.max(finalLifetime, 0.854236 + offlineAccrued);
+            finalLifetime = Math.max(finalLifetime, 0.854236);
           }
 
           if (target) {
-            target.cash = (d.cash || 0) + offlineAccrued;
+            target.cash = d.cash || 0;
             target.lifetimeRent = finalLifetime;
             target.plots = d.plots || {};
           } else if (d.player) {
@@ -229,8 +246,9 @@ const Leaderboard = (() => {
               name: d.player.name || "Traveler",
               avatar: d.player.avatar || "🙂",
               plotsCount: Object.keys(d.plots || {}).length,
-              cash: (d.cash || 0) + offlineAccrued,
+              cash: d.cash || 0,
               lifetimeRent: finalLifetime,
+              plots: d.plots || {},
               cities: {}, states: {}, countries: {}
             });
           }
@@ -242,8 +260,8 @@ const Leaderboard = (() => {
 
     const me = playerArray.find(p => p.id === state.player?.id);
     if (me) {
-      me.cash = state.cash || 0;
-      me.lifetimeRent = state.lifetimeRent || state.cash || 0;
+      me.cash = Math.max(Number(me.cash) || 0, Number(state.cash) || 0);
+      me.lifetimeRent = Math.max(Number(me.lifetimeRent) || 0, Number(state.lifetimeRent || state.cash) || 0);
     }
 
     cachedData = { players: playerArray, mayorsMap, governorsMap, presidentsMap };
