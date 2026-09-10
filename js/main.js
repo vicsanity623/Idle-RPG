@@ -19,6 +19,7 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.add("hidden"), ms);
   }
+  window.showGameToast = showToast;
 
   function openModal(id) { el(id).classList.remove("hidden"); }
   function closeModal(id) { el(id).classList.add("hidden"); }

@@ -95,7 +95,7 @@ const Citadels = (() => {
 
     const cid = id();
     const rarity = state.capsule.rarity || "common";
-    const wasRelocated = state.capsule.relocated === true;
+    const wasRelocated = state.capsule.relocated === true || state.capsule.everPlanted === true;
     const now = Date.now();
     const growthFinish = now + (CONFIG.CITADEL_GROWTH_MS || 1800000);
     const ts = CONFIG.TILE_SIZE_METERS || 6.096;
@@ -131,6 +131,7 @@ const Citadels = (() => {
 
     state.capsule.planted = true;
     state.capsule.tileId = cid;
+    state.capsule.everPlanted = true;
     delete state.capsule.relocated;
     globalCitadels[cid] = citadelData;
     Store.save(true);
@@ -145,7 +146,9 @@ const Citadels = (() => {
     }
 
     render();
-    showToast(`🔮 Citadel planted on Tile [${tileX}, ${tileY}]! Stronghold parcel activated!`, 3500);
+    if (typeof window.showGameToast === "function") {
+      window.showGameToast(`🔮 Citadel planted on Tile [${tileX}, ${tileY}]! Stronghold parcel activated!`, 3500);
+    }
     return true;
   }
 
@@ -299,8 +302,8 @@ const Citadels = (() => {
         element: el,
         anchor: "bottom",
         offset: [0, 0],
-        pitchAlignment: "viewport",
-        rotationAlignment: "viewport",
+        pitchAlignment: "map",
+        rotationAlignment: "map",
       })
         .setLngLat([trueLon, trueLat])
         .addTo(mapInstance);
