@@ -41,13 +41,6 @@ const WeeklyPool = (() => {
     let globalRateSec = 0;
 
     // Fast Rarity Rate Lookup Table
-    const RATE_MAP = {
-      common: 0.0000000011,
-      rare: 0.0000000016,
-      epic: 0.0000000022,
-      legendary: 0.0000000044
-    };
-
     // Calculate global lifetime rent AND global velocity
     players.forEach(p => {
       totalGlobalRent += (Number(p.lifetimeRent || p.cash) || 0);
@@ -56,11 +49,12 @@ const WeeklyPool = (() => {
       if (p.plots) {
         for (const tid in p.plots) {
           const rKey = p.plots[tid].rarity?.key || p.plots[tid].rarity || "common";
-          globalRateSec += (RATE_MAP[rKey] || 0.0000000011);
+          const rarity = CONFIG.PLOT_RARITIES.find(r => r.key === rKey);
+          globalRateSec += (rarity ? rarity.rate : CONFIG.PLOT_RARITIES[0].rate);
         }
       } else if (p.plotsCount) {
         // Fallback if plots map isn't fully loaded: assume all common
-        globalRateSec += (p.plotsCount * 0.0000000011);
+        globalRateSec += (p.plotsCount * CONFIG.PLOT_RARITIES[0].rate);
       }
     });
 

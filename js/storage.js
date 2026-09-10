@@ -223,13 +223,6 @@ const Store = (() => {
   }
 
   // Fast Rarity Rate Lookup Table (Zero array find overhead)
-  const RATE_MAP = {
-    common: 0.0000000016,
-    rare: 0.0000000027,
-    epic: 0.0000000044,
-    legendary: 0.0000000088
-  };
-
   let cachedBaseRate = 0;
   let lastPlotsCount = -1;
 
@@ -246,7 +239,8 @@ const Store = (() => {
     for (const id in state.plots) {
       const p = state.plots[id];
       const rKey = p.rarity?.key || p.rarity || "common";
-      sum += (RATE_MAP[rKey] || (p.rate || 0.0000000011));
+      const rarity = CONFIG.PLOT_RARITIES.find(r => r.key === rKey);
+      sum += (rarity ? rarity.rate : (p.rate || CONFIG.PLOT_RARITIES[0].rate));
     }
     cachedBaseRate = sum;
   }

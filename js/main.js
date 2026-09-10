@@ -171,6 +171,11 @@
     if (el("count-rare")) el("count-rare").textContent = counts.rare;
     if (el("count-epic")) el("count-epic").textContent = counts.epic;
     if (el("count-legendary")) el("count-legendary").textContent = counts.legendary;
+
+    CONFIG.PLOT_RARITIES.forEach(rarity => {
+      if (el(`weight-${rarity.key}`)) el(`weight-${rarity.key}`).textContent = rarity.weight;
+      if (el(`rate-${rarity.key}`)) el(`rate-${rarity.key}`).textContent = rarity.rate;
+    });
   }
   
   async function updatePlayerInfoModal(targetPlayerData = null) {
@@ -226,7 +231,7 @@
               if (allPlots[id].ownerId === targetPlayerData.ownerId) {
                 const rKey = allPlots[id].rarity?.key || allPlots[id].rarity;
                 const confR = CONFIG.PLOT_RARITIES.find(r => r.key === rKey);
-                playerBaseRate += (confR ? confR.rate : 0.0000000011);
+                playerBaseRate += (confR ? confR.rate : CONFIG.PLOT_RARITIES[0].rate);
               }
             }
 

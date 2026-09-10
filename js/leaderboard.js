@@ -10,13 +10,6 @@ const Leaderboard = (() => {
   const CACHE_TTL_MS = 60000;
   
   // Fast Rarity Rate Lookup Table (Zero find() search overhead)
-  const RARITY_RATE_MAP = {
-    common: 0.0000000011,
-    rare: 0.0000000160,
-    epic: 0.0000000220,
-    legendary: 0.0000000440
-  };
-
   async function fetchRankings(forceRefresh = false) {
     const now = Date.now();
     if (!forceRefresh && cachedData && (now - lastFetchTime < CACHE_TTL_MS)) {
@@ -53,7 +46,8 @@ const Leaderboard = (() => {
       const oid = p.ownerId || "unknown";
 
       const rKey = p.rarity?.key || p.rarity || "common";
-      const pRate = RARITY_RATE_MAP[rKey] || 0.0000000011;
+      const rarity = CONFIG.PLOT_RARITIES.find(r => r.key === rKey);
+      const pRate = rarity ? rarity.rate : CONFIG.PLOT_RARITIES[0].rate;
       playerRateMap[oid] = (playerRateMap[oid] || 0) + pRate;
 
       if (!playerStats[oid]) {
@@ -215,7 +209,7 @@ const Leaderboard = (() => {
           // Instant O(1) rate lookup (replaces 20,000 loop iterations)
           const lastActive = d.lastTick || d.createdAt || now;
           const offlineSec = Math.max(0, (now - lastActive) / 1000);
-          const rate = playerRateMap[doc.id] || 0.0000000011;
+          const rate = playerRateMap[doc.id] || CONFIG.PLOT_RARITIES[0].rate;
           const offlineAccrued = offlineSec * rate;
 
           let finalLifetime = (d.lifetimeRent !== undefined ? d.lifetimeRent : (d.cash || 0)) + offlineAccrued;
