@@ -263,11 +263,15 @@ const Citadels = (() => {
         cit.ty = ty;
       }
 
-      // 2. Exact Mathematical Center of the 10x10ft tile
-      const center = Geo.fromMercator(
-        tx * tileSize + tileSize / 2,
-        ty * tileSize + tileSize / 2
-      );
+      // 2. Keep the persisted placement coordinate authoritative for the marker.
+      // Recomputing it from tile indices on every render can move legacy markers
+      // when their stored tile metadata and geographic coordinates differ.
+      const markerLat = Number(cit.lat);
+      const markerLon = Number(cit.lon);
+      const hasStoredCenter = Number.isFinite(markerLat) && Number.isFinite(markerLon);
+      const center = hasStoredCenter
+        ? { lat: markerLat, lon: markerLon }
+        : Geo.fromMercator(tx * tileSize + tileSize / 2, ty * tileSize + tileSize / 2);
       const trueLat = center.lat;
       const trueLon = center.lon;
 
@@ -296,7 +300,7 @@ const Citadels = (() => {
         geometry: { type: "Polygon", coordinates: [coords] }
       });
 
-      // 4. Mount an upright, screen-facing monument at the exact tile center.
+      // 4. Mount an upright, screen-facing monument at its persisted ground coordinate.
       // MapLibre owns geographic position; the HTML billboard does not counter-rotate with the camera.
       const el = createDysonSphereMarker(cit);
       const marker = new mapboxgl.Marker({
