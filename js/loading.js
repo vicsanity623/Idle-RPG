@@ -166,11 +166,8 @@ const Bootloader = (() => {
     Store.load();
 
     try {
-      // 2. Cloud Save (35%)
+      // 2. Cloud Save (35%) is restored by Auth before the boot pipeline starts.
       await step(120, 35, `Synchronizing cloud profile: ${player.name || "Traveler"}...`);
-      if (player.id && !player.id.startsWith("guest-")) {
-        await Store.syncFromCloud(player.id);
-      }
 
       // 3. Location (60%)
       await step(120, 60, "Acquiring high-accuracy GPS coordinates...");
