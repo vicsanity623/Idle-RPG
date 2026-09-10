@@ -7806,3 +7806,45 @@ button[aria-label="Close ad"],
 .multiplier-btn.event-50x .mult-sub {
   color: #f0d38a !important;
 }
+
+/* ---------- Treasury Global Rate Row ---------- */
+.pool-hero-stats-wrap {
+  background: var(--panel-2);
+  border: 1.5px solid rgba(212, 175, 97, 0.45);
+  border-radius: 14px;
+  margin: 12px 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.pool-hero-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.pool-global-rate {
+  background: rgba(13, 20, 32, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pool-global-rate .rate-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.pool-global-rate .rate-val {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--teal);
+  text-shadow: 0 0 10px rgba(79, 214, 196, 0.4);
+}

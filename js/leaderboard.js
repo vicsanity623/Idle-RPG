@@ -228,6 +228,7 @@ const Leaderboard = (() => {
           if (target) {
             target.cash = (d.cash || 0) + offlineAccrued;
             target.lifetimeRent = finalLifetime;
+            target.plots = d.plots || {};
           } else if (d.player) {
             playerArray.push({
               id: doc.id,

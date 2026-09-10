@@ -28,17 +28,42 @@ const WeeklyPool = (() => {
     return result.getTime();
   }
 
-  // Calculate Total Global Lifetime Rent Across All Players
+  // Calculate Total Global Lifetime Rent & Global $/Sec Across All Players
   async function calculateGlobalPool() {
     if (typeof Leaderboard === "undefined" || !Leaderboard.fetchRankings) {
-      return { totalGlobalRent: 1.0, weeklyPool: 0.01, sortedTop10: [] };
+      return { totalGlobalRent: 1.0, weeklyPool: 0.01, globalRateSec: 0, sortedTop10: [] };
     }
 
     const data = await Leaderboard.fetchRankings();
     const players = data?.players || [];
 
-    // Sum all players' lifetime rent
-    const totalGlobalRent = players.reduce((sum, p) => sum + (Number(p.lifetimeRent || p.cash) || 0), 0);
+    let totalGlobalRent = 0;
+    let globalRateSec = 0;
+
+    // Fast Rarity Rate Lookup Table
+    const RATE_MAP = {
+      common: 0.0000000011,
+      rare: 0.0000000016,
+      epic: 0.0000000022,
+      legendary: 0.0000000044
+    };
+
+    // Calculate global lifetime rent AND global velocity
+    players.forEach(p => {
+      totalGlobalRent += (Number(p.lifetimeRent || p.cash) || 0);
+      
+      // Calculate this player's base rate by their plot rarities
+      if (p.plots) {
+        for (const tid in p.plots) {
+          const rKey = p.plots[tid].rarity?.key || p.plots[tid].rarity || "common";
+          globalRateSec += (RATE_MAP[rKey] || 0.0000000011);
+        }
+      } else if (p.plotsCount) {
+        // Fallback if plots map isn't fully loaded: assume all common
+        globalRateSec += (p.plotsCount * 0.0000000011);
+      }
+    });
+
     const weeklyPool = totalGlobalRent * 0.01; // Exactly 1%
 
     // Top 10 sorted by plots + lifetimeRent
@@ -48,7 +73,7 @@ const WeeklyPool = (() => {
       return (Number(b.lifetimeRent || b.cash) || 0) - (Number(a.lifetimeRent || a.cash) || 0);
     }).slice(0, 10);
 
-    return { totalGlobalRent, weeklyPool, sortedTop10 };
+    return { totalGlobalRent, weeklyPool, globalRateSec, sortedTop10 };
   }
 
   // Check if today is Monday & user is in Top 10 for claim
@@ -183,9 +208,13 @@ const WeeklyPool = (() => {
     if (modal) modal.classList.remove("hidden");
 
     updateCountdownTicker();
-    const { totalGlobalRent, weeklyPool } = await calculateGlobalPool();
+    const { totalGlobalRent, weeklyPool, globalRateSec } = await calculateGlobalPool();
+    
     document.getElementById("modal-global-rent-val").textContent = `$${totalGlobalRent.toFixed(6)}`;
     document.getElementById("modal-weekly-pool-val").textContent = `$${weeklyPool.toFixed(6)}`;
+    
+    const rateEl = document.getElementById("modal-global-rate-val");
+    if (rateEl) rateEl.textContent = `+$${globalRateSec.toFixed(10)} / sec`;
   }
 
   function init() {
