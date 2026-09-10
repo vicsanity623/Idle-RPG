@@ -89,7 +89,7 @@
     <div class="hero-balance-card" id="hero-balance-card">
       <div class="hero-top-line">
         <div class="hero-brand-title">
-          <span class="hero-brand-gem">◆</span> ELDEN EARTH <span class="hero-version-tag">v2.0.09</span>
+          <span class="hero-brand-gem">◆</span> ELDEN EARTH <span class="hero-version-tag">v2.0.10</span>
         </div>
         <div id="boost-timer-badge" class="boost-timer-badge hidden">⚡ 30X BOOST <span id="boost-countdown">00:00:00</span></div>
       </div>
@@ -451,9 +451,42 @@
     </div>
     <div class="modal-actions">
       <button id="buy-cancel-btn" class="btn btn-secondary">Cancel</button>
+      <button id="plot-bag-btn" class="btn btn-primary" style="display:none;">Bag</button>
       <button id="plant-capsule-confirm-btn" class="btn btn-primary" style="display:none; background: linear-gradient(180deg, #a86ee0, #6c5ce7); color: #fff;">🔮 Plant Citadel (Free)</button>
       <button id="buy-confirm-btn" class="btn btn-primary">Claim Tile</button>
     </div>
+  </div>
+</div>
+
+<!-- ===================== PLOT RELOCATION MODAL ===================== -->
+<div id="plot-modal" class="modal hidden">
+  <div class="modal-card citadel-chamber-card">
+    <button class="close-btn" data-close="plot-modal">✕</button>
+    <div class="citadel-relocate-wrap" id="plot-relocate-wrap">
+      <button id="plot-relocate-btn" class="citadel-relocate-btn" type="button">Relocate</button>
+    </div>
+    <div class="citadel-chamber-header">
+      <span class="citadel-badge-pill" id="plot-modal-rarity">COMMON PLOT</span>
+      <h2 id="plot-modal-name">Owned Plot</h2>
+      <p class="modal-sub" id="plot-modal-coords">Coordinates: [0, 0]</p>
+    </div>
+    <div class="citadel-stats-box">
+      <div class="stat-row"><span>Mining Rate:</span><strong id="plot-modal-rate" class="teal-text">0 EB / sec</strong></div>
+      <div class="stat-row"><span>Location:</span><strong id="plot-modal-location" class="gold-text">Unknown</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PLOT BAG MODAL ===================== -->
+<div id="plot-bag-modal" class="modal hidden">
+  <div class="modal-card citadel-chamber-card">
+    <button class="close-btn" data-close="plot-bag-modal">✕</button>
+    <div class="citadel-chamber-header">
+      <span class="citadel-badge-pill">PLOT BAG</span>
+      <h2>Select a Plot</h2>
+      <p class="modal-sub">Choose a plot to relocate to this tile.</p>
+    </div>
+    <div class="modal-actions" id="plot-bag-items"></div>
   </div>
 </div>
 

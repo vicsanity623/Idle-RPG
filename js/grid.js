@@ -9,6 +9,7 @@ const Grid = (() => {
   let activeMarkers = [];
   let isBuyMode = false;
   let playerCoords = null;
+  let selectedPlotId = null;
 
   function tileId(tx, ty) { return tx + "_" + ty; }
 
@@ -43,8 +44,8 @@ const Grid = (() => {
     const allPlots = getAllPlots();
 
     if (allPlots[tid]) {
-      const owner = allPlots[tid].ownerName || "another player";
-      alert(`This tile is already claimed by ${owner}!`);
+      if (allPlots[tid].ownerId === state.player.id) openPlotModal(tid, allPlots[tid]);
+      else alert(`This tile is already claimed by ${allPlots[tid].ownerName || "another player"}!`);
       return;
     }
 
@@ -52,7 +53,7 @@ const Grid = (() => {
     const hasCapsule = state.capsule && state.capsule.awarded && !state.capsule.planted;
 
     // Allow opening modal if player has 100 EB OR a free capsule to plant!
-    if (state.eb < CONFIG.PLOT_COST_EB && !hasCapsule) {
+    if (state.eb < CONFIG.PLOT_COST_EB && !hasCapsule && !hasBagPlots(state)) {
       onBuyAttempt(false, null);
       return;
     }
@@ -66,8 +67,127 @@ const Grid = (() => {
     if (plantBtn) {
       plantBtn.style.display = hasCapsule ? "inline-block" : "none";
     }
+    const bagBtn = document.getElementById("plot-bag-btn");
+    if (bagBtn) bagBtn.style.display = hasBagPlots(state) ? "inline-block" : "none";
 
     if (modal) modal.classList.remove("hidden");
+  }
+
+  function hasBagPlots(state) {
+    return Object.values(state.plotBag || {}).some(count => Number(count) > 0);
+  }
+
+  function addPlotToBag(state, rarityKey) {
+    state.plotBag = state.plotBag || {};
+    let slot = rarityKey;
+    let suffix = 0;
+    while (Number(state.plotBag[slot]) >= 99) {
+      suffix++;
+      slot = `${rarityKey}_${suffix}`;
+    }
+    state.plotBag[slot] = (Number(state.plotBag[slot]) || 0) + 1;
+  }
+
+  function openPlotModal(tid, plot) {
+    selectedPlotId = tid;
+    const rarity = rarityInfo(plot.rarity);
+    document.getElementById("plot-modal-rarity").textContent = `${rarity.label} PLOT`;
+    document.getElementById("plot-modal-rarity").style.color = rarity.color;
+    document.getElementById("plot-modal-name").textContent = `${plot.ownerName || "Traveler"}'s Plot`;
+    document.getElementById("plot-modal-coords").textContent = `Coords: [${plot.tx}, ${plot.ty}]`;
+    document.getElementById("plot-modal-rate").textContent = `${rarity.rate} EB / sec`;
+    document.getElementById("plot-modal-location").textContent = [plot.city, plot.state, plot.country].filter(Boolean).join(", ") || "Unknown";
+    document.getElementById("plot-modal")?.classList.remove("hidden");
+  }
+
+  function relocatePlot() {
+    const state = Store.get();
+    const plot = state.plots[selectedPlotId];
+    if (!plot || plot.ownerId !== state.player.id) return;
+    if (!confirm("Relocate this plot? The tile will become unoccupied and the plot will return to your bag.")) return;
+
+    addPlotToBag(state, plot.rarity);
+    delete state.plots[selectedPlotId];
+    delete globalPlots[selectedPlotId];
+    Store.save();
+
+    const db = Store.getDb();
+    if (db) db.collection("plots").doc(selectedPlotId).delete().catch(e => console.warn("[Plots] Relocation sync notice:", e));
+
+    document.getElementById("plot-modal")?.classList.add("hidden");
+    selectedPlotId = null;
+    render();
+    if (typeof showToast === "function") showToast(`Plot relocated. ${rarityInfo(plot.rarity).label} plot returned to your bag!`, 3500);
+  }
+
+  function openPlotBag() {
+    const state = Store.get();
+    const items = document.getElementById("plot-bag-items");
+    if (!items) return;
+    items.innerHTML = "";
+    for (const slot in (state.plotBag || {})) {
+      const rarityKey = slot.split("_")[0];
+      const rarity = rarityInfo(rarityKey);
+      const count = Number(state.plotBag[slot]) || 0;
+      if (!count) continue;
+      const button = document.createElement("button");
+      button.className = "btn btn-primary";
+      button.textContent = `${rarity.label} Plot x${count}`;
+      button.style.borderColor = rarity.color;
+      button.addEventListener("click", () => placeBagPlot(slot));
+      items.appendChild(button);
+    }
+    document.getElementById("buy-modal")?.classList.add("hidden");
+    document.getElementById("plot-bag-modal")?.classList.remove("hidden");
+  }
+
+  async function placeBagPlot(slot) {
+    if (!pendingTile) return;
+    const state = Store.get();
+    const { tx, ty } = pendingTile;
+    const tid = tileId(tx, ty);
+    const rarityKey = slot.split("_")[0];
+    const count = Number(state.plotBag?.[slot]) || 0;
+    if (!count || getAllPlots()[tid]) return;
+
+    const corners = Geo.tileBounds(tx, ty, CONFIG.TILE_SIZE_METERS);
+    const centerLat = (corners[0][0] + corners[2][0]) / 2;
+    const centerLon = (corners[0][1] + corners[2][1]) / 2;
+    const territory = await Geo.getTerritoryInfo(centerLat, centerLon);
+    const rarity = rarityInfo(rarityKey);
+    const sourceId = Object.keys(state.plots).find(id => state.plots[id].rarity === rarityKey);
+    const plotData = {
+      ...(sourceId ? state.plots[sourceId] : {}),
+      tx, ty, city: territory.city, state: territory.state, country: territory.country,
+      rarity: rarityKey, rate: rarity.rate, ownerId: state.player.id,
+      ownerName: state.player.name || "Traveler", avatar: state.player.avatar || "🙂", claimedAt: Date.now(),
+    };
+    state.plotBag[slot] = count - 1;
+    if (!state.plotBag[slot]) delete state.plotBag[slot];
+    state.plots[tid] = plotData;
+    globalPlots[tid] = plotData;
+    pendingTile = null;
+    Store.save();
+    const db = Store.getDb();
+    if (db) await db.collection("plots").doc(tid).set(plotData).catch(e => console.warn("[Plots] Relocation sync notice:", e));
+    document.getElementById("plot-bag-modal")?.classList.add("hidden");
+    render();
+    showPlotFloatText(tx, ty, `RELOCATED ${rarity.label.toUpperCase()} TO NEW LOCATION`);
+  }
+
+  function showPlotFloatText(tx, ty, text) {
+    if (!map) return;
+    const corners = Geo.tileBounds(tx, ty, CONFIG.TILE_SIZE_METERS);
+    const lat = (corners[0][0] + corners[2][0]) / 2;
+    const lon = (corners[0][1] + corners[2][1]) / 2;
+    const pt = map.project([lon, lat]);
+    const popup = document.createElement("div");
+    popup.className = "combat-text-popup";
+    popup.style.left = `${pt.x}px`;
+    popup.style.top = `${pt.y}px`;
+    popup.textContent = text;
+    document.body.appendChild(popup);
+    setTimeout(() => popup.remove(), 1500);
   }
 
   async function executeBuy() {
@@ -521,6 +641,7 @@ const Grid = (() => {
     const confirmBtn = document.getElementById("buy-confirm-btn");
     const cancelBtn = document.getElementById("buy-cancel-btn");
     const plantBtn = document.getElementById("plant-capsule-confirm-btn");
+    const bagBtn = document.getElementById("plot-bag-btn");
     const buyModal = document.getElementById("buy-modal");
 
     confirmBtn?.addEventListener("click", () => {
@@ -544,6 +665,9 @@ const Grid = (() => {
         }
       }
     });
+
+    bagBtn?.addEventListener("click", openPlotBag);
+    document.getElementById("plot-relocate-btn")?.addEventListener("click", relocatePlot);
 
     // Debounced renders prevent lag during rapid zoom/orbit gestures
     map.on("moveend zoomend", scheduleRender);

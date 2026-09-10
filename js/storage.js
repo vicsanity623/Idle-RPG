@@ -29,6 +29,7 @@ const Store = (() => {
       diamonds: 50,
       totalDividends: 0,
       plots: {},
+      plotBag: {},
       liveDiamonds: {},
       collectedDiamondIds: [],
       lastDiamondSpawn: 0,
