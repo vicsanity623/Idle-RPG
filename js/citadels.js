@@ -296,13 +296,14 @@ const Citadels = (() => {
         geometry: { type: "Polygon", coordinates: [coords] }
       });
 
-      // 4. Mount Upright 10X 3D Monument firmly at the exact tile center
+      // 4. Mount upright billboard at the exact tile center.
+      // Viewport pitch keeps the HTML monument vertical; map rotation keeps it geographic.
       const el = createDysonSphereMarker(cit);
       const marker = new mapboxgl.Marker({
         element: el,
         anchor: "bottom",
         offset: [0, 0],
-        pitchAlignment: "map",
+        pitchAlignment: "viewport",
         rotationAlignment: "map",
       })
         .setLngLat([trueLon, trueLat])
@@ -516,8 +517,8 @@ const Citadels = (() => {
     if (relocateWrap) relocateWrap.hidden = true;
     render();
 
-    if (typeof showToast === "function") {
-      showToast(`Citadel relocated. Capsule returned! +${spoils.diamonds} Diamonds & +${spoils.eb} EB`, 4000);
+    if (typeof window.showGameToast === "function") {
+      window.showGameToast(`Citadel relocated. Capsule returned! +${spoils.diamonds} Diamonds & +${spoils.eb} EB`, 4000);
     }
   }
 
@@ -538,7 +539,7 @@ const Citadels = (() => {
 
     document.getElementById("citadel-modal")?.classList.add("hidden");
     render();
-    if (typeof showToast === "function") showToast("🛡️ Garrisoned! Defending this Citadel!");
+    if (typeof window.showGameToast === "function") window.showGameToast("🛡️ Garrisoned! Defending this Citadel!");
   }
 
   function recallDefender(cid) {
@@ -558,8 +559,8 @@ const Citadels = (() => {
 
     document.getElementById("citadel-modal")?.classList.add("hidden");
     render();
-    if (typeof showToast === "function") {
-      showToast(`🏆 Defender Recalled! Banked +${spoils.diamonds} Diamonds & +${spoils.eb} EB!`, 3500);
+    if (typeof window.showGameToast === "function") {
+      window.showGameToast(`🏆 Defender Recalled! Banked +${spoils.diamonds} Diamonds & +${spoils.eb} EB!`, 3500);
     }
   }
   
@@ -643,8 +644,8 @@ const Citadels = (() => {
     document.getElementById("citadel-upgrade-modal")?.classList.add("hidden");
     render();
 
-    if (typeof showToast === "function") {
-      showToast(`⚡ Citadel Evolution started! 10-minute transformation underway!`, 4000);
+    if (typeof window.showGameToast === "function") {
+      window.showGameToast(`⚡ Citadel Evolution started! 10-minute transformation underway!`, 4000);
     }
   }
 
@@ -725,13 +726,13 @@ const Citadels = (() => {
     let dmg = 0;
     if (isCritical) {
       dmg = 45 + Math.floor(Math.random() * 10);
-      if (typeof showToast === "function") showToast("💥 CRITICAL HIT! -50 Shield HP!");
+      if (typeof window.showGameToast === "function") window.showGameToast("💥 CRITICAL HIT! -50 Shield HP!");
     } else if (isHit) {
       dmg = 25 + Math.floor(Math.random() * 8);
-      if (typeof showToast === "function") showToast("⚔️ Clean Strike! -25 Shield HP!");
+      if (typeof window.showGameToast === "function") window.showGameToast("⚔️ Clean Strike! -25 Shield HP!");
     } else {
       dmg = 10;
-      if (typeof showToast === "function") showToast("🛡️ Glancing Blow! -10 HP!");
+      if (typeof window.showGameToast === "function") window.showGameToast("🛡️ Glancing Blow! -10 HP!");
     }
 
     combatShieldHP -= dmg;
@@ -775,8 +776,8 @@ const Citadels = (() => {
     }
 
     render();
-    if (typeof showToast === "function") {
-      showToast("🏆 CITADEL BREACHED! You are the new Reigning Defender! (+5 EB Bounty)", 4000);
+    if (typeof window.showGameToast === "function") {
+      window.showGameToast("🏆 CITADEL BREACHED! You are the new Reigning Defender! (+5 EB Bounty)", 4000);
     }
   }
 
@@ -811,8 +812,8 @@ const Citadels = (() => {
 
     document.getElementById("plant-capsule-btn")?.addEventListener("click", () => {
       document.getElementById("capsule-reward-modal")?.classList.add("hidden");
-      if (typeof showToast === "function") {
-        showToast("📍 Enter BUY LAND mode & tap an unowned tile to plant your Citadel!", 3500);
+      if (typeof window.showGameToast === "function") {
+        window.showGameToast("📍 Enter BUY LAND mode & tap an unowned tile to plant your Citadel!", 3500);
       }
     });
 

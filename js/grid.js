@@ -127,7 +127,7 @@ const Grid = (() => {
     document.getElementById("plot-modal")?.classList.add("hidden");
     selectedPlotId = null;
     render();
-    if (typeof showToast === "function") showToast(`Plot relocated. ${rarityInfo(plot.rarity).label} plot returned to your bag!`, 3500);
+    if (typeof window.showGameToast === "function") window.showGameToast(`Plot relocated. ${rarityInfo(plot.rarity).label} plot returned to your bag!`, 3500);
   }
 
   function openPlotBag() {
