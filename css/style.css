@@ -15705,3 +15705,64 @@ button[aria-label="Close ad"],
   color: var(--teal);
   text-shadow: 0 0 10px rgba(79, 214, 196, 0.4);
 }
+
+/* Compact, stable map marker footprint for nearby citadels. */
+.citadel-3d-monument {
+  width: 56px !important;
+  height: 96px !important;
+}
+
+.dyson-ground-shadow {
+  width: 36px;
+  height: 10px;
+}
+
+.dyson-ring.ring-1 {
+  width: 44px;
+  height: 44px;
+  bottom: 28px;
+  margin-left: -22px;
+}
+
+.dyson-ring.ring-2 {
+  width: 36px;
+  height: 36px;
+  bottom: 32px;
+  margin-left: -18px;
+}
+
+.dyson-ring.ring-3 {
+  width: 28px;
+  height: 28px;
+  bottom: 36px;
+  margin-left: -14px;
+}
+
+.dyson-core-avatar {
+  bottom: 40px;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  border-width: 2px;
+}
+
+.dyson-spire-tip {
+  bottom: 76px;
+  font-size: 12px;
+}
+
+.growth-pin-stem {
+  bottom: 8px;
+  height: 40px;
+}
+
+.growth-seed-core {
+  bottom: 48px;
+  font-size: 28px;
+}
+
+.growth-timer-pill {
+  bottom: 72px;
+  font-size: 10px;
+  padding: 3px 8px;
+}

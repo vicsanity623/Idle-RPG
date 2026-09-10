@@ -664,13 +664,12 @@ const Citadels = (() => {
       return;
     }
 
-    // Rule 2: Cannot attack any Citadel within the configured local proximity of your own Citadel
+    // Rule 2: Cannot attack any Citadel within 250 meters of your own Citadel
     const myCitadel = Object.values(globalCitadels).find(c => c.creatorId === state.player?.id);
     if (myCitadel && targetCit) {
       const distToMyHold = Geo.haversine(myCitadel.lat, myCitadel.lon, targetCit.lat, targetCit.lon);
-      const minSpacingMeters = CONFIG.CITADEL_MIN_SPACING_METERS || (5 * (CONFIG.TILE_SIZE_METERS || 6.096));
-      if (distToMyHold < minSpacingMeters) {
-        showGameNotice(`🛡️ Peace Treaty Active: You cannot siege holds within ${Math.round(minSpacingMeters)} meters of your own Citadel (currently ${Math.round(distToMyHold)}m away). Travel further to conquer foreign lands!`);
+      if (distToMyHold < 250) {
+        showGameNotice(`🛡️ Peace Treaty Active: You cannot siege holds within 250 meters of your own Citadel (currently ${Math.round(distToMyHold)}m away). Travel further to conquer foreign lands!`);
         return;
       }
     }
